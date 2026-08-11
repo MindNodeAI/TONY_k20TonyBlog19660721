@@ -75,7 +75,10 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInAnonymously, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+    // [新增] 引入 Firebase Functions
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
     // 使用規格書提供的 Firebase Config
     const firebaseConfig = {
@@ -92,6 +95,8 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
+    const functions = getFunctions(app); // 初始化 Functions
     const googleProvider = new GoogleAuthProvider();
 
     // Global App State
@@ -99,12 +104,24 @@
         user: null,
         role: null, // 新增 role 狀態
         db: db,
-        auth: auth
+        auth: auth,
+        storage: storage,
+        functions: functions, // 將 functions 放入全域狀態
+        currentCategory: '全部',
+        searchQuery: ''
     };
 
     // 將 Firestore 操作函式綁定到全域，讓路由與其他 script 可以使用
     window.FS = {
-        collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp
+        collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc
+    };
+
+    // 將 Storage 與 Functions 操作函式綁定到全域
+    window.StorageAPI = {
+        ref, uploadBytes, getDownloadURL
+    };
+    window.FunctionsAPI = {
+        httpsCallable
     };
 
     // Make Auth functions globally available for inline event handlers (though we prefer event listeners)
@@ -555,6 +572,124 @@
                 </div>
             </div>
         `,
+        series: `
+            <div class="bg-bg min-h-screen py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h1 class="text-3xl md:text-4xl font-bold text-primary mb-4">主題專題</h1>
+                    <p class="text-textSub max-w-2xl mx-auto mb-12">系統化的學習路徑與深度探討，幫助您建立完整的知識體系。</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group">
+                            <div class="h-48 bg-gray-200 relative overflow-hidden">
+                                <img src="https://placehold.co/800x400/E2E8F0/64748B?text=RAG+Series" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="RAG 專題">
+                                <div class="absolute top-4 left-4 bg-accent text-primary text-xs font-bold px-3 py-1 rounded">連載中</div>
+                            </div>
+                            <div class="p-8">
+                                <h3 class="text-2xl font-bold text-primary mb-3">企業 AI 知識庫 (RAG) 實戰全指南</h3>
+                                <p class="text-textSub mb-6">從架構設計、向量資料庫選型，到提示工程與安全防護。帶您從零到一建置企業級的專屬 AI 顧問。</p>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500"><i class="fa-solid fa-list-ol mr-1"></i> 共 8 篇文章</span>
+                                    <a href="#/articles" class="text-cta font-medium hover:underline">開始閱讀 <i class="fa-solid fa-arrow-right text-sm ml-1"></i></a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group">
+                            <div class="h-48 bg-gray-200 relative overflow-hidden">
+                                <img src="https://placehold.co/800x400/E2E8F0/64748B?text=Vibe+Coding" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Vibe Coding">
+                                <div class="absolute top-4 left-4 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded">已完結</div>
+                            </div>
+                            <div class="p-8">
+                                <h3 class="text-2xl font-bold text-primary mb-3">Vibe Coding：AI 時代的極速開發心法</h3>
+                                <p class="text-textSub mb-6">探討如何利用 Cursor、Gemini Canvas 等工具，透過精準的 PRD 與模組化思維，將開發效率提升 10 倍。</p>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500"><i class="fa-solid fa-list-ol mr-1"></i> 共 5 篇文章</span>
+                                    <a href="#/articles" class="text-cta font-medium hover:underline">開始閱讀 <i class="fa-solid fa-arrow-right text-sm ml-1"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        services: `
+            <div class="bg-bg min-h-screen py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h1 class="text-3xl md:text-4xl font-bold text-primary mb-4">服務與課程</h1>
+                    <p class="text-textSub max-w-2xl mx-auto mb-16">我們提供針對企業轉型與個人技術提升的多元方案。</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- Service 1 -->
+                        <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center">
+                            <div class="w-20 h-20 bg-blue-50 text-cta rounded-full flex items-center justify-center text-3xl mb-6">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-primary mb-3">企業內訓與演講</h3>
+                            <p class="text-sm text-textSub mb-8 flex-grow">量身打造 AI 應用導入、Vibe Coding 極速開發與全端敏捷實務培訓，協助您的團隊快速升級技術能量。</p>
+                            <a href="#/contact" class="w-full block py-3 bg-secondary text-white font-medium rounded hover:bg-primary transition shadow-sm">索取報價與大綱</a>
+                        </div>
+                        
+                        <!-- Service 2 -->
+                        <div class="bg-white p-8 rounded-xl shadow-lg border-2 border-accent relative flex flex-col items-center transform md:-translate-y-4">
+                            <div class="absolute top-0 right-0 bg-accent text-primary text-xs font-bold px-4 py-1 rounded-bl-lg">熱門諮詢</div>
+                            <div class="w-20 h-20 bg-yellow-50 text-accent rounded-full flex items-center justify-center text-3xl mb-6">
+                                <i class="fa-solid fa-code-merge"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-primary mb-3">架構顧問與專案開發</h3>
+                            <p class="text-sm text-textSub mb-8 flex-grow">針對企業痛點，評估導入 LLM 解決方案、規劃 RAG 知識庫架構，或承接高難度的全端專案開發委託。</p>
+                            <a href="#/contact" class="w-full block py-3 bg-cta text-white font-medium rounded hover:bg-blue-700 transition shadow-md">預約免費諮詢</a>
+                        </div>
+                        
+                        <!-- Service 3 -->
+                        <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center">
+                            <div class="w-20 h-20 bg-gray-50 text-textSub rounded-full flex items-center justify-center text-3xl mb-6">
+                                <i class="fa-solid fa-book-open-reader"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-primary mb-3">線上課程 (籌備中)</h3>
+                            <p class="text-sm text-textSub mb-8 flex-grow">將顧問經驗轉化為系統化課程，提供完整的實戰任務包、架構圖與檢核表。敬請期待。</p>
+                            <button onclick="showToast('課程正在籌備中，歡迎訂閱電子報獲取最新消息', 'info')" class="w-full block py-3 bg-gray-100 text-gray-500 font-medium rounded hover:bg-gray-200 transition">即將推出</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        about: `
+            <div class="bg-bg min-h-screen py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                        <div class="h-64 bg-primary relative">
+                             <div class="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTIwIDIwTDAgMEg0MEwyMCAyMHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1IiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=')]"></div>
+                        </div>
+                        <div class="px-8 pb-12 relative">
+                            <img src="https://placehold.co/200x200/163A63/C9A24B?text=TONY" alt="TONY" class="w-32 h-32 rounded-full border-4 border-white shadow-xl absolute -top-16">
+                            
+                            <div class="mt-20">
+                                <h1 class="text-3xl font-bold text-primary mb-2">關於 TONY 老師</h1>
+                                <p class="text-accent font-bold mb-6">全端架構師 / Vibe Coding 專家 / 企業顧問</p>
+                                
+                                <div class="prose prose-lg text-textMain leading-loose max-w-none">
+                                    <p>您好，我是 TONY。致力於在快速變動的技術浪潮中，尋找最優雅、高效的解決方案。</p>
+                                    <p>擁有多年全端開發與架構設計經驗，近年專注於 <strong>AI 應用導入 (RAG)</strong> 與 <strong>Vibe Coding 開發模式</strong> 的研究與實踐。我相信未來的軟體開發，將會是人類的創意與 AI 算力的完美結合。</p>
+                                    
+                                    <h3 class="text-xl font-bold text-primary mt-8 mb-4 border-b pb-2">核心專長</h3>
+                                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 list-disc pl-5">
+                                        <li>Serverless 架構設計 (Firebase, GCP)</li>
+                                        <li>前端框架與生態系 (React, Vue)</li>
+                                        <li>AI 知識庫與 RAG 系統建置</li>
+                                        <li>Vibe Coding 流程導入與培訓</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="mt-12 pt-8 border-t border-gray-200 flex gap-4">
+                                    <a href="#/contact" class="px-6 py-2 bg-cta text-white rounded font-medium hover:bg-blue-700 transition shadow">聯絡洽詢</a>
+                                    <a href="#/articles" class="px-6 py-2 bg-gray-100 text-gray-700 rounded font-medium hover:bg-gray-200 transition">閱讀專欄</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
         login: `
             <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-bg">
                 <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
@@ -766,7 +901,7 @@
                         <a href="#/admin" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#" onclick="showToast('功能建置中', 'info')" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-brain w-5 text-center"></i> AI 知識庫設定</a>
-                        <a href="#" onclick="showToast('功能建置中', 'info')" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-users w-5 text-center"></i> 會員與商機</a>
+                        <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
                     </nav>
                 </div>
 
@@ -813,6 +948,7 @@
                     <nav class="flex-grow p-4 space-y-2">
                         <a href="#/admin" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
+                        <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
                     </nav>
                 </div>
 
@@ -981,6 +1117,121 @@
                     </div>
                 </div>
             </div>
+        `,
+        contact: `
+            <div class="bg-bg min-h-screen py-20">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-12">
+                        <h1 class="text-3xl md:text-4xl font-bold text-primary mb-4">聯絡 TONY</h1>
+                        <p class="text-textSub">無論是企業內訓、架構顧問，還是專案合作，都歡迎填寫下方表單與我聯繫。</p>
+                    </div>
+                    
+                    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+                        <form id="contact-form" onsubmit="window.submitContactForm(event)" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">您的姓名 *</label>
+                                    <input type="text" id="lead-name" required class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">聯絡 Email *</label>
+                                    <input type="email" id="lead-email" required class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">公司/單位名稱</label>
+                                    <input type="text" id="lead-company" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">需求類型 *</label>
+                                    <select id="lead-type" required class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm bg-white">
+                                        <option value="企業培訓">企業培訓 (AI/全端)</option>
+                                        <option value="架構顧問">架構設計與顧問</option>
+                                        <option value="專案開發">專案委託開發</option>
+                                        <option value="其他">其他合作探討</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">詳細說明 *</label>
+                                <textarea id="lead-message" required rows="5" placeholder="請描述您的背景與具體需求..." class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm"></textarea>
+                            </div>
+
+                            <div class="border-t border-gray-100 pt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">夾帶附件 (選填，限 PDF/圖片，最大 5MB)</label>
+                                <input type="file" id="lead-file" accept=".pdf,image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                            </div>
+
+                            <div class="text-center pt-4">
+                                <button type="submit" id="btn-submit-lead" class="bg-cta hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition shadow-md w-full md:w-auto">
+                                    <i class="fa-regular fa-paper-plane mr-2"></i> 送出諮詢
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `,
+        adminLeads: `
+            <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
+                <!-- Sidebar -->
+                <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
+                    <div class="p-6 border-b border-gray-700">
+                        <h2 class="text-xl font-bold flex items-center gap-2 text-accent">
+                            <i class="fa-solid fa-sliders"></i> TONY CMS
+                        </h2>
+                    </div>
+                    <nav class="flex-grow p-4 space-y-2">
+                        <a href="#/admin" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
+                        <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
+                        <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                    </nav>
+                </div>
+
+                <!-- Main Content -->
+                <div class="flex-grow p-6 md:p-8 relative">
+                    <h1 class="text-2xl font-bold text-primary mb-6">商機與聯絡表單</h1>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm">
+                                        <th class="px-6 py-4 font-medium">時間</th>
+                                        <th class="px-6 py-4 font-medium">聯絡人 / 公司</th>
+                                        <th class="px-6 py-4 font-medium">類型 / 狀態</th>
+                                        <th class="px-6 py-4 font-medium text-right">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-leads-list" class="divide-y divide-gray-200">
+                                    <tr><td colspan="4" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Modal -->
+                    <div id="lead-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0">
+                                <h3 class="text-lg font-bold text-primary">表單詳細內容</h3>
+                                <button onclick="document.getElementById('lead-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-700">
+                                    <i class="fa-solid fa-xmark text-xl"></i>
+                                </button>
+                            </div>
+                            <div class="p-6" id="lead-modal-content">
+                                <!-- Modal Content -->
+                            </div>
+                            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 text-right">
+                                <button onclick="document.getElementById('lead-modal').classList.add('hidden')" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-medium transition">關閉</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `
     };
 
@@ -1019,7 +1270,10 @@
             }
             root.innerHTML = Views.askTony;
             window.scrollTo(0,0);
-        } else if (path === '/services') {
+        } else if (path === '/series') {
+            root.innerHTML = Views.series;
+            window.scrollTo(0,0);
+        } else if (path === '/services' || path === '/courses') {
             root.innerHTML = Views.services;
             window.scrollTo(0,0);
         } else if (path === '/about') {
@@ -1056,6 +1310,10 @@
             const articleId = path.split('/')[4];
             root.innerHTML = Views.adminArticleEdit;
             setTimeout(() => window.initArticleEditor(articleId), 100);
+        } else if (path === '/admin/leads') {
+            if (!window.AppState.user || !['super_admin', 'admin'].includes(window.AppState.role)) return;
+            root.innerHTML = Views.adminLeads;
+            setTimeout(window.loadAdminLeads, 100);
         } else if (path === '/login') {
             if (window.AppState.user) {
                 window.location.hash = '#/member'; // Redirect if already logged in
@@ -1412,6 +1670,205 @@
         }
     };
 
+    // --- Leads (Contact Form) Logic ---
+    
+    window.compressImage = async (file, maxWidth = 1920, maxHeight = 1920, quality = 0.8) => {
+        // 如果不是圖片（例如 PDF），直接回傳原始檔案
+        if (!file || !file.type.startsWith('image/')) return file;
+        
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+
+                    // 計算等比例縮小的尺寸
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round(height * (maxWidth / width));
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round(width * (maxHeight / height));
+                            height = maxHeight;
+                        }
+                    }
+
+                    // 繪製到 Canvas 上
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // 轉換為 Blob (JPEG 格式)
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // 將副檔名強制改為 .jpg
+                            const newName = file.name.replace(/\.[^/.]+$/, ".jpg");
+                            const compressedFile = new File([blob], newName, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            resolve(file); // 如果壓縮失敗，退回原檔
+                        }
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = () => resolve(file); // 圖片載入失敗，退回原檔
+            };
+            reader.onerror = () => resolve(file); // 讀取失敗，退回原檔
+        });
+    };
+
+    window.submitContactForm = async (event) => {
+        event.preventDefault();
+        const btn = document.getElementById('btn-submit-lead');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
+
+        const name = document.getElementById('lead-name').value;
+        const email = document.getElementById('lead-email').value;
+        const company = document.getElementById('lead-company').value;
+        const type = document.getElementById('lead-type').value;
+        const message = document.getElementById('lead-message').value;
+        const fileInput = document.getElementById('lead-file');
+        let file = fileInput.files[0];
+
+        try {
+            const { db, storage } = window.AppState;
+            const { collection, addDoc, updateDoc, doc, serverTimestamp } = window.FS;
+            const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
+
+            // 1. 先儲存表單文字資料到 Firestore
+            const leadData = {
+                name, email, company, type, message,
+                status: 'new',
+                createdAt: serverTimestamp()
+            };
+            const docRef = await addDoc(collection(db, "leads"), leadData);
+
+            // 2. 處理附件上傳
+            if (file) {
+                // 如果是圖片，進行壓縮 (最大 1200x1200px, 80% 品質)
+                if (file.type.startsWith('image/')) {
+                    btn.innerHTML = '<i class="fa-solid fa-compress fa-fade"></i> 壓縮圖片中...';
+                    file = await window.compressImage(file, 1200, 1200, 0.8);
+                }
+
+                // 檢查檔案大小 (壓縮後/PDF 限制 5MB)
+                if (file.size > 5 * 1024 * 1024) throw new Error("檔案大小不能超過 5MB");
+                
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳附件中...';
+                // 建立上傳路徑：/leads/{leadId}/attachments/{fileName}
+                const fileRef = ref(storage, `leads/${docRef.id}/attachments/${file.name}`);
+                await uploadBytes(fileRef, file);
+                
+                // 取得下載網址，並更新回 Firestore 的表單紀錄中
+                const fileUrl = await getDownloadURL(fileRef);
+                await updateDoc(doc(db, "leads", docRef.id), { attachmentUrl: fileUrl, fileName: file.name });
+            }
+
+            showToast("感謝您的來信！我們將盡快與您聯繫。", "success");
+            document.getElementById('contact-form').reset();
+            
+        } catch (error) {
+            console.error("Lead submission failed", error);
+            showToast("送出失敗：" + error.message, "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-regular fa-paper-plane mr-2"></i> 送出諮詢';
+        }
+    };
+
+    window.loadAdminLeads = async () => {
+        const tbody = document.getElementById('admin-leads-list');
+        if (!tbody) return;
+
+        try {
+            const { db } = window.AppState;
+            const { collection, getDocs, query, orderBy } = window.FS;
+            
+            // 讀取所有 leads (單純時間排序，不需要額外複合索引)
+            const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">目前沒有任何諮詢紀錄。</td></tr>';
+                return;
+            }
+
+            let html = '';
+            window.AppState.loadedLeads = {}; // 暫存在記憶體供彈出視窗使用
+
+            querySnapshot.forEach((docSnap) => {
+                const lead = docSnap.data();
+                window.AppState.loadedLeads[docSnap.id] = lead;
+
+                const dateStr = lead.createdAt ? new Date(lead.createdAt.seconds * 1000).toLocaleString() : '剛送出';
+                const statusBadge = lead.status === 'new' 
+                    ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">新進</span>'
+                    : '<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-bold">已處理</span>';
+
+                html += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-4 text-sm text-gray-500">${dateStr}</td>
+                        <td class="px-4 py-4 text-sm text-gray-900 font-bold">${lead.name} <br><span class="text-xs text-gray-400 font-normal">${lead.company || lead.email}</span></td>
+                        <td class="px-4 py-4 text-sm"><span class="px-2 py-1 bg-blue-50 text-cta rounded text-xs font-medium">${lead.type}</span> ${statusBadge}</td>
+                        <td class="px-4 py-4 text-right text-sm font-medium">
+                            <button onclick="window.viewLead('${docSnap.id}')" class="text-cta hover:text-blue-800 transition"><i class="fa-solid fa-folder-open"></i> 檢視</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        } catch (error) {
+            console.error(error);
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-500">載入失敗。</td></tr>';
+        }
+    };
+
+    window.viewLead = (id) => {
+        const lead = window.AppState.loadedLeads[id];
+        if (!lead) return;
+
+        const content = document.getElementById('lead-modal-content');
+        let attachmentHtml = '';
+        if (lead.attachmentUrl) {
+            // 提供帶有憑證的 Firebase Storage 網址直接打開或下載
+            attachmentHtml = `
+                <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded">
+                    <span class="text-sm text-gray-500 block mb-1">夾帶附件：</span>
+                    <a href="${lead.attachmentUrl}" target="_blank" class="text-cta hover:underline text-sm font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-paperclip"></i> ${lead.fileName || '開啟檔案'}
+                    </a>
+                </div>
+            `;
+        }
+
+        content.innerHTML = `
+            <div class="grid grid-cols-2 gap-4 border-b border-gray-100 pb-4">
+                <div><span class="text-xs text-gray-400 block">姓名</span><span class="font-medium">${lead.name}</span></div>
+                <div><span class="text-xs text-gray-400 block">Email</span><a href="mailto:${lead.email}" class="text-cta hover:underline font-medium">${lead.email}</a></div>
+                <div><span class="text-xs text-gray-400 block">公司</span><span>${lead.company || '無'}</span></div>
+                <div><span class="text-xs text-gray-400 block">需求類型</span><span class="px-2 py-1 bg-blue-50 text-cta rounded text-xs font-medium">${lead.type}</span></div>
+            </div>
+            <div class="pt-2">
+                <span class="text-xs text-gray-400 block mb-2">詳細說明</span>
+                <p class="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 p-4 rounded border border-gray-100">${lead.message}</p>
+            </div>
+            ${attachmentHtml}
+        `;
+        
+        document.getElementById('lead-modal').classList.remove('hidden');
+    };
+
     // --- Member Dashboard ---
     window.renderMemberDashboard = async () => {
         const { user, db } = window.AppState;
@@ -1587,45 +2044,26 @@
                 contextText = "【目前知識庫中尚無任何已發布的文章，請基於你的常識簡短回答，並說明知識庫尚在建置中。】";
             }
 
-            // 4. 準備 Gemini API Payload 與 System Instruction
-            const systemPrompt = `你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的語氣要專業、友善，像是一位經驗豐富的全端工程師與架構師。
-請嚴格根據以下提供的【知識庫內容】來回答使用者的問題。
-如果使用者的問題無法從知識庫內容中找到答案，請誠實地說「根據目前知識庫的資料，我無法精準回答這個問題」，不要自行捏造或臆測。
-請盡量使用繁體中文，並且排版要清晰（使用適當的換行或粗體重點）。
+            // 4. 呼叫後端 Firebase Cloud Functions (超安全，金鑰在後端！)
+            const { functions } = window.AppState;
+            const { httpsCallable } = window.FunctionsAPI;
+            const askTonyFunction = httpsCallable(functions, 'askTony');
 
-${contextText}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: query }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] }
-            };
-            
-            // 呼叫 Gemini API (Canvas 會自動注入 API Key)
-            const apiKey = ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            // 將問題與背景知識打包送到後端
+            const result = await askTonyFunction({ 
+                query: query,
+                contextText: contextText
             });
-            
-            const result = await response.json();
-            
-            // 加入 API 錯誤檢查
-            if (result.error) {
-                throw new Error(result.error.message);
-            }
 
-            const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，AI 思考時發生了點狀況。";
+            const aiText = result.data.text;
 
-            // 簡單的 Markdown 轉 HTML (粗體與換行)
+            // 5. 簡單的 Markdown 轉 HTML (粗體與換行)
             const formattedHtml = aiText
                 .replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary">$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/\n/g, '<br>');
 
-            // 5. 將 AI 回答渲染到畫面上
+            // 6. 將 AI 回答渲染到畫面上
             document.getElementById(loadingId).outerHTML = `
                 <div class="flex gap-4">
                     <div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-accent font-bold shadow-sm">T</div>
@@ -1643,11 +2081,14 @@ ${contextText}`;
             `;
         } catch (err) {
             console.error("Ask TONY Error:", err);
+            // 捕捉並顯示來自後端的真實錯誤
+            let errorMsg = err.message || '連線到 AI 伺服器失敗，請稍後再試。';
+            
             document.getElementById(loadingId).outerHTML = `
                 <div class="flex gap-4">
                     <div class="w-8 h-8 rounded-full bg-red-600 flex-shrink-0 flex items-center justify-center text-white font-bold shadow-sm"><i class="fa-solid fa-exclamation"></i></div>
                     <div class="bg-red-50 text-red-700 border border-red-200 p-4 rounded-2xl rounded-tl-none text-sm max-w-[85%] shadow-sm">
-                        抱歉，發生錯誤：<br><span class="text-xs font-mono mt-1 block">${err.message || '連線到 AI 伺服器失敗，請稍後再試。'}</span>
+                        抱歉，發生錯誤：<br><span class="text-xs font-mono mt-1 block">${errorMsg}</span>
                     </div>
                 </div>
             `;
