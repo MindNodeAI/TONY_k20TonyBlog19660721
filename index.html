@@ -147,6 +147,189 @@
         httpsCallable
     };
 
+    window.updateSEO = (title, description = '', imageUrl = '') => {
+        const baseTitle = 'TONY STUDIO';
+        document.title = title === '個人品牌官網與專業內容中心' ? `${baseTitle} | ${title}` : (title ? `${title} | ${baseTitle}` : `${baseTitle} | 個人品牌官網與專業內容中心`);
+
+        let metaDesc = document.querySelector('meta[name="description"]');
+        if (!metaDesc) {
+            metaDesc = document.createElement('meta');
+            metaDesc.name = "description";
+            document.head.appendChild(metaDesc);
+        }
+        metaDesc.content = description || '專注於全端開發、AI 知識庫建置與個人品牌營運。在這裡，我將經驗化為可被搜尋、引用與實踐的知識資產。';
+    };
+
+    // --- 新增：全域客製化彈窗 (Modal) ---
+    window.showModal = (title, content, onConfirm = null, confirmText = '確認', isDanger = false) => {
+        const existing = document.getElementById('custom-modal');
+        if (existing) existing.remove();
+
+        const modalHtml = `
+            <div id="custom-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300">
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform scale-95 transition-transform duration-300">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                        <h3 class="text-lg font-bold text-primary">${title}</h3>
+                        <button onclick="document.getElementById('custom-modal').remove()" class="text-gray-400 hover:text-gray-700">
+                            <i class="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6 text-textMain text-sm">
+                        ${content}
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+                        <button onclick="document.getElementById('custom-modal').remove()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-sm font-medium">取消</button>
+                        ${onConfirm ? `<button id="modal-confirm-btn" class="px-4 py-2 ${isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-cta hover:bg-blue-700'} text-white rounded transition text-sm font-medium shadow-sm">${confirmText}</button>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        const modal = document.getElementById('custom-modal');
+        void modal.offsetWidth; // 觸發動畫
+        modal.classList.remove('opacity-0');
+        modal.querySelector('div').classList.remove('scale-95');
+
+        if (onConfirm) {
+            document.getElementById('modal-confirm-btn').onclick = () => {
+                onConfirm();
+                modal.remove();
+            };
+        }
+    };
+
+    // --- 新增：分類管理系統 ---
+    window.loadCategories = async (containerId, mode = 'filters', selected = '') => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        try {
+            const { db } = window.AppState;
+            const { collection, getDocs, query, orderBy } = window.FS;
+            const q = query(collection(db, "categories"), orderBy("order", "asc"));
+            const snap = await getDocs(q);
+            
+            let categories = [];
+            snap.forEach(doc => categories.push({ id: doc.id, ...doc.data() }));
+
+            // 預設防呆分類 (如果資料庫是空的)
+            if (categories.length === 0) {
+                categories = [
+                    { id: 'default1', name: 'Vibe Coding', order: 1 },
+                    { id: 'default2', name: '架構設計', order: 2 },
+                    { id: 'default3', name: 'AI 應用', order: 3 }
+                ];
+            }
+
+            if (mode === 'filters') {
+                let html = `<button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-4 py-1.5 ${window.AppState.currentCategory === '全部' || !window.AppState.currentCategory ? 'bg-primary text-white' : 'bg-bg text-textSub hover:bg-gray-200'} text-sm font-medium rounded-full whitespace-nowrap transition shadow-sm">全部</button>`;
+                categories.forEach(cat => {
+                    const isActive = window.AppState.currentCategory === cat.name;
+                    html += `<button onclick="window.filterArticles('${cat.name}')" data-cat="${cat.name}" class="cat-btn px-4 py-1.5 ${isActive ? 'bg-primary text-white shadow-sm' : 'bg-bg text-textSub hover:bg-gray-200'} text-sm font-medium rounded-full whitespace-nowrap transition">${cat.name}</button>`;
+                });
+                container.innerHTML = html;
+            } else if (mode === 'select') {
+                let html = '';
+                categories.forEach(cat => {
+                    const isSelected = selected === cat.name ? 'selected' : '';
+                    html += `<option value="${cat.name}" ${isSelected}>${cat.name}</option>`;
+                });
+                container.innerHTML = html;
+            } else if (mode === 'admin') {
+                let html = '';
+                categories.forEach(cat => {
+                    html += `
+                        <div class="flex items-center justify-between bg-gray-50 border border-gray-200 px-4 py-3 rounded group hover:bg-white transition">
+                            <span class="font-medium text-gray-700">${cat.name}</span>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                <button onclick="window.editCategory('${cat.id}', '${cat.name}')" class="w-8 h-8 rounded-full bg-blue-50 text-cta hover:bg-cta hover:text-white transition flex items-center justify-center shadow-sm" title="修改分類"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="window.deleteCategory('${cat.id}', '${cat.name}')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center shadow-sm" title="刪除分類"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+        } catch (error) {
+            console.warn("載入分類發生警告:", error);
+            if (mode === 'filters') container.innerHTML = '<span class="text-sm text-gray-500 px-4 py-1">分類載入受限</span>';
+            else if (mode === 'admin') container.innerHTML = '<div class="py-4 text-center text-red-500 text-sm"><i class="fa-solid fa-triangle-exclamation mr-2"></i>權限受限：請確認 Firestore 規則已發布。</div>';
+            else if (mode === 'select') container.innerHTML = '<option value="">載入失敗</option>';
+        }
+    };
+
+    window.createCategory = async () => {
+        const input = document.getElementById('new-category-input');
+        const name = input.value.trim();
+        if (!name) return showToast('請輸入分類名稱', 'warning');
+        
+        const btn = document.getElementById('btn-add-category');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        
+        try {
+            const { db } = window.AppState;
+            const { collection, addDoc, serverTimestamp } = window.FS;
+            await addDoc(collection(db, "categories"), {
+                name: name,
+                order: Date.now(),
+                createdAt: serverTimestamp()
+            });
+            showToast('分類新增成功', 'success');
+            input.value = '';
+            window.loadCategories('settings-categories-list', 'admin');
+        } catch (error) {
+            showToast('新增失敗: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plus"></i> 新增';
+        }
+    };
+
+    window.editCategory = (id, oldName) => {
+        if (id.startsWith('default')) {
+            showToast('這是預設分類。請先新增您的專屬分類後，才能修改。', 'warning');
+            return;
+        }
+        const content = `
+            <label class="block mb-2 text-sm font-medium text-gray-700">請輸入新的分類名稱：</label>
+            <input type="text" id="edit-cat-input" value="${oldName}" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta font-medium">
+        `;
+        window.showModal('修改分類名稱', content, async () => {
+            const newName = document.getElementById('edit-cat-input').value.trim();
+            if (!newName || newName === oldName) return;
+            try {
+                const { db } = window.AppState;
+                const { doc, updateDoc } = window.FS;
+                await updateDoc(doc(db, "categories", id), { name: newName });
+                showToast('分類已更新！', 'success');
+                window.loadCategories('settings-categories-list', 'admin');
+            } catch (error) {
+                showToast('更新失敗，請檢查權限', 'error');
+            }
+        }, '儲存修改');
+    };
+
+    window.deleteCategory = (id, name) => {
+        if (id.startsWith('default')) {
+            showToast('預設分類無法刪除。', 'warning');
+            return;
+        }
+        const content = `<p>您確定要刪除 <strong>${name}</strong> 嗎？</p><p class="text-red-500 text-xs mt-2 bg-red-50 p-2 rounded">注意：這不會刪除文章，但會讓使用此分類的文章失去對應標籤。</p>`;
+        window.showModal('刪除分類確認', content, async () => {
+            try {
+                const { db } = window.AppState;
+                const { doc, deleteDoc } = window.FS;
+                await deleteDoc(doc(db, "categories", id));
+                showToast('分類已永久刪除', 'success');
+                window.loadCategories('settings-categories-list', 'admin');
+            } catch (error) {
+                showToast('刪除失敗，請檢查權限', 'error');
+            }
+        }, '確定刪除', true);
+    };
+
     // Enhanced Authentication Handlers with clear diagnostic messages
     window.handleEmailRegister = async (event) => {
         event.preventDefault();
@@ -301,7 +484,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
             <div class="flex-shrink-0 flex items-center">
-                <a href="#/" class="flex items-center space-x-2">
+                <a href="#/" id="nav-logo-container" class="flex items-center space-x-2">
                     <div class="w-8 h-8 bg-primary text-accent flex items-center justify-center rounded font-bold text-xl">T</div>
                     <span class="font-bold text-xl text-primary tracking-tight">TONY STUDIO</span>
                 </a>
@@ -358,7 +541,7 @@
 <footer class="bg-primary text-white py-12 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div class="md:col-span-1">
-            <a href="#/" class="flex items-center space-x-2 mb-4">
+            <a href="#/" id="footer-logo-container" class="flex items-center space-x-2 mb-4">
                 <div class="w-8 h-8 bg-white text-primary flex items-center justify-center rounded font-bold text-xl">T</div>
                 <span class="font-bold text-xl text-white tracking-tight">TONY STUDIO</span>
             </a>
@@ -390,9 +573,9 @@
         <div>
             <h4 class="font-semibold mb-4 text-accent">訂閱電子報</h4>
             <p class="text-sm text-gray-300 mb-3">掌握最新的技術趨勢與洞察文章。</p>
-            <form class="flex" onsubmit="event.preventDefault(); showToast('訂閱功能建置中', 'warning');">
-                <input type="email" placeholder="您的 Email" class="px-3 py-2 bg-secondary text-white placeholder-gray-400 border border-gray-600 rounded-l focus:outline-none focus:border-accent w-full text-sm">
-                <button type="submit" class="bg-cta hover:bg-blue-600 px-4 py-2 rounded-r text-sm font-medium transition">訂閱</button>
+            <form class="flex" onsubmit="window.subscribeNewsletter(event)">
+                <input type="email" required placeholder="您的 Email" class="px-3 py-2 bg-secondary text-white placeholder-gray-400 border border-gray-600 rounded-l focus:outline-none focus:border-accent w-full text-sm">
+                <button type="submit" class="bg-cta hover:bg-blue-600 px-4 py-2 rounded-r text-sm font-medium transition flex items-center justify-center min-w-[4rem]">訂閱</button>
             </form>
         </div>
     </div>
@@ -691,6 +874,21 @@
                         <div class="prose prose-lg max-w-none text-textMain leading-loose bg-white p-8 rounded-xl shadow-sm border border-gray-100" id="detail-content">
                             <div class="flex justify-center py-12"><i class="fa-solid fa-spinner fa-spin text-3xl text-cta"></i></div>
                         </div>
+                        
+                        <!-- 文章末端訂閱 CTA -->
+                        <div class="mt-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border border-blue-100 text-center shadow-sm">
+                            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-cta text-2xl mx-auto mb-4 shadow-sm">
+                                <i class="fa-regular fa-envelope"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-primary mb-2">喜歡這篇文章嗎？</h3>
+                            <p class="text-textSub mb-6 max-w-md mx-auto">訂閱 TONY STUDIO 電子報，第一時間獲取關於全端開發、AI 應用與架構設計的最新洞察。</p>
+                            <form onsubmit="window.subscribeNewsletter(event)" class="max-w-md mx-auto flex shadow-sm">
+                                <input type="email" required placeholder="輸入您的 Email 地址..." class="flex-grow px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:border-cta focus:ring-1 focus:ring-cta text-sm">
+                                <button type="submit" class="bg-cta hover:bg-blue-700 text-white px-6 py-3 rounded-r-lg font-medium transition flex items-center justify-center min-w-[6rem]">
+                                    馬上訂閱
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="lg:w-1/3 hidden lg:block">
@@ -763,6 +961,29 @@
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h3 class="text-textSub text-sm mb-2">AI 知識庫狀態</h3>
                             <p class="text-lg font-bold text-green-600"><i class="fa-solid fa-circle-check"></i> 雲端後端連線正常</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-primary">最新電子報訂閱名單</h3>
+                            <button onclick="window.exportSubscribers()" class="bg-cta hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium transition shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-file-csv"></i> 匯出 CSV
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 border-b border-gray-200 text-textSub text-sm">
+                                        <th class="px-6 py-4 font-medium">訂閱時間</th>
+                                        <th class="px-6 py-4 font-medium">Email 信箱</th>
+                                        <th class="px-6 py-4 font-medium">來源</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-subscribers-list" class="divide-y divide-gray-200">
+                                    <tr><td colspan="3" class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1009,8 +1230,11 @@
                             </div>
 
                             <div class="border-t border-gray-100 pt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">夾帶附件 <span class="text-xs text-gray-400 font-normal ml-1">(選填，支援 PDF 或 JPG/PNG，單一檔案上限 5MB)</span></label>
-                                <input type="file" id="lead-file" accept=".pdf,image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">夾帶附件 <span class="text-xs text-gray-400 font-normal ml-1">(選填，支援多選 PDF 或 JPG/PNG，單一檔案上限 5MB)</span></label>
+                                <!-- 加上 multiple (多選) 與 onchange (觸發 JS) -->
+                                <input type="file" id="lead-file" multiple accept=".pdf,image/*" onchange="window.handleFileSelect(event)" class="w-full text-sm text-gray-500 file:cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                <!-- 這裡就是用來長出垃圾桶跟檔案名稱的清單容器！ -->
+                                <ul id="lead-file-list" class="mt-3 space-y-2"></ul>
                             </div>
 
                             <div class="text-center pt-4">
@@ -1097,10 +1321,18 @@
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-3xl">
                         <form onsubmit="window.saveSiteSettings(event)" class="space-y-6">
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">網站品牌 LOGO <span class="text-xs text-gray-400 font-normal ml-1">(選填，將替換左上角與頁尾預設文字)</span></label>
+                                <div class="flex items-center gap-6">
+                                    <img id="settings-logo-preview" src="https://placehold.co/300x100/163A63/FFF?text=LOGO" class="h-12 w-auto object-contain border border-gray-200 rounded shadow-sm bg-gray-50 px-2">
+                                    <input type="file" id="settings-site-logo" accept="image/*" onchange="window.previewImage(event, 'settings-logo-preview')" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                </div>
+                            </div>
+                            <hr class="border-gray-100">
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">首頁大頭貼 <span class="text-xs text-gray-400 font-normal ml-1">(支援 JPG/PNG，系統將自動裁切壓縮為 800x800 正方形)</span></label>
                                 <div class="flex items-center gap-6">
                                     <img id="settings-preview-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY" class="w-24 h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm">
-                                    <input type="file" id="settings-profile-img" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                    <input type="file" id="settings-profile-img" accept="image/*" onchange="window.previewImage(event, 'settings-preview-img')" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
                                 </div>
                             </div>
                             <div>
@@ -1146,6 +1378,11 @@
         root.classList.remove('page-enter');
         void root.offsetWidth;
         
+        // 預設將標題與 SEO 重置
+        if (!path.startsWith('/article/')) {
+            window.updateSEO('個人品牌官網與專業內容中心');
+        }
+        
         if (path === '/' || path === '') {
             root.innerHTML = Views.home;
             setTimeout(window.loadHomeData, 100);
@@ -1176,6 +1413,7 @@
             root.innerHTML = Views.services;
             window.scrollTo(0,0);
         } else if (path === '/contact') {
+            window.AppState.leadFiles = []; // 清空之前的暫存檔案
             root.innerHTML = Views.contact;
             window.scrollTo(0,0);
         } else if (path === '/member') {
@@ -1193,6 +1431,7 @@
                 return;
             }
             root.innerHTML = Views.admin;
+            setTimeout(window.loadAdminDashboard, 100);
         } else if (path === '/admin/articles') {
             if (!window.AppState.user || !['super_admin', 'admin', 'editor'].includes(window.AppState.role)) return;
             root.innerHTML = Views.adminArticles;
@@ -1340,6 +1579,9 @@
             const article = docSnap.data();
             const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛';
             
+            // 動態更新網頁標題與 SEO Meta 標籤
+            window.updateSEO(article.title, article.excerpt, article.coverImage);
+            
             document.getElementById('detail-title').innerText = article.title;
             document.getElementById('detail-category').innerText = article.category || '未分類';
             document.getElementById('detail-date').innerHTML = `<i class="fa-regular fa-calendar mr-1"></i> ${dateStr}`;
@@ -1348,8 +1590,14 @@
             
             window.updateBookmarkButtonUI(id);
         } catch (error) {
-            console.error(error);
-            document.getElementById('detail-title').innerText = '無法讀取';
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限不足：請確認 firestore.rules 已發布", error.message);
+                document.getElementById('detail-title').innerText = '權限設定提示';
+                document.getElementById('detail-content').innerHTML = '<div class="text-center py-12 bg-yellow-50 rounded-lg border border-yellow-200"><i class="fa-solid fa-lock text-3xl text-accent mb-4"></i><p class="text-yellow-800">您目前的雲端資料庫尚未開放讀取權限。<br>請管理員先至終端機執行 <code>firebase deploy --only firestore:rules</code> 才能看到文章內容喔！</p></div>';
+            } else {
+                console.warn(error);
+                document.getElementById('detail-title').innerText = '無法讀取';
+            }
         }
     };
 
@@ -1686,14 +1934,19 @@
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 💡 判斷原圖是否為 PNG，如果是 PNG 則保留 PNG 格式以維持透明背景
+                    const isPng = file.type === 'image/png';
+                    const mimeType = isPng ? 'image/png' : 'image/jpeg';
+                    const newName = isPng ? file.name : file.name.replace(/\.[^/.]+$/, ".jpg");
+
                     canvas.toBlob((blob) => {
                         if (blob) {
-                            const newName = file.name.replace(/\.[^/.]+$/, ".jpg");
-                            resolve(new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() }));
+                            resolve(new File([blob], newName, { type: mimeType, lastModified: Date.now() }));
                         } else {
                             resolve(file);
                         }
-                    }, 'image/jpeg', quality);
+                    }, mimeType, quality);
                 };
                 img.onerror = () => resolve(file);
             };
@@ -1701,271 +1954,55 @@
         });
     };
 
-    window.generateAIContent = async () => {
-        const btn = document.getElementById('btn-ai-generate');
-        const style = document.getElementById('ai-style').value;
-        const audience = document.getElementById('ai-audience').value;
-        const prompt = document.getElementById('ai-prompt').value;
-
-        if (!prompt) {
-            showToast('請先輸入想要撰寫的主題或大綱喔！', 'warning');
-            return;
-        }
-
-        // 按鈕鎖定，並提示正在生成
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 魔法施展中 (約需幾秒鐘)...';
-
-        try {
-            const { functions } = window.AppState;
-            const { httpsCallable } = window.FunctionsAPI;
-            const aiAssistantFunction = httpsCallable(functions, 'aiAssistant');
-
-            // 呼叫雲端函式
-            const result = await aiAssistantFunction({ style, audience, prompt });
-            const htmlContent = result.data.html;
-
-            // 將生成的 HTML 直接插入到 Quill 編輯器的游標位置
-            if (window.quillEditor) {
-                // 取得目前游標位置，若無游標則插在最前面
-                let range = window.quillEditor.getSelection();
-                let insertIndex = range ? range.index : 0;
-                
-                window.quillEditor.clipboard.dangerouslyPasteHTML(insertIndex, htmlContent);
-                
-                // 將游標移到剛插入的內容後面，方便繼續編輯
-                window.quillEditor.setSelection(window.quillEditor.getLength(), 0);
-                showToast('✨ AI 內容已成功插入！', 'success');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('AI 生成失敗：' + err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 讓 AI 生成內容並插入編輯器';
-        }
-    };
-
-    window.loadCategories = async (targetElementId, mode = 'admin', selectedValue = null) => {
-        let categories = ["Vibe Coding", "架構設計", "AI 應用"]; // 預設防呆分類
+    window.handleFileSelect = (event) => {
+        const files = Array.from(event.target.files);
+        if (!window.AppState.leadFiles) window.AppState.leadFiles = [];
         
-        try {
-            const { db } = window.AppState;
-            const { doc, getDoc } = window.FS;
-            const docSnap = await getDoc(doc(db, "settings", "categories"));
-            
-            if (docSnap.exists() && docSnap.data().list) {
-                categories = docSnap.data().list;
-            }
-        } catch (error) {
-            if (error.code === 'permission-denied') {
-                console.warn("⚠️ 權限不足：無法從資料庫讀取分類設定，將暫時使用預設分類。若要修復此問題，請確定已將 firestore.rules 部署到您的 Firebase 專案。");
-            } else {
-                console.error("載入分類失敗:", error);
-            }
-        }
-
-        const targetEl = document.getElementById(targetElementId);
-        if (!targetEl) return;
-
-        if (mode === 'select') {
-            let html = '';
-            categories.forEach(cat => {
-                const selected = cat === selectedValue ? 'selected' : '';
-                html += `<option value="${cat}" ${selected}>${cat}</option>`;
-            });
-            targetEl.innerHTML = html;
-        } else if (mode === 'filters') {
-            let html = `<button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-4 py-1.5 ${window.AppState.currentCategory === '全部' || !window.AppState.currentCategory ? 'bg-primary text-white' : 'bg-bg text-textSub hover:bg-gray-200'} text-sm font-medium rounded-full whitespace-nowrap transition">全部</button>`;
-            categories.forEach(cat => {
-                const isSelected = window.AppState.currentCategory === cat;
-                const activeClass = isSelected ? 'bg-primary text-white' : 'bg-bg text-textSub hover:bg-gray-200';
-                html += `<button onclick="window.filterArticles('${cat}')" data-cat="${cat}" class="cat-btn px-4 py-1.5 ${activeClass} text-sm font-medium rounded-full whitespace-nowrap transition">${cat}</button>`;
-            });
-            targetEl.innerHTML = html;
-        } else {
-            let html = '';
-            categories.forEach(cat => {
-                html += `
-                    <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded">
-                        <span class="text-sm font-medium text-gray-700">${cat}</span>
-                        <div class="flex items-center gap-4">
-                            <button onclick="window.editCategory('${cat}')" class="text-cta hover:text-blue-800 transition" title="修改分類名稱"><i class="fa-solid fa-pen text-sm"></i></button>
-                            <button onclick="window.deleteCategory('${cat}')" class="text-red-500 hover:text-red-700 transition" title="刪除分類"><i class="fa-solid fa-trash-can text-sm"></i></button>
-                        </div>
-                    </div>
-                `;
-            });
-            targetEl.innerHTML = html;
-        }
-    };
-
-    window.showModal = (type, title, message, defaultValue = '', onConfirm) => {
-        // 先移除可能殘留的彈窗
-        const existingModal = document.getElementById('custom-modal');
-        if (existingModal) existingModal.remove();
-
-        const isPrompt = type === 'prompt';
-        const inputHtml = isPrompt ? `<input type="text" id="modal-input" class="w-full px-4 py-2 mt-4 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm" value="${defaultValue}">` : '';
-
-        // 建立彈窗的 HTML 結構
-        const modalHtml = `
-            <div id="custom-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
-                <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-                    <h3 class="text-xl font-bold text-primary mb-2">${title}</h3>
-                    <p class="text-sm text-gray-600">${message}</p>
-                    ${inputHtml}
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button id="modal-cancel" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition">取消</button>
-                        <button id="modal-confirm" class="px-4 py-2 text-sm font-medium text-white bg-cta hover:bg-blue-700 rounded transition shadow-sm">確認</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // 插入到畫面中
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        const modalEl = document.getElementById('custom-modal');
-        const inputEl = document.getElementById('modal-input');
-        
-        // 如果是輸入框模式，自動聚焦並選取文字方便修改
-        if (isPrompt && inputEl) {
-            inputEl.focus();
-            inputEl.select();
-        }
-
-        // 綁定關閉事件
-        const closeModal = () => modalEl.remove();
-
-        document.getElementById('modal-cancel').onclick = closeModal;
-        document.getElementById('modal-confirm').onclick = () => {
-            const result = isPrompt ? inputEl.value : true;
-            if (isPrompt && (!result || result.trim() === '')) {
-                showToast('請輸入有效名稱', 'warning');
+        files.forEach(file => {
+            if (file.size > 5 * 1024 * 1024) {
+                showToast(`檔案 ${file.name} 超過 5MB 上限，已略過。`, "warning");
                 return;
             }
-            closeModal();
-            if (onConfirm) onConfirm(isPrompt ? result.trim() : true);
-        };
-    };
-
-    window.editCategory = (oldCat) => {
-        window.showModal('prompt', '修改分類', `請輸入「${oldCat}」的新名稱：`, oldCat, async (newCatTrimmed) => {
-            if (newCatTrimmed === oldCat) return;
-            
-            showToast("分類更新中，並同步修改相關文章，請稍候...", "info");
-
-            try {
-                const { db } = window.AppState;
-                const { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } = window.FS;
-                const catRef = doc(db, "settings", "categories");
-                const docSnap = await getDoc(catRef);
-                
-                let categories = [];
-                if (docSnap.exists() && docSnap.data().list) {
-                    categories = docSnap.data().list;
-                }
-
-                if (categories.includes(newCatTrimmed)) {
-                    showToast("此分類名稱已經存在囉！", "warning");
-                    return;
-                }
-
-                // 1. 更新全域分類陣列中的名稱
-                const index = categories.indexOf(oldCat);
-                if (index !== -1) {
-                    categories[index] = newCatTrimmed;
-                    await setDoc(catRef, { list: categories });
-                }
-
-                // 2. 批次更新 (Batch) 找出所有掛著「舊分類」的文章，改為「新分類」
-                const q = query(collection(db, "articles"), where("category", "==", oldCat));
-                const querySnapshot = await getDocs(q);
-                
-                if (!querySnapshot.empty) {
-                    const batch = writeBatch(db);
-                    querySnapshot.forEach((articleDoc) => {
-                        batch.update(articleDoc.ref, { category: newCatTrimmed });
-                    });
-                    await batch.commit();
-                }
-
-                showToast(`分類已成功修改為「${newCatTrimmed}」！`, "success");
-                await window.loadCategories('settings-categories-list', 'admin');
-            } catch (error) {
-                console.error(error);
-                showToast("修改分類失敗，請確認資料庫連線", "error");
-            }
+            window.AppState.leadFiles.push(file);
         });
+        
+        // 選完後清空 input 的 value，這樣下次選同一個檔案才能再次觸發 onchange
+        event.target.value = '';
+        window.renderLeadFileList();
     };
 
-    window.createCategory = async () => {
-        const input = document.getElementById('new-category-input');
-        const btn = document.getElementById('btn-add-category');
-        const newCat = input.value.trim();
+    window.removeLeadFile = (index) => {
+        if (!window.AppState.leadFiles) return;
+        window.AppState.leadFiles.splice(index, 1);
+        window.renderLeadFileList();
+    };
+
+    window.renderLeadFileList = () => {
+        const listEl = document.getElementById('lead-file-list');
+        if (!listEl) return;
         
-        if (!newCat) {
-            showToast("請輸入分類名稱", "warning");
+        if (!window.AppState.leadFiles || window.AppState.leadFiles.length === 0) {
+            listEl.innerHTML = '';
             return;
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-        try {
-            const { db } = window.AppState;
-            const { doc, getDoc, setDoc } = window.FS;
-            const catRef = doc(db, "settings", "categories");
-            const docSnap = await getDoc(catRef);
-            
-            let categories = [];
-            if (docSnap.exists() && docSnap.data().list) {
-                categories = docSnap.data().list;
-            }
-
-            if (categories.includes(newCat)) {
-                showToast("此分類已存在！", "warning");
-            } else {
-                categories.push(newCat);
-                await setDoc(catRef, { list: categories });
-                showToast("分類新增成功！", "success");
-                input.value = '';
-                await window.loadCategories('settings-categories-list', 'admin');
-            }
-        } catch (error) {
-            showToast("新增分類失敗", "error");
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-plus"></i> 新增';
-        }
-    };
-
-    window.deleteCategory = (catToDelete) => {
-        window.showModal('confirm', '刪除分類', `確定要刪除「${catToDelete}」嗎？<br><span class="text-xs text-gray-500">注意：這不會刪除該分類下的文章，但文章將會失去此分類。</span>`, '', async () => {
-            try {
-                const { db } = window.AppState;
-                const { doc, getDoc, setDoc } = window.FS;
-                const catRef = doc(db, "settings", "categories");
-                const docSnap = await getDoc(catRef);
-                
-                let categories = ["Vibe Coding", "架構設計", "AI 應用"];
-                if (docSnap.exists() && docSnap.data().list) {
-                    categories = docSnap.data().list;
-                }
-                
-                categories = categories.filter(c => c !== catToDelete);
-                await setDoc(catRef, { list: categories });
-                showToast("分類已刪除！", "success");
-                await window.loadCategories('settings-categories-list', 'admin');
-            } catch (error) {
-                if (error.code === 'permission-denied') {
-                    showToast("權限不足：無法刪除分類，請部署 firestore.rules", "error");
-                } else {
-                    showToast("刪除分類失敗", "error");
-                }
-            }
+        let html = '';
+        window.AppState.leadFiles.forEach((file, index) => {
+            const sizeKB = (file.size / 1024).toFixed(1);
+            html += `
+                <li class="flex items-center justify-between bg-gray-50 border border-gray-200 px-3 py-2 rounded">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <i class="fa-solid fa-file-lines text-gray-400"></i>
+                        <span class="text-sm text-gray-700 truncate">${file.name}</span>
+                        <span class="text-xs text-gray-400">(${sizeKB} KB)</span>
+                    </div>
+                    <button type="button" onclick="window.removeLeadFile(${index})" class="text-red-400 hover:text-red-600 transition flex-shrink-0 ml-2" title="移除此檔案">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </li>
+            `;
         });
+        listEl.innerHTML = html;
     };
 
     window.submitContactForm = async (event) => {
@@ -1979,38 +2016,62 @@
         const company = document.getElementById('lead-company').value;
         const type = document.getElementById('lead-type').value;
         const message = document.getElementById('lead-message').value;
-        const fileInput = document.getElementById('lead-file');
-        let file = fileInput.files[0];
 
         try {
             const { db, storage } = window.AppState;
-            const { collection, addDoc, updateDoc, doc, serverTimestamp } = window.FS;
+            const { collection, addDoc, serverTimestamp } = window.FS;
             const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
 
+            let uploadedAttachments = [];
+            const filesToUpload = window.AppState.leadFiles || [];
+
+            // 1. 如果有選擇檔案，開始逐一處理上傳
+            if (filesToUpload.length > 0) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 處理附件中...';
+                
+                for (let i = 0; i < filesToUpload.length; i++) {
+                    let file = filesToUpload[i];
+                    
+                    // 如果是圖片就先進行無損壓縮
+                    if (file.type.startsWith('image/')) {
+                        file = await window.compressImage(file);
+                    }
+                    
+                    // 將檔案傳到 Firebase Storage
+                    const fileRef = ref(storage, `leads/attachments/${Date.now()}_${file.name}`);
+                    await uploadBytes(fileRef, file);
+                    const fileUrl = await getDownloadURL(fileRef);
+                    
+                    // 將檔案資訊存入陣列
+                    uploadedAttachments.push({
+                        name: file.name,
+                        url: fileUrl,
+                        type: file.type
+                    });
+                }
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出表單中...';
+            
+            // 2. 將包含附件陣列的表單資訊一次性寫入 Firestore
             const leadData = {
                 name, email, company, type, message,
                 status: 'new',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                attachments: uploadedAttachments
             };
-            const docRef = await addDoc(collection(db, "leads"), leadData);
 
-            if (file) {
-                if (file.type.startsWith('image/')) {
-                    btn.innerHTML = '<i class="fa-solid fa-compress"></i> 壓縮圖片中...';
-                    file = await window.compressImage(file);
-                }
-                if (file.size > 5 * 1024 * 1024) throw new Error("檔案大小超過 5MB");
-                
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳附件中...';
-                const fileRef = ref(storage, `leads/${docRef.id}/attachments/${file.name}`);
-                await uploadBytes(fileRef, file);
-                const fileUrl = await getDownloadURL(fileRef);
-                await updateDoc(doc(db, "leads", docRef.id), { attachmentUrl: fileUrl, fileName: file.name });
-            }
+            await addDoc(collection(db, "leads"), leadData);
 
             showToast("感謝您的來信！我們將盡快與您聯繫。", "success");
+            
+            // 3. 重設表單與清單
             document.getElementById('contact-form').reset();
+            window.AppState.leadFiles = [];
+            window.renderLeadFileList();
+
         } catch (error) {
+            console.error("Submit Error:", error);
             showToast("送出失敗：" + error.message, "error");
         } finally {
             btn.disabled = false;
@@ -2064,14 +2125,32 @@
         const lead = window.AppState.loadedLeads[id];
         if (!lead) return;
         const content = document.getElementById('lead-modal-content');
-        let attachmentHtml = lead.attachmentUrl ? `
-            <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded">
-                <span class="text-sm text-gray-500 block mb-1">夾帶附件：</span>
-                <a href="${lead.attachmentUrl}" target="_blank" class="text-cta hover:underline text-sm font-medium flex items-center gap-1">
-                    <i class="fa-solid fa-paperclip"></i> ${lead.fileName || '開啟檔案'}
+        
+        // 判斷是新版多檔案陣列，還是舊版單一檔案，向下相容
+        let attachmentHtml = '';
+        if (lead.attachments && lead.attachments.length > 0) {
+            let links = lead.attachments.map(att => `
+                <a href="${att.url}" target="_blank" class="text-cta hover:underline text-sm font-medium flex items-center gap-2 bg-white px-3 py-2 border border-gray-200 rounded-lg shadow-sm transition hover:bg-gray-50">
+                    <i class="fa-solid fa-paperclip text-gray-400"></i> <span class="truncate max-w-[200px]">${att.name}</span>
                 </a>
-            </div>
-        ` : '';
+            `).join('');
+            
+            attachmentHtml = `
+                <div class="mt-6 p-5 bg-gray-50 border border-gray-100 rounded-xl">
+                    <span class="text-sm font-bold text-gray-700 block mb-3">夾帶附件 (${lead.attachments.length} 個檔案)：</span>
+                    <div class="flex flex-wrap gap-3">${links}</div>
+                </div>
+            `;
+        } else if (lead.attachmentUrl) {
+            attachmentHtml = `
+                <div class="mt-6 p-5 bg-gray-50 border border-gray-100 rounded-xl">
+                    <span class="text-sm font-bold text-gray-700 block mb-3">夾帶附件：</span>
+                    <a href="${lead.attachmentUrl}" target="_blank" class="text-cta hover:underline text-sm font-medium flex items-center gap-2 bg-white px-3 py-2 border border-gray-200 rounded-lg shadow-sm transition hover:bg-gray-50 w-fit">
+                        <i class="fa-solid fa-paperclip text-gray-400"></i> <span class="truncate max-w-[200px]">${lead.fileName || '開啟檔案'}</span>
+                    </a>
+                </div>
+            `;
+        }
 
         content.innerHTML = `
             <div class="grid grid-cols-2 gap-4 border-b border-gray-100 pb-4">
@@ -2080,9 +2159,9 @@
                 <div><span class="text-xs text-gray-400 block">公司</span><span>${lead.company || '無'}</span></div>
                 <div><span class="text-xs text-gray-400 block">需求類型</span><span class="px-2 py-1 bg-blue-50 text-cta rounded text-xs font-medium">${lead.type}</span></div>
             </div>
-            <div class="pt-2">
+            <div class="pt-4">
                 <span class="text-xs text-gray-400 block mb-2">詳細說明</span>
-                <p class="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 p-4 rounded border border-gray-100">${lead.message}</p>
+                <p class="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 p-5 rounded-xl border border-gray-100 leading-relaxed">${lead.message}</p>
             </div>
             ${attachmentHtml}
         `;
@@ -2173,6 +2252,10 @@
                 if (data.profileImageUrl) {
                     document.getElementById('settings-preview-img').src = data.profileImageUrl;
                 }
+                if (data.siteLogoUrl) {
+                    const logoPreview = document.getElementById('settings-logo-preview');
+                    if (logoPreview) logoPreview.src = data.siteLogoUrl;
+                }
             }
         } catch (error) {
             // 將 console.error 改為 console.warn，避免觸發系統中斷警告
@@ -2197,8 +2280,11 @@
 
         const heroTitle = document.getElementById('settings-hero-title').value;
         const heroBio = document.getElementById('settings-hero-bio').value;
-        const fileInput = document.getElementById('settings-profile-img');
-        let file = fileInput.files[0];
+        const profileInput = document.getElementById('settings-profile-img');
+        const logoInput = document.getElementById('settings-site-logo');
+        
+        let profileFile = profileInput.files[0];
+        let logoFile = logoInput?.files[0];
 
         try {
             const { db, storage } = window.AppState;
@@ -2206,37 +2292,180 @@
             const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
 
             let profileImageUrl = document.getElementById('settings-preview-img').src;
+            let siteLogoUrl = document.getElementById('settings-logo-preview')?.src;
+            
+            // 防呆：如果是預設的空圖片或網址，則設為 null 避免覆寫髒資料
+            if (!logoFile && (!siteLogoUrl || siteLogoUrl.includes(window.location.host) || siteLogoUrl.includes('placehold.co') || siteLogoUrl === window.location.href)) {
+                siteLogoUrl = null;
+            }
 
-            // 如果有上傳新圖片，進行壓縮與上傳
-            if (file) {
-                if (file.type.startsWith('image/')) {
-                    btn.innerHTML = '<i class="fa-solid fa-compress"></i> 壓縮圖片中...';
-                    file = await window.compressImage(file, 800, 800, 0.85); // 壓縮為 800x800 正方形
+            // 1. 上傳 LOGO
+            if (logoFile) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳 LOGO...';
+                if (logoFile.type.startsWith('image/')) {
+                    logoFile = await window.compressImage(logoFile, 600, 200, 0.9); // Logo 不需太大
                 }
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳圖片中...';
+                const logoRef = ref(storage, `site/settings/logo_${Date.now()}.png`);
+                await uploadBytes(logoRef, logoFile);
+                siteLogoUrl = await getDownloadURL(logoRef);
+            }
+
+            // 2. 上傳大頭貼
+            if (profileFile) {
+                btn.innerHTML = '<i class="fa-solid fa-compress"></i> 壓縮圖片中...';
+                if (profileFile.type.startsWith('image/')) {
+                    profileFile = await window.compressImage(profileFile, 800, 800, 0.85);
+                }
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳大頭貼...';
                 const fileRef = ref(storage, `site/settings/profile_${Date.now()}.jpg`);
-                await uploadBytes(fileRef, file);
+                await uploadBytes(fileRef, profileFile);
                 profileImageUrl = await getDownloadURL(fileRef);
                 document.getElementById('settings-preview-img').src = profileImageUrl;
             }
 
             btn.innerHTML = '<i class="fa-solid fa-database"></i> 更新資料庫...';
-            // 將設定寫入 Firestore
-            await setDoc(doc(db, "settings", "global"), {
+            
+            const updateData = {
                 heroTitle,
                 heroBio,
                 profileImageUrl,
                 updatedAt: serverTimestamp()
-            }, { merge: true });
+            };
+            
+            if (siteLogoUrl) {
+                updateData.siteLogoUrl = siteLogoUrl;
+            }
+
+            await setDoc(doc(db, "settings", "global"), updateData, { merge: true });
 
             showToast("網站設定儲存成功！回首頁即可看到變化。", "success");
-            fileInput.value = ''; // 清空選擇檔案狀態
+            
+            window.applyGlobalSiteSettings(); // 儲存後立即更新畫面的 LOGO
+            
+            profileInput.value = ''; 
+            if (logoInput) logoInput.value = '';
+            
         } catch (error) {
             showToast("儲存失敗：" + error.message, "error");
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 儲存所有設定';
         }
+    };
+
+    // --- 新增：電子報訂閱邏輯 ---
+    window.subscribeNewsletter = async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const input = form.querySelector('input[type="email"]');
+        const btn = form.querySelector('button[type="submit"]');
+        const email = input.value.trim().toLowerCase();
+        
+        if (!email) return;
+        
+        const originalBtnText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        try {
+            const { db } = window.AppState;
+            const { collection, addDoc, serverTimestamp } = window.FS;
+            const subscribersRef = collection(db, "subscribers");
+            
+            // 💡 安全機制修正：移除「讀取資料庫檢查是否重複」的動作。
+            // 訪客現在是「盲寫入」(Append-only)，完全符合最嚴格的安全規則！
+            await addDoc(subscribersRef, {
+                email: email,
+                subscribedAt: serverTimestamp(),
+                status: 'active',
+                source: window.location.hash || 'home'
+            });
+
+            showToast("🎉 訂閱成功！歡迎加入 TONY STUDIO。", "success");
+            input.value = '';
+        } catch (error) {
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限不足：無法寫入訂閱資料", error.message);
+                showToast("測試環境提醒：請先在終端機發布 Firebase 安全規則 (firestore.rules) 才能送出訂閱喔！", "warning");
+            } else {
+                console.warn("訂閱錯誤：", error);
+                showToast("訂閱失敗，請稍後再試", "error");
+            }
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalBtnText;
+        }
+    };
+
+    window.loadAdminDashboard = async () => {
+        const tbody = document.getElementById('admin-subscribers-list');
+        if (!tbody) return;
+
+        try {
+            const { db } = window.AppState;
+            const { collection, getDocs, query, orderBy, limit } = window.FS;
+            
+            // 抓取最新 100 筆訂閱名單
+            const subQuery = query(collection(db, "subscribers"), orderBy("subscribedAt", "desc"), limit(100));
+            const snap = await getDocs(subQuery);
+            
+            if (snap.empty) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-500">目前還沒有人訂閱喔。趕快分享您的網站吧！</td></tr>';
+                return;
+            }
+
+            let html = '';
+            window.AppState.allSubscribers = []; // 存起來供匯出功能使用
+            
+            snap.forEach(doc => {
+                const data = doc.data();
+                window.AppState.allSubscribers.push(data);
+                const dateStr = data.subscribedAt ? new Date(data.subscribedAt.seconds * 1000).toLocaleString() : '剛訂閱';
+                html += `
+                    <tr class="hover:bg-gray-50 transition bg-white">
+                        <td class="px-6 py-3 text-sm text-gray-500">${dateStr}</td>
+                        <td class="px-6 py-3 text-sm font-bold text-gray-800">${data.email}</td>
+                        <td class="px-6 py-3 text-sm text-gray-400">${data.source || '首頁'}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        } catch (error) {
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限警告：無法載入訂閱名單，因為 Firebase 規則尚未在雲端生效。");
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded"><i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i><br><b>權限尚未開通</b><br>請在終端機執行 <code>firebase deploy --only firestore:rules</code> 更新安全規則，<br>重新整理網頁後即可看到名單。</td></tr>';
+            } else {
+                console.error("載入訂閱名單失敗:", error);
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-red-500">無法載入名單，發生未知錯誤。</td></tr>';
+            }
+        }
+    };
+
+    window.exportSubscribers = () => {
+        const subs = window.AppState.allSubscribers;
+        if (!subs || subs.length === 0) {
+            showToast('目前沒有名單可以匯出喔！', 'warning');
+            return;
+        }
+        
+        // 加入 \uFEFF (BOM) 確保 Excel 打開 CSV 時中文不會變亂碼
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+        csvContent += "訂閱時間,Email信箱,來源頁面\n";
+        
+        subs.forEach(row => {
+            const dateStr = row.subscribedAt ? new Date(row.subscribedAt.seconds * 1000).toLocaleString() : '未知';
+            csvContent += `"${dateStr}","${row.email}","${row.source || '首頁'}"\n`;
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `TONY_STUDIO_訂閱名單_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('名單匯出成功！可以打開 Excel 檢視了', 'success');
     };
 
     window.setAskTonyInput = (text) => {
@@ -2358,8 +2587,44 @@
         }
     };
 
+    window.previewImage = (event, imgId) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.getElementById(imgId);
+                if(img) img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    window.applyGlobalSiteSettings = async () => {
+        try {
+            const { db } = window.AppState;
+            const { doc, getDoc } = window.FS;
+            const docSnap = await getDoc(doc(db, "settings", "global"));
+            if (docSnap.exists() && docSnap.data().siteLogoUrl) {
+                const logoUrl = docSnap.data().siteLogoUrl;
+                const navContainer = document.getElementById('nav-logo-container');
+                const footerContainer = document.getElementById('footer-logo-container');
+                if (navContainer) {
+                    navContainer.innerHTML = `<img src="${logoUrl}" class="h-8 w-auto object-contain" alt="LOGO">`;
+                }
+                if (footerContainer) {
+                    footerContainer.innerHTML = `<img src="${logoUrl}" class="h-10 w-auto object-contain brightness-0 invert opacity-90" alt="LOGO">`;
+                }
+            }
+        } catch (e) {
+            console.warn("LOGO 載入受限或無設定");
+        }
+    };
+
     window.addEventListener('hashchange', router);
-    window.addEventListener('load', router);
+    window.addEventListener('load', () => {
+        router();
+        window.applyGlobalSiteSettings(); // 網頁載入時立刻替換全站 LOGO
+    });
 </script>
 
 </body>
