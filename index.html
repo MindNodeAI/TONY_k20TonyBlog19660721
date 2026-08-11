@@ -13,6 +13,9 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Quill.js Rich Text Editor CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -68,6 +71,29 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Quill Editor Styling Fixes for Tailwind */
+        .ql-container {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif !important;
+            font-size: 1rem !important;
+            background-color: #ffffff;
+            border-bottom-left-radius: 0.375rem;
+            border-bottom-right-radius: 0.375rem;
+        }
+        .ql-toolbar {
+            border-top-left-radius: 0.375rem;
+            border-top-right-radius: 0.375rem;
+            background-color: #f8fafc;
+        }
+        .ql-editor {
+            min-height: 300px;
+        }
+        .ql-editor h1 { font-size: 2.25rem; font-weight: bold; margin-bottom: 1rem; }
+        .ql-editor h2 { font-size: 1.875rem; font-weight: bold; margin-bottom: 0.875rem; }
+        .ql-editor h3 { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.75rem; }
+        .ql-editor p { margin-bottom: 1rem; }
+        .ql-editor ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .ql-editor ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -75,9 +101,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInAnonymously, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-    // [新增] 引入 Firebase Functions
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
     // 使用規格書提供的 Firebase Config
@@ -96,27 +121,25 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
-    const functions = getFunctions(app); // 初始化 Functions
-    const googleProvider = new GoogleAuthProvider();
+    const functions = getFunctions(app);
 
     // Global App State
     window.AppState = {
         user: null,
-        role: null, // 新增 role 狀態
+        role: null,
         db: db,
         auth: auth,
         storage: storage,
-        functions: functions, // 將 functions 放入全域狀態
+        functions: functions,
         currentCategory: '全部',
         searchQuery: ''
     };
 
-    // 將 Firestore 操作函式綁定到全域，讓路由與其他 script 可以使用
+    // Global APIs binding
     window.FS = {
-        collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc
+        collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc, writeBatch
     };
 
-    // 將 Storage 與 Functions 操作函式綁定到全域
     window.StorageAPI = {
         ref, uploadBytes, getDownloadURL
     };
@@ -124,7 +147,7 @@
         httpsCallable
     };
 
-    // Make Auth functions globally available for inline event handlers (though we prefer event listeners)
+    // Enhanced Authentication Handlers with clear diagnostic messages
     window.handleEmailRegister = async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
@@ -141,11 +164,12 @@
             window.location.hash = '#/member';
         } catch (error) {
             console.error("Registration failed", error);
-            // 處理常見錯誤
             if (error.code === 'auth/email-already-in-use') {
-                showToast("此信箱已註冊過，請改用登入", "error");
+                showToast("此信箱已註冊過，請直接切換至「登入」分頁", "error");
             } else if (error.code === 'auth/weak-password') {
                 showToast("密碼太弱，至少需要 6 個字元", "warning");
+            } else if (error.code === 'auth/operation-not-allowed') {
+                showToast("錯誤：尚未在 Firebase Console 啟用 Email/Password 登入功能！", "error");
             } else {
                 showToast("註冊失敗：" + error.message, "error");
             }
@@ -168,35 +192,20 @@
             window.location.hash = '#/member';
         } catch (error) {
             console.error("Login failed", error);
-             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                showToast("帳號或密碼錯誤", "error");
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                showToast("帳號或密碼錯誤。若尚未註冊請先點擊「註冊」分頁，或檢查 Firebase 是否已啟用 Email 登入", "error");
+            } else if (error.code === 'auth/operation-not-allowed') {
+                showToast("錯誤：尚未在 Firebase Console 啟用 Email/Password 登入服務！", "error");
             } else {
                 showToast("登入失敗：" + error.message, "error");
             }
         }
     };
 
-    // 保留沙盒登入作為備用
-    window.handleLogin = async () => {
-        try {
-            // 在沙盒環境中，繞過 Google Popup 限制，改用 Custom Token 或匿名登入進行測試
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-            showToast("已透過沙盒測試環境成功登入", "success");
-            window.location.hash = '#/';
-        } catch (error) {
-            console.error("Login failed", error);
-            showToast("登入失敗，請稍後再試。 (" + error.message + ")", "error");
-        }
-    };
-
     window.handleLogout = async () => {
         try {
             await signOut(auth);
-            window.AppState.role = null; // 清除 role
+            window.AppState.role = null;
             showToast("已成功登出", "success");
             window.location.hash = '#/';
         } catch (error) {
@@ -204,7 +213,6 @@
         }
     };
 
-    // 處理登入/註冊分頁切換 (移至全域)
     window.toggleAuthMode = (mode) => {
         const form = document.getElementById('auth-form');
         const btn = document.getElementById('submit-btn');
@@ -216,26 +224,40 @@
         if(mode === 'login') {
             form.onsubmit = window.handleEmailLogin;
             btn.innerText = 'Email 登入';
-            tabLogin.classList.replace('bg-white', 'bg-primary');
-            tabLogin.classList.replace('text-primary', 'text-white');
-            tabRegister.classList.replace('bg-primary', 'bg-white');
-            tabRegister.classList.replace('text-white', 'text-primary');
+            tabLogin.className = 'flex-1 px-4 py-2 text-sm font-medium bg-primary text-white border border-primary rounded-l-md transition';
+            tabRegister.className = 'flex-1 px-4 py-2 text-sm font-medium bg-white text-primary border border-gray-300 rounded-r-md hover:bg-gray-50 transition';
         } else {
             form.onsubmit = window.handleEmailRegister;
             btn.innerText = '註冊新帳號';
-            tabRegister.classList.replace('bg-white', 'bg-primary');
-            tabRegister.classList.replace('text-primary', 'text-white');
-            tabLogin.classList.replace('bg-primary', 'bg-white');
-            tabLogin.classList.replace('text-white', 'text-primary');
+            tabRegister.className = 'flex-1 px-4 py-2 text-sm font-medium bg-primary text-white border border-primary rounded-r-md transition';
+            tabLogin.className = 'flex-1 px-4 py-2 text-sm font-medium bg-white text-primary border border-gray-300 rounded-l-md hover:bg-gray-50 transition';
         }
     };
 
-    // Listen to Auth State
+    window.togglePassword = (inputId, iconId) => {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (!input || !icon) return;
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    };
+
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // 強制刷新 Token 以獲取剛才後端賦予的 Custom Claims (super_admin)
-            const idTokenResult = await user.getIdTokenResult(true);
-            window.AppState.role = idTokenResult.claims.role || 'member';
+            try {
+                const idTokenResult = await user.getIdTokenResult(true);
+                window.AppState.role = idTokenResult.claims.role || 'member';
+            } catch(e) {
+                window.AppState.role = 'member';
+            }
             window.AppState.user = user;
             updateNavbarAuthUI(user, window.AppState.role);
         } else {
@@ -253,7 +275,6 @@
             const displayName = user.displayName || user.email?.split('@')[0] || '會員';
             const avatarUrl = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + displayName.charAt(0).toUpperCase());
             
-            // 如果是管理員，顯示後台入口
             const adminLink = (role === 'super_admin' || role === 'admin') 
                 ? `<a href="#/admin" class="text-xs font-bold text-accent bg-secondary px-2 py-1 rounded hover:bg-primary transition"><i class="fa-solid fa-gauge mr-1"></i>管理後台</a>` 
                 : '';
@@ -265,7 +286,7 @@
                         <img src="${avatarUrl}" alt="Avatar" class="w-8 h-8 rounded-full border border-gray-200">
                         <span class="text-sm font-medium hidden sm:block">${displayName}</span>
                     </a>
-                    <button onclick="window.handleLogout()" class="text-sm text-textSub hover:text-red-600 transition">登出</button>
+                    <button onclick="window.handleLogout()" class="text-sm text-textSub hover:text-red-600 transition">登入管理/登出</button>
                 </div>
             `;
         } else {
@@ -276,11 +297,9 @@
     }
 </script>
 
-<!-- Navigation Bar -->
 <header class="bg-white shadow-sm sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-            <!-- Logo -->
             <div class="flex-shrink-0 flex items-center">
                 <a href="#/" class="flex items-center space-x-2">
                     <div class="w-8 h-8 bg-primary text-accent flex items-center justify-center rounded font-bold text-xl">T</div>
@@ -288,7 +307,6 @@
                 </a>
             </div>
             
-            <!-- Desktop Menu -->
             <nav class="hidden md:flex space-x-8">
                 <a href="#/articles" class="text-textMain hover:text-cta font-medium transition">專欄文章</a>
                 <a href="#/series" class="text-textMain hover:text-cta font-medium transition">主題專題</a>
@@ -298,11 +316,8 @@
                 <a href="#/services" class="text-textMain hover:text-cta font-medium transition">服務與課程</a>
             </nav>
 
-            <!-- Auth/Profile & Mobile Toggle -->
             <div class="flex items-center space-x-4">
-                <div id="nav-auth-container" class="hidden sm:block">
-                    <!-- Dynamic auth state injected here -->
-                </div>
+                <div id="nav-auth-container" class="hidden sm:block"></div>
                 <button class="md:hidden text-textSub hover:text-primary focus:outline-none">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
@@ -311,12 +326,9 @@
     </div>
 </header>
 
-<!-- Main Content Area (Router Outlet) -->
 <main id="app-root" class="flex-grow flex flex-col page-enter">
-    <!-- View content will be injected here -->
 </main>
 
-<!-- Global Toast Notification System -->
 <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
 
 <script>
@@ -335,20 +347,14 @@
         toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span class="text-sm font-medium">${message}</span>`;
         
         container.appendChild(toast);
-        
-        // Trigger reflow for animation
-        setTimeout(() => {
-            toast.classList.remove('translate-y-10', 'opacity-0');
-        }, 10);
-
+        setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
         setTimeout(() => {
             toast.classList.add('opacity-0');
             setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        }, 3500);
     }
 </script>
 
-<!-- Footer -->
 <footer class="bg-primary text-white py-12 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div class="md:col-span-1">
@@ -369,7 +375,7 @@
             <ul class="space-y-2 text-sm text-gray-300">
                 <li><a href="#/articles" class="hover:text-white transition">所有文章</a></li>
                 <li><a href="#/series" class="hover:text-white transition">主題專題</a></li>
-                <li><a href="#/resources" class="hover:text-white transition">下載資源</a></li>
+                <li><a href="#/contact" class="hover:text-white transition">聯絡 TONY</a></li>
             </ul>
         </div>
         
@@ -378,7 +384,6 @@
             <ul class="space-y-2 text-sm text-gray-300">
                 <li><a href="#/services" class="hover:text-white transition">企業培訓 & 顧問</a></li>
                 <li><a href="#/courses" class="hover:text-white transition">公開課程</a></li>
-                <li><a href="#/contact" class="hover:text-white transition">聯絡 TONY</a></li>
             </ul>
         </div>
         
@@ -396,16 +401,14 @@
         <div class="space-x-4 mt-4 md:mt-0">
             <a href="#" class="hover:text-white transition">隱私權政策</a>
             <a href="#" class="hover:text-white transition">服務條款</a>
-            <a href="#" class="hover:text-white transition">AI 聲明</a>
         </div>
     </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script>
-    // --- View Templates ---
     const Views = {
         home: `
-            <!-- Hero Section -->
             <section class="bg-primary text-white py-20 relative overflow-hidden">
                 <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-secondary opacity-50 blur-3xl"></div>
                 <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-cta opacity-30 blur-3xl"></div>
@@ -413,11 +416,11 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col lg:flex-row items-center">
                     <div class="lg:w-3/5 text-left mb-12 lg:mb-0">
                         <span class="inline-block py-1 px-3 rounded-full bg-secondary text-accent text-xs font-bold tracking-wider mb-6">VIBE CODING EXPERT</span>
-                        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+                        <h1 id="home-hero-title" class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
                             技術與商業的交匯點，<br>
                             <span class="text-accent">重塑您的數位護城河</span>
                         </h1>
-                        <p class="text-lg text-gray-300 mb-8 max-w-2xl">
+                        <p id="home-hero-bio" class="text-lg text-gray-300 mb-8 max-w-2xl">
                             我是 TONY，專注於全端開發、AI 知識庫建置與個人品牌營運。在這裡，我將經驗化為可被搜尋、引用與實踐的知識資產。
                         </p>
                         <div class="flex flex-wrap gap-4">
@@ -430,16 +433,14 @@
                         </div>
                     </div>
                     <div class="lg:w-2/5 flex justify-center">
-                        <!-- Placeholder for TONY's Avatar or IP Character -->
                         <div class="w-72 h-72 md:w-96 md:h-96 rounded-full border-4 border-accent/30 p-2 relative">
                             <div class="absolute inset-0 rounded-full border-2 border-dashed border-accent animate-[spin_60s_linear_infinite]"></div>
-                            <img src="https://placehold.co/400x400/163A63/C9A24B?text=TONY+Profile" alt="TONY 老師" class="w-full h-full object-cover rounded-full shadow-2xl">
+                            <img id="home-profile-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY+Profile" alt="TONY 老師" class="w-full h-full object-cover rounded-full shadow-2xl">
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Latest Articles Section (Mockup layout) -->
             <section class="py-16 bg-white">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-end mb-10">
@@ -451,7 +452,6 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <!-- Article Card 1 -->
                         <div class="group bg-bg rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
                             <div class="h-48 bg-gray-200 relative overflow-hidden">
                                 <img src="https://placehold.co/600x400/E2E8F0/64748B?text=Article+Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
@@ -464,11 +464,10 @@
                                 </div>
                                 <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2">如何使用 Gemini Canvas 打造全端個人部落格架構</h3>
                                 <p class="text-sm text-textSub line-clamp-3 mb-4">透過 Vibe Coding 的方式，以模組化的指引與嚴謹的 PRD 規格，讓 AI 成為你的完美 Pair Programmer...</p>
-                                <a href="#/article/vibe-coding-blog" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
+                                <a href="#/articles" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
                             </div>
                         </div>
 
-                         <!-- Article Card 2 -->
                         <div class="group bg-bg rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
                             <div class="h-48 bg-gray-200 relative overflow-hidden">
                                 <img src="https://placehold.co/600x400/E2E8F0/64748B?text=Article+Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
@@ -481,11 +480,10 @@
                                 </div>
                                 <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2">企業 AI 轉型：從 RAG 知識庫開始的第一步</h3>
                                 <p class="text-sm text-textSub line-clamp-3 mb-4">不只是導入工具，而是重新設計知識流動的途徑。本文解析如何利用 Firebase 與 Gemini Embedding 建置專屬知識庫。</p>
-                                <a href="#/article/enterprise-ai-rag" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
+                                <a href="#/articles" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
                             </div>
                         </div>
 
-                         <!-- Article Card 3 -->
                         <div class="group bg-bg rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
                             <div class="h-48 bg-gray-200 relative overflow-hidden">
                                 <img src="https://placehold.co/600x400/E2E8F0/64748B?text=Article+Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
@@ -498,44 +496,8 @@
                                 </div>
                                 <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2">Serverless 全端架構安全實務：App Check 與 Rules 雙重防護</h3>
                                 <p class="text-sm text-textSub line-clamp-3 mb-4">前端按鈕隱藏不等於安全，深入探討 Firestore Security Rules 與 Custom Claims 的權限矩陣設計...</p>
-                                <a href="#/article/serverless-security" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
+                                <a href="#/articles" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Services Preview -->
-            <section class="py-16 bg-bg border-t border-gray-200">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 class="text-3xl font-bold text-primary mb-4">專業服務與合作</h2>
-                    <p class="text-textSub max-w-2xl mx-auto mb-12">針對企業與個人提供多維度的技術升級與顧問服務，推動商業轉型。</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center">
-                            <div class="w-16 h-16 bg-blue-50 text-cta rounded-full flex items-center justify-center text-2xl mb-6">
-                                <i class="fa-solid fa-chalkboard-user"></i>
-                            </div>
-                            <h3 class="text-xl font-bold mb-3">企業培訓與演講</h3>
-                            <p class="text-sm text-textSub mb-6 flex-grow">量身打造 AI 應用、Vibe Coding 與敏捷開發培訓，提升團隊技術能量。</p>
-                            <a href="#/services" class="text-cta font-medium hover:underline">了解詳情</a>
-                        </div>
-                        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-accent text-primary text-xs font-bold px-3 py-1 rounded-bl">熱門</div>
-                            <div class="w-16 h-16 bg-blue-50 text-cta rounded-full flex items-center justify-center text-2xl mb-6">
-                                <i class="fa-solid fa-code-merge"></i>
-                            </div>
-                            <h3 class="text-xl font-bold mb-3">AI 轉型與架構顧問</h3>
-                            <p class="text-sm text-textSub mb-6 flex-grow">協助企業評估導入 LLM 方案，規劃 RAG 知識庫與自動化工作流架構。</p>
-                            <a href="#/services" class="text-cta font-medium hover:underline">了解詳情</a>
-                        </div>
-                        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center">
-                            <div class="w-16 h-16 bg-blue-50 text-cta rounded-full flex items-center justify-center text-2xl mb-6">
-                                <i class="fa-solid fa-book-open-reader"></i>
-                            </div>
-                            <h3 class="text-xl font-bold mb-3">線上課程與資源</h3>
-                            <p class="text-sm text-textSub mb-6 flex-grow">完整系統化的實戰課程、任務包與檢核表，提供給持續成長的開發者。</p>
-                            <a href="#/courses" class="text-cta font-medium hover:underline">瀏覽課程</a>
                         </div>
                     </div>
                 </div>
@@ -548,21 +510,16 @@
             </div>
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 pb-20">
                 <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-6 md:p-8 min-h-[500px]">
-                    <!-- Filters & Search Bar (UI Mock) -->
                     <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-gray-100 pb-6">
-                        <div class="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-                            <button class="px-4 py-1.5 bg-primary text-white text-sm font-medium rounded-full whitespace-nowrap">全部</button>
-                            <button class="px-4 py-1.5 bg-bg text-textSub hover:bg-gray-200 text-sm font-medium rounded-full whitespace-nowrap transition">Vibe Coding</button>
-                            <button class="px-4 py-1.5 bg-bg text-textSub hover:bg-gray-200 text-sm font-medium rounded-full whitespace-nowrap transition">架構設計</button>
-                            <button class="px-4 py-1.5 bg-bg text-textSub hover:bg-gray-200 text-sm font-medium rounded-full whitespace-nowrap transition">AI 應用</button>
+                        <div id="articles-category-filters" class="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                            <button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-4 py-1.5 bg-primary text-white text-sm font-medium rounded-full whitespace-nowrap transition">全部</button>
                         </div>
                         <div class="relative w-full md:w-64">
-                            <input type="text" placeholder="搜尋文章..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-cta">
+                            <input type="text" oninput="window.searchArticles(event)" placeholder="搜尋文章..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-cta">
                             <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400"></i>
                         </div>
                     </div>
                     
-                    <!-- Content Area -->
                     <div id="articles-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div class="col-span-full py-12 text-center text-textSub">
                             <i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i>
@@ -619,7 +576,6 @@
                     <p class="text-textSub max-w-2xl mx-auto mb-16">我們提供針對企業轉型與個人技術提升的多元方案。</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <!-- Service 1 -->
                         <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center">
                             <div class="w-20 h-20 bg-blue-50 text-cta rounded-full flex items-center justify-center text-3xl mb-6">
                                 <i class="fa-solid fa-chalkboard-user"></i>
@@ -629,7 +585,6 @@
                             <a href="#/contact" class="w-full block py-3 bg-secondary text-white font-medium rounded hover:bg-primary transition shadow-sm">索取報價與大綱</a>
                         </div>
                         
-                        <!-- Service 2 -->
                         <div class="bg-white p-8 rounded-xl shadow-lg border-2 border-accent relative flex flex-col items-center transform md:-translate-y-4">
                             <div class="absolute top-0 right-0 bg-accent text-primary text-xs font-bold px-4 py-1 rounded-bl-lg">熱門諮詢</div>
                             <div class="w-20 h-20 bg-yellow-50 text-accent rounded-full flex items-center justify-center text-3xl mb-6">
@@ -640,7 +595,6 @@
                             <a href="#/contact" class="w-full block py-3 bg-cta text-white font-medium rounded hover:bg-blue-700 transition shadow-md">預約免費諮詢</a>
                         </div>
                         
-                        <!-- Service 3 -->
                         <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center">
                             <div class="w-20 h-20 bg-gray-50 text-textSub rounded-full flex items-center justify-center text-3xl mb-6">
                                 <i class="fa-solid fa-book-open-reader"></i>
@@ -653,61 +607,23 @@
                 </div>
             </div>
         `,
-        about: `
-            <div class="bg-bg min-h-screen py-20">
-                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div class="h-64 bg-primary relative">
-                             <div class="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTIwIDIwTDAgMEg0MEwyMCAyMHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjA1IiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=')]"></div>
-                        </div>
-                        <div class="px-8 pb-12 relative">
-                            <img src="https://placehold.co/200x200/163A63/C9A24B?text=TONY" alt="TONY" class="w-32 h-32 rounded-full border-4 border-white shadow-xl absolute -top-16">
-                            
-                            <div class="mt-20">
-                                <h1 class="text-3xl font-bold text-primary mb-2">關於 TONY 老師</h1>
-                                <p class="text-accent font-bold mb-6">全端架構師 / Vibe Coding 專家 / 企業顧問</p>
-                                
-                                <div class="prose prose-lg text-textMain leading-loose max-w-none">
-                                    <p>您好，我是 TONY。致力於在快速變動的技術浪潮中，尋找最優雅、高效的解決方案。</p>
-                                    <p>擁有多年全端開發與架構設計經驗，近年專注於 <strong>AI 應用導入 (RAG)</strong> 與 <strong>Vibe Coding 開發模式</strong> 的研究與實踐。我相信未來的軟體開發，將會是人類的創意與 AI 算力的完美結合。</p>
-                                    
-                                    <h3 class="text-xl font-bold text-primary mt-8 mb-4 border-b pb-2">核心專長</h3>
-                                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 list-disc pl-5">
-                                        <li>Serverless 架構設計 (Firebase, GCP)</li>
-                                        <li>前端框架與生態系 (React, Vue)</li>
-                                        <li>AI 知識庫與 RAG 系統建置</li>
-                                        <li>Vibe Coding 流程導入與培訓</li>
-                                    </ul>
-                                </div>
-                                
-                                <div class="mt-12 pt-8 border-t border-gray-200 flex gap-4">
-                                    <a href="#/contact" class="px-6 py-2 bg-cta text-white rounded font-medium hover:bg-blue-700 transition shadow">聯絡洽詢</a>
-                                    <a href="#/articles" class="px-6 py-2 bg-gray-100 text-gray-700 rounded font-medium hover:bg-gray-200 transition">閱讀專欄</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `,
         login: `
             <div class="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-bg">
                 <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
                     <div>
                         <div class="mx-auto h-12 w-12 bg-primary text-accent flex items-center justify-center rounded-lg font-bold text-2xl shadow-sm">T</div>
-                        <h2 class="mt-6 text-center text-2xl font-extrabold text-primary">登入 TONY STUDIO</h2>
+                        <h2 class="mt-6 text-center text-2xl font-extrabold text-primary">會員身分驗證</h2>
                         <p class="mt-2 text-center text-sm text-textSub">
-                            加入會員，解鎖收藏、AI 問答與專屬資源
+                            請使用 Email 登入或註冊 TONY STUDIO
                         </p>
                     </div>
                     
                     <div class="mt-8 space-y-6">
-                        
                         <div class="flex rounded-md shadow-sm" role="group">
-                          <button type="button" id="tab-login" onclick="window.toggleAuthMode('login')" class="flex-1 px-4 py-2 text-sm font-medium bg-primary text-white border border-primary rounded-l-md hover:bg-secondary focus:z-10 focus:ring-2 focus:ring-accent transition">
+                          <button type="button" id="tab-login" onclick="window.toggleAuthMode('login')" class="flex-1 px-4 py-2 text-sm font-medium bg-primary text-white border border-primary rounded-l-md transition">
                             登入
                           </button>
-                          <button type="button" id="tab-register" onclick="window.toggleAuthMode('register')" class="flex-1 px-4 py-2 text-sm font-medium bg-white text-primary border border-gray-300 rounded-r-md hover:bg-gray-50 focus:z-10 focus:ring-2 focus:ring-accent transition">
+                          <button type="button" id="tab-register" onclick="window.toggleAuthMode('register')" class="flex-1 px-4 py-2 text-sm font-medium bg-white text-primary border border-gray-300 rounded-r-md hover:bg-gray-50 transition">
                             註冊
                           </button>
                         </div>
@@ -719,40 +635,33 @@
                             </div>
                             <div>
                                 <label for="password" class="sr-only">密碼</label>
-                                <input id="password" name="password" type="password" required class="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-cta focus:border-cta sm:text-sm" placeholder="密碼 (至少 6 個字元)">
+                                <!-- 密碼欄位加入相對定位與眼睛圖示 -->
+                                <div class="relative">
+                                    <input id="password" name="password" type="password" required class="appearance-none rounded block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-cta focus:border-cta sm:text-sm" placeholder="密碼 (至少 6 個字元)">
+                                    <button type="button" onclick="window.togglePassword('password', 'toggle-password-icon')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-primary transition focus:outline-none">
+                                        <i id="toggle-password-icon" class="fa-regular fa-eye text-lg"></i>
+                                    </button>
+                                </div>
                             </div>
                             <button type="submit" id="submit-btn" class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-cta hover:bg-blue-700 transition">
                                 Email 登入
                             </button>
                         </form>
-                        
-                        <div class="relative mt-6">
-                            <div class="absolute inset-0 flex items-center">
-                                <div class="w-full border-t border-gray-300"></div>
-                            </div>
-                            <div class="relative flex justify-center text-sm">
-                                <span class="px-2 bg-white text-gray-500">其他選項</span>
-                            </div>
-                        </div>
-
-                        <!-- 隱藏沙盒登入，因為我們現在已經有真實的 Email 登入了 -->
-                        <button onclick="window.handleLogin()" class="hidden group relative w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none transition mt-4">
-                            沙盒環境匿名登入 (測試專用)
-                        </button>
                     </div>
-                    <p class="text-xs text-center text-gray-400 mt-4">登入/註冊即表示您同意本站的服務條款與隱私權政策。</p>
+                    <div class="mt-4 p-4 bg-blue-50 text-blue-800 text-xs rounded border border-blue-200">
+                        <p class="font-bold mb-1"><i class="fa-solid fa-circle-info mr-1"></i> 首次使用提醒：</p>
+                        若出現帳號錯誤，請先點擊上方右側的「註冊」分頁建立新帳號。並請確認您的 Firebase Console -> Authentication 已啟用「電子郵件/密碼 (Email/Password)」提供者。
+                    </div>
                 </div>
             </div>
         `,
         articleDetail: `
             <div class="bg-bg min-h-screen pb-20">
-                <!-- Article Hero -->
                 <div class="bg-primary text-white py-16">
                     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div class="flex items-center gap-2 mb-6">
                             <span id="detail-category" class="px-3 py-1 bg-secondary text-accent text-xs font-bold rounded-full">載入中...</span>
                             <span id="detail-date" class="text-gray-400 text-sm"><i class="fa-regular fa-calendar mr-1"></i> --</span>
-                            <span id="detail-readtime" class="text-gray-400 text-sm"><i class="fa-regular fa-clock mr-1"></i> --</span>
                         </div>
                         <h1 id="detail-title" class="text-3xl md:text-5xl font-bold leading-tight mb-6">文章載入中...</h1>
                         <div class="flex items-center justify-between">
@@ -775,45 +684,17 @@
                     </div>
                 </div>
 
-                <!-- Article Body -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 flex flex-col lg:flex-row gap-12">
-                    <!-- Main Content -->
                     <div class="lg:w-2/3">
                         <img id="detail-cover" src="https://placehold.co/800x400/E2E8F0/64748B?text=Loading..." class="w-full h-auto rounded-xl shadow-md mb-8 object-cover aspect-video" alt="Cover">
                         
-                        <div class="prose prose-lg max-w-none text-textMain leading-loose" id="detail-content">
-                            <!-- Content injected via JS -->
+                        <div class="prose prose-lg max-w-none text-textMain leading-loose bg-white p-8 rounded-xl shadow-sm border border-gray-100" id="detail-content">
                             <div class="flex justify-center py-12"><i class="fa-solid fa-spinner fa-spin text-3xl text-cta"></i></div>
-                        </div>
-
-                        <!-- Article Footer Actions -->
-                        <div class="mt-12 pt-8 border-t border-gray-200 flex flex-wrap gap-4 items-center justify-between">
-                            <div class="flex gap-2">
-                                <span class="px-3 py-1 bg-gray-100 text-textSub text-sm rounded-full"># 架構設計</span>
-                                <span class="px-3 py-1 bg-gray-100 text-textSub text-sm rounded-full"># 實戰經驗</span>
-                            </div>
-                            <button class="flex items-center gap-2 text-primary hover:text-cta font-medium transition" onclick="showToast('感謝您的評價！', 'success')">
-                                <i class="fa-regular fa-thumbs-up text-xl"></i> 這篇文章有幫助
-                            </button>
                         </div>
                     </div>
 
-                    <!-- Sidebar -->
                     <div class="lg:w-1/3 hidden lg:block">
                         <div class="sticky top-24">
-                            <!-- TOC -->
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
-                                <h4 class="font-bold text-primary mb-4 border-b border-gray-100 pb-2">本篇目錄</h4>
-                                <ul class="space-y-3 text-sm text-textSub" id="detail-toc">
-                                    <li><a href="#" class="hover:text-cta transition">1. 核心概念與痛點</a></li>
-                                    <li><a href="#" class="hover:text-cta transition pl-4">1.1 傳統開發的挑戰</a></li>
-                                    <li><a href="#" class="hover:text-cta transition">2. 解決方案架構</a></li>
-                                    <li><a href="#" class="hover:text-cta transition">3. 實戰演練步驟</a></li>
-                                    <li><a href="#" class="hover:text-cta transition">4. TONY 的架構觀點</a></li>
-                                </ul>
-                            </div>
-
-                            <!-- AI Ask TONY Promo -->
                             <div class="bg-gradient-to-br from-primary to-secondary p-6 rounded-xl shadow-md text-white border border-accent/20">
                                 <div class="flex items-center gap-2 mb-3">
                                     <i class="fa-solid fa-sparkles text-accent"></i>
@@ -831,7 +712,6 @@
         `,
         member: `
             <div class="bg-bg min-h-screen pb-20">
-                <!-- Member Header -->
                 <div class="bg-white border-b border-gray-200 pt-16 pb-8">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center gap-6">
                         <img id="member-avatar" src="" alt="Avatar" class="w-24 h-24 rounded-full border-4 border-gray-100 shadow-sm">
@@ -840,47 +720,16 @@
                             <p id="member-email" class="text-textSub text-sm mb-3">---</p>
                             <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full"><i class="fa-solid fa-check-circle mr-1"></i> 標準會員</span>
                         </div>
-                        <div class="md:ml-auto flex gap-4 mt-4 md:mt-0">
-                            <div class="bg-blue-50 text-cta px-4 py-3 rounded-lg text-center border border-blue-100">
-                                <p class="text-xs font-medium uppercase tracking-wider mb-1">AI 剩餘額度</p>
-                                <p class="text-2xl font-bold">50 <span class="text-sm font-normal">次</span></p>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Member Content -->
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 flex flex-col lg:flex-row gap-8">
-                    <!-- Sidebar Nav -->
-                    <div class="lg:w-1/4">
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
-                            <button class="w-full text-left px-6 py-4 border-b border-gray-100 bg-gray-50 text-primary font-medium border-l-4 border-l-cta flex items-center justify-between">
-                                <span><i class="fa-solid fa-bookmark mr-2 w-5"></i> 我的收藏</span>
-                                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-                            </button>
-                            <button class="w-full text-left px-6 py-4 border-b border-gray-100 hover:bg-gray-50 text-textSub hover:text-primary transition flex items-center justify-between" onclick="showToast('功能建置中', 'info')">
-                                <span><i class="fa-solid fa-clock-rotate-left mr-2 w-5"></i> 閱讀紀錄</span>
-                            </button>
-                            <button class="w-full text-left px-6 py-4 border-b border-gray-100 hover:bg-gray-50 text-textSub hover:text-primary transition flex items-center justify-between" onclick="showToast('功能建置中', 'info')">
-                                <span><i class="fa-solid fa-comments mr-2 w-5"></i> AI 對話紀錄</span>
-                            </button>
-                            <button class="w-full text-left px-6 py-4 hover:bg-gray-50 text-textSub hover:text-primary transition flex items-center justify-between" onclick="showToast('功能建置中', 'info')">
-                                <span><i class="fa-solid fa-gear mr-2 w-5"></i> 帳號設定</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Main Panel (Bookmarks) -->
-                    <div class="lg:w-3/4">
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-                            <h2 class="text-2xl font-bold text-primary mb-6">我的收藏</h2>
-                            
-                            <div id="member-bookmarks-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Bookmarks injected via JS -->
-                                <div class="col-span-full py-12 text-center text-textSub">
-                                    <p>目前還沒有收藏任何文章喔！</p>
-                                    <a href="#/articles" class="inline-block mt-4 text-cta hover:underline">去逛逛專欄文章</a>
-                                </div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+                        <h2 class="text-2xl font-bold text-primary mb-6">我的收藏文章</h2>
+                        <div id="member-bookmarks-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="col-span-full py-12 text-center text-textSub">
+                                <p>目前還沒有收藏任何文章喔！</p>
+                                <a href="#/articles" class="inline-block mt-4 text-cta hover:underline">去逛逛專欄文章</a>
                             </div>
                         </div>
                     </div>
@@ -889,7 +738,6 @@
         `,
         admin: `
             <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
-                <!-- Sidebar -->
                 <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
                     <div class="p-6 border-b border-gray-700">
                         <h2 class="text-xl font-bold flex items-center gap-2 text-accent">
@@ -900,45 +748,28 @@
                     <nav class="flex-grow p-4 space-y-2">
                         <a href="#/admin" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
-                        <a href="#" onclick="showToast('功能建置中', 'info')" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-brain w-5 text-center"></i> AI 知識庫設定</a>
                         <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/settings" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
 
-                <!-- Main Content -->
                 <div class="flex-grow p-6 md:p-8">
                     <h1 class="text-2xl font-bold text-primary mb-6">營運總覽</h1>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h3 class="text-textSub text-sm mb-2">已發布文章</h3>
-                            <p class="text-3xl font-bold text-primary">--</p>
-                        </div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h3 class="text-textSub text-sm mb-2">會員總數</h3>
-                            <p class="text-3xl font-bold text-primary">--</p>
+                            <p class="text-3xl font-bold text-primary">管理中</p>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h3 class="text-textSub text-sm mb-2">AI 知識庫狀態</h3>
-                            <p class="text-lg font-bold text-green-600"><i class="fa-solid fa-circle-check"></i> 運作正常</p>
+                            <p class="text-lg font-bold text-green-600"><i class="fa-solid fa-circle-check"></i> 雲端後端連線正常</p>
                         </div>
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div class="flex justify-between items-center mb-4 border-b pb-2">
-                            <h2 class="text-xl font-bold text-primary">系統權限驗證與寫入測試</h2>
-                        </div>
-                        <p class="text-sm text-textSub mb-6">點擊下方按鈕，系統將嘗試以您目前的權限向 Firestore 寫入一筆測試資料。用以驗證您的 Super Admin 權限與 Security Rules。</p>
-                        <button onclick="window.testFirestoreWrite()" class="bg-cta hover:bg-blue-700 text-white font-medium py-2 px-6 rounded shadow transition flex items-center gap-2 mb-4">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> 寫入測試文章
-                        </button>
-                        <div id="admin-log" class="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm min-h-[100px] overflow-auto whitespace-pre-wrap">> 系統就緒，等待測試指令...</div>
                     </div>
                 </div>
             </div>
         `,
         adminArticles: `
             <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
-                <!-- Sidebar -->
                 <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
                     <div class="p-6 border-b border-gray-700">
                         <h2 class="text-xl font-bold flex items-center gap-2 text-accent">
@@ -949,10 +780,10 @@
                         <a href="#/admin" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/settings" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
 
-                <!-- Main Content -->
                 <div class="flex-grow p-6 md:p-8">
                     <div class="flex justify-between items-center mb-6">
                         <h1 class="text-2xl font-bold text-primary">內容管理 (CMS)</h1>
@@ -983,7 +814,6 @@
         `,
         adminArticleEdit: `
             <div class="bg-gray-50 min-h-screen">
-                <!-- Topbar -->
                 <div class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
                     <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
                         <div class="flex items-center gap-4">
@@ -996,7 +826,6 @@
                     </div>
                 </div>
 
-                <!-- Editor Form -->
                 <div class="max-w-5xl mx-auto px-4 py-8">
                     <form id="article-form" class="space-y-6">
                         <input type="hidden" id="article-id">
@@ -1009,11 +838,15 @@
                                         <input type="text" id="article-title-input" required class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta font-medium text-lg">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">封面圖片網址 (選填)</label>
-                                        <input type="url" id="article-cover-input" placeholder="https://..." class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">封面圖片 <span class="text-xs text-gray-400 font-normal ml-1">(支援 JPG/PNG，系統將自動壓縮至 1200px 寬，建議檔案 < 5MB)</span></label>
+                                        <div class="flex items-center gap-4">
+                                            <img id="cover-preview-img" src="https://placehold.co/800x400/E2E8F0/64748B?text=Cover" class="w-32 h-20 object-cover rounded shadow-sm border border-gray-100">
+                                            <input type="file" id="article-cover-file" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition w-full">
+                                        </div>
+                                        <input type="hidden" id="article-cover-input">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">文章摘要 (顯示於列表與 AI 導讀) *</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">文章摘要 *</label>
                                         <textarea id="article-excerpt-input" required rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm"></textarea>
                                     </div>
                                 </div>
@@ -1028,31 +861,55 @@
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">分類 *</label>
                                         <select id="article-category-input" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm bg-white">
-                                            <option value="Vibe Coding">Vibe Coding</option>
-                                            <option value="架構設計">架構設計</option>
-                                            <option value="AI 應用">AI 應用</option>
+                                            <!-- 將由 JS 動態載入 -->
                                         </select>
                                     </div>
-                                    <div class="pt-4 border-t border-gray-200">
-                                        <p class="text-xs text-gray-500 mb-2"><i class="fa-solid fa-circle-info text-cta"></i> Vibe Coding 提示：<br>您可以在正文中輸入 HTML 來套用 PRD 規定的四類內容框：</p>
-                                        <code class="block text-[10px] bg-gray-200 p-2 rounded text-gray-700 overflow-x-auto">
-&lt;div class="box-fact"&gt;事實&lt;/div&gt;<br>
-&lt;div class="box-analysis"&gt;分析&lt;/div&gt;<br>
-&lt;div class="box-prediction"&gt;推演&lt;/div&gt;<br>
-&lt;div class="box-tony"&gt;TONY 觀點&lt;/div&gt;
-                                        </code>
+                                    <div class="pt-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">SEO 標籤 <span class="text-xs text-gray-400 font-normal ml-1">(多個標籤請用半形逗號分隔)</span></label>
+                                        <input type="text" id="article-tags-input" placeholder="例如: AI, 網頁開發, 架構設計" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm bg-white">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Full Content -->
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl shadow-sm border border-blue-100 mb-6">
+                            <h3 class="text-lg font-bold text-primary mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-accent"></i> AI 寫作助手 (Gemini 驅動)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">寫作風格</label>
+                                    <select id="ai-style" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm bg-white">
+                                        <option value="專業嚴謹">專業嚴謹</option>
+                                        <option value="幽默風趣">幽默風趣</option>
+                                        <option value="淺顯易懂 (適合新手)">淺顯易懂 (適合新手)</option>
+                                        <option value="熱情激勵">熱情激勵</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">目標對象 (受眾)</label>
+                                    <select id="ai-audience" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm bg-white">
+                                        <option value="一般大眾">一般大眾</option>
+                                        <option value="初階開發者">初階開發者</option>
+                                        <option value="資深工程師與架構師">資深工程師與架構師</option>
+                                        <option value="企業主管與老闆">企業主管與老闆</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">請描述您想寫的主題或大綱 *</label>
+                                <textarea id="ai-prompt" rows="2" placeholder="例如：幫我寫一段關於『為什麼企業需要導入 RAG 知識庫』的引言..." class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm shadow-inner"></textarea>
+                            </div>
+                            <div class="text-right">
+                                <button type="button" id="btn-ai-generate" onclick="window.generateAIContent()" class="bg-primary hover:bg-secondary text-accent px-5 py-2 rounded font-medium transition shadow flex items-center gap-2 ml-auto text-sm">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> 讓 AI 生成內容並插入編輯器
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 flex justify-between items-center">
-                                <span>文章正文 (支援 HTML) *</span>
-                                <span class="text-xs font-normal text-cta"><i class="fa-solid fa-code"></i> 原始碼模式</span>
-                            </label>
-                            <textarea id="article-content-input" required rows="20" class="w-full px-4 py-3 border border-gray-300 rounded focus:outline-none focus:border-cta font-mono text-sm leading-relaxed" placeholder="<h1>標題</h1>\n<p>在這裡輸入您的文章內容...</p>"></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">文章正文 (富文本編輯器) *</label>
+                            <div id="editor-container"></div>
                         </div>
                     </form>
                 </div>
@@ -1068,16 +925,13 @@
                         <p class="text-textSub">您的專屬 AI 顧問，隨時基於 TONY STUDIO 的知識庫為您解答。</p>
                     </div>
 
-                    <!-- Chat Interface -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-grow h-[600px] overflow-hidden">
-                        
-                        <!-- Chat Header -->
                         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm">T</div>
                                 <div>
-                                    <h3 class="font-bold text-primary text-sm">Ask TONY (Gemini)</h3>
-                                    <p class="text-xs text-green-600"><i class="fa-solid fa-circle text-[8px] animate-pulse"></i> 在線，已連結知識庫</p>
+                                    <h3 class="font-bold text-primary text-sm">Ask TONY (Cloud Function AI)</h3>
+                                    <p class="text-xs text-green-600"><i class="fa-solid fa-circle text-[8px] animate-pulse"></i> 在線，安全後端連線中</p>
                                 </div>
                             </div>
                             <button onclick="window.clearChat()" class="text-textSub hover:text-primary transition text-sm flex items-center gap-1">
@@ -1085,26 +939,21 @@
                             </button>
                         </div>
 
-                        <!-- Chat History Area -->
                         <div id="chat-history" class="flex-grow p-6 overflow-y-auto space-y-6 bg-bg">
-                            <!-- Initial Greeting -->
                             <div class="flex gap-4">
                                 <div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-accent font-bold shadow-sm">T</div>
                                 <div class="bg-white border border-gray-200 p-4 rounded-2xl rounded-tl-none text-textMain text-sm max-w-[85%] leading-relaxed shadow-sm">
                                     嗨！我是 TONY 老師的 AI 助手。<br><br>
-                                    我已經熟讀了本站的專欄文章與知識庫。您可以問我關於 Vibe Coding、架構設計或是商業策略的問題。如果我的知識庫沒有相關資訊，我會誠實告訴您。
+                                    我已經透過安全後端連結了本站知識庫。您可以問我關於 Vibe Coding、架構設計或是商業策略的問題！
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Suggested Questions -->
-                        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex gap-2 overflow-x-auto hide-scrollbar">
-                            <button onclick="window.setAskTonyInput('什麼是 Vibe Coding？')" class="px-3 py-1.5 bg-white border border-gray-200 text-xs text-textSub hover:text-primary hover:border-primary rounded-full whitespace-nowrap transition">什麼是 Vibe Coding？</button>
-                            <button onclick="window.setAskTonyInput('如何規劃 RAG 知識庫？')" class="px-3 py-1.5 bg-white border border-gray-200 text-xs text-textSub hover:text-primary hover:border-primary rounded-full whitespace-nowrap transition">如何規劃 RAG 知識庫？</button>
-                            <button onclick="window.setAskTonyInput('什麼是 Serverless 安全防護？')" class="px-3 py-1.5 bg-white border border-gray-200 text-xs text-textSub hover:text-primary hover:border-primary rounded-full whitespace-nowrap transition">什麼是 Serverless 安全防護？</button>
+                        <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex gap-2 overflow-x-auto">
+                            <button onclick="window.setAskTonyInput('什麼是 Vibe Coding？')" class="px-3 py-1.5 bg-white border border-gray-200 text-xs text-textSub hover:text-primary rounded-full whitespace-nowrap transition">什麼是 Vibe Coding？</button>
+                            <button onclick="window.setAskTonyInput('如何規劃 RAG 知識庫？')" class="px-3 py-1.5 bg-white border border-gray-200 text-xs text-textSub hover:text-primary rounded-full whitespace-nowrap transition">如何規劃 RAG 知識庫？</button>
                         </div>
 
-                        <!-- Input Area -->
                         <div class="p-4 bg-white border-t border-gray-200">
                             <form onsubmit="window.submitAskTony(event)" class="relative">
                                 <input type="text" id="ask-tony-input" placeholder="詢問 TONY..." required class="w-full pl-4 pr-24 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-cta focus:bg-white transition text-sm">
@@ -1112,7 +961,6 @@
                                     <i class="fa-regular fa-paper-plane mr-2"></i> 送出
                                 </button>
                             </form>
-                            <p class="text-[10px] text-center text-gray-400 mt-2">AI 生成的內容可能有誤，建議核對原文。每次提問將扣除 1 點 AI 額度。</p>
                         </div>
                     </div>
                 </div>
@@ -1161,7 +1009,7 @@
                             </div>
 
                             <div class="border-t border-gray-100 pt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">夾帶附件 (選填，限 PDF/圖片，最大 5MB)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">夾帶附件 <span class="text-xs text-gray-400 font-normal ml-1">(選填，支援 PDF 或 JPG/PNG，單一檔案上限 5MB)</span></label>
                                 <input type="file" id="lead-file" accept=".pdf,image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
                             </div>
 
@@ -1177,7 +1025,6 @@
         `,
         adminLeads: `
             <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
-                <!-- Sidebar -->
                 <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
                     <div class="p-6 border-b border-gray-700">
                         <h2 class="text-xl font-bold flex items-center gap-2 text-accent">
@@ -1188,10 +1035,10 @@
                         <a href="#/admin" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/settings" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
 
-                <!-- Main Content -->
                 <div class="flex-grow p-6 md:p-8 relative">
                     <h1 class="text-2xl font-bold text-primary mb-6">商機與聯絡表單</h1>
                     
@@ -1213,7 +1060,6 @@
                         </div>
                     </div>
 
-                    <!-- Modal -->
                     <div id="lead-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                         <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0">
@@ -1222,12 +1068,67 @@
                                     <i class="fa-solid fa-xmark text-xl"></i>
                                 </button>
                             </div>
-                            <div class="p-6" id="lead-modal-content">
-                                <!-- Modal Content -->
-                            </div>
+                            <div class="p-6" id="lead-modal-content"></div>
                             <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 text-right">
-                                <button onclick="document.getElementById('lead-modal').classList.add('hidden')" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded shadow-sm text-sm font-medium transition">關閉</button>
+                                <button onclick="document.getElementById('lead-modal').classList.add('hidden')" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded shadow-sm text-sm font-medium">關閉</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        adminSettings: `
+            <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
+                <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
+                    <div class="p-6 border-b border-gray-700">
+                        <h2 class="text-xl font-bold flex items-center gap-2 text-accent">
+                            <i class="fa-solid fa-sliders"></i> TONY CMS
+                        </h2>
+                    </div>
+                    <nav class="flex-grow p-4 space-y-2">
+                        <a href="#/admin" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
+                        <a href="#/admin/articles" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
+                        <a href="#/admin/leads" class="flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/settings" class="flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-medium"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
+                    </nav>
+                </div>
+                <div class="flex-grow p-6 md:p-8">
+                    <h1 class="text-2xl font-bold text-primary mb-6">全域網站設定</h1>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-3xl">
+                        <form onsubmit="window.saveSiteSettings(event)" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">首頁大頭貼 <span class="text-xs text-gray-400 font-normal ml-1">(支援 JPG/PNG，系統將自動裁切壓縮為 800x800 正方形)</span></label>
+                                <div class="flex items-center gap-6">
+                                    <img id="settings-preview-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY" class="w-24 h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm">
+                                    <input type="file" id="settings-profile-img" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">首頁大標題 (支援 HTML 標籤如 &lt;br&gt; 或 &lt;span&gt;)</label>
+                                <textarea id="settings-hero-title" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta font-mono text-sm">技術與商業的交匯點，<br><span class="text-accent">重塑您的數位護城河</span></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">首頁個人簡介</label>
+                                <textarea id="settings-hero-bio" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">我是 TONY，專注於全端開發、AI 知識庫建置與個人品牌營運。在這裡，我將經驗化為可被搜尋、引用與實踐的知識資產。</textarea>
+                            </div>
+                            <div class="pt-4 border-t border-gray-100">
+                                <button type="submit" id="btn-save-settings" class="bg-cta hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition shadow flex items-center gap-2">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> 儲存所有設定
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-3xl mt-8">
+                        <h2 class="text-xl font-bold text-primary mb-4">文章分類管理</h2>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="new-category-input" placeholder="輸入新分類名稱..." class="flex-grow px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">
+                            <button id="btn-add-category" onclick="window.createCategory()" class="bg-secondary hover:bg-primary text-white px-4 py-2 rounded text-sm font-medium transition flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> 新增
+                            </button>
+                        </div>
+                        <div id="settings-categories-list" class="space-y-2">
+                            <div class="py-4 text-center text-gray-500 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i>載入中...</div>
                         </div>
                     </div>
                 </div>
@@ -1235,27 +1136,25 @@
         `
     };
 
-    // --- In-Memory State for Interactive Features ---
-    window.UserInteractions = {
-        bookmarks: new Set(),
-        currentArticleId: null
-    };
+    window.UserInteractions = { bookmarks: new Set(), currentArticleId: null };
+    window.quillEditor = null;
 
-    // --- Router Implementation ---
     function router() {
         const root = document.getElementById('app-root');
         let path = window.location.hash.slice(1) || '/';
         
-        // Remove animation class briefly to trigger re-flow
         root.classList.remove('page-enter');
-        void root.offsetWidth; // trigger reflow
+        void root.offsetWidth;
         
         if (path === '/' || path === '') {
             root.innerHTML = Views.home;
-            setTimeout(window.fetchHomeLatestArticles, 100); // 載入首頁最新文章
+            setTimeout(window.loadHomeData, 100);
         } else if (path === '/articles') {
             root.innerHTML = Views.articles;
-            setTimeout(window.fetchPublicArticles, 100); 
+            setTimeout(async () => {
+                await window.loadCategories('articles-category-filters', 'filters');
+                window.fetchPublicArticles();
+            }, 100);
         } else if (path.startsWith('/article/')) {
             const articleId = path.split('/')[2];
             window.UserInteractions.currentArticleId = articleId;
@@ -1276,9 +1175,6 @@
         } else if (path === '/services' || path === '/courses') {
             root.innerHTML = Views.services;
             window.scrollTo(0,0);
-        } else if (path === '/about') {
-            root.innerHTML = Views.about;
-            window.scrollTo(0,0);
         } else if (path === '/contact') {
             root.innerHTML = Views.contact;
             window.scrollTo(0,0);
@@ -1292,7 +1188,7 @@
             setTimeout(renderMemberDashboard, 100);
         } else if (path === '/admin') {
             if (!window.AppState.user || !['super_admin', 'admin'].includes(window.AppState.role)) {
-                showToast("無權限訪問，請確認您已設定超級管理員權限", "error");
+                showToast("無權限訪問", "error");
                 window.location.hash = '#/';
                 return;
             }
@@ -1314,9 +1210,13 @@
             if (!window.AppState.user || !['super_admin', 'admin'].includes(window.AppState.role)) return;
             root.innerHTML = Views.adminLeads;
             setTimeout(window.loadAdminLeads, 100);
+        } else if (path === '/admin/settings') {
+            if (!window.AppState.user || !['super_admin', 'admin'].includes(window.AppState.role)) return;
+            root.innerHTML = Views.adminSettings;
+            setTimeout(window.loadSiteSettings, 100);
         } else if (path === '/login') {
             if (window.AppState.user) {
-                window.location.hash = '#/member'; // Redirect if already logged in
+                window.location.hash = '#/member';
                 return;
             }
             root.innerHTML = Views.login;
@@ -1324,9 +1224,8 @@
             root.innerHTML = `
                 <div class="flex-grow flex items-center justify-center flex-col py-20 text-center">
                     <i class="fa-solid fa-person-digging text-6xl text-accent mb-6"></i>
-                    <h2 class="text-2xl font-bold text-primary mb-2">此頁面建置中 (Vibe Coding)</h2>
-                    <p class="text-textSub mb-6">模組化開發進行中，即將開放：${path}</p>
-                    <a href="#/" class="text-cta font-medium hover:underline flex items-center gap-2">
+                    <h2 class="text-2xl font-bold text-primary mb-2">此頁面建置中</h2>
+                    <a href="#/" class="text-cta font-medium hover:underline flex items-center gap-2 mt-4">
                         <i class="fa-solid fa-arrow-left"></i> 返回首頁
                     </a>
                 </div>
@@ -1337,11 +1236,8 @@
         if(!path.startsWith('/article/')) window.scrollTo(0,0);
     }
 
-    // --- Data Fetching & Rendering Logic (Real Firestore) ---
-    
     window.filterArticles = (category) => {
         window.AppState.currentCategory = category;
-        // 更新按鈕樣式
         document.querySelectorAll('.cat-btn').forEach(btn => {
             if (btn.dataset.cat === category) {
                 btn.className = 'cat-btn px-4 py-1.5 bg-primary text-white text-sm font-medium rounded-full whitespace-nowrap transition';
@@ -1353,11 +1249,8 @@
     };
 
     window.searchArticles = (event) => {
-        // 簡單的防抖 (Debounce) 與 Enter 觸發
-        if (event.key === 'Enter' || event.target.value.length === 0 || event.target.value.length > 2) {
-            window.AppState.searchQuery = event.target.value.toLowerCase();
-            window.fetchPublicArticles();
-        }
+        window.AppState.searchQuery = event.target.value.toLowerCase();
+        window.fetchPublicArticles();
     };
     
     window.fetchPublicArticles = async () => {
@@ -1366,19 +1259,16 @@
         container.innerHTML = '<div class="col-span-full py-12 text-center"><i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i></div>';
         
         try {
-            // [修正] 加入預設值 ('全部' 與 '')，避免初始載入時為 undefined 導致 Firestore 報錯
             const currentCategory = window.AppState.currentCategory || '全部';
             const searchQuery = window.AppState.searchQuery || '';
             const { db } = window.AppState;
             const { collection, getDocs, query, where, orderBy } = window.FS;
             
-            // 基礎查詢：已發布 + 公開
             let constraints = [
                 where("status", "==", "published"),
                 where("visibility", "==", "public")
             ];
             
-            // 分類篩選
             if (currentCategory !== '全部') {
                 constraints.push(where("category", "==", currentCategory));
             }
@@ -1393,19 +1283,14 @@
             }
 
             let html = '';
-            let renderCount = 0;
-
             querySnapshot.forEach((doc) => {
                 const article = doc.data();
-                
-                // 客戶端關鍵字搜尋 (因為 Firestore 不支援原生全文檢索，V1 採用前端過濾)
                 if (searchQuery) {
                     const title = (article.title || '').toLowerCase();
                     const excerpt = (article.excerpt || '').toLowerCase();
                     if (!title.includes(searchQuery) && !excerpt.includes(searchQuery)) return;
                 }
 
-                renderCount++;
                 const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
                 const cover = article.coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=TONY+STUDIO';
                 
@@ -1428,11 +1313,15 @@
                     </div>
                 `;
             });
-            
-            container.innerHTML = renderCount > 0 ? html : '<div class="col-span-full py-12 text-center text-textSub">沒有找到符合關鍵字的文章。</div>';
+            container.innerHTML = html || '<div class="col-span-full py-12 text-center text-textSub">沒有找到符合關鍵字的文章。</div>';
         } catch (error) {
-            console.error("Fetch error:", error);
-            container.innerHTML = '<div class="col-span-full py-12 text-center text-red-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i>載入文章時發生錯誤，請稍後再試。</div>';
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限不足：無法讀取文章。請部署 firestore.rules 開放讀取權限。");
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-accent"><i class="fa-solid fa-lock text-3xl mb-4 block"></i><p>資料庫權限不足，請先至 Firebase Console 更新 Firestore Rules。</p></div>';
+            } else {
+                console.error("Fetch error:", error);
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-red-500">載入文章時發生錯誤。請確認 Firestore 是否正常運作。</div>';
+            }
         }
     };
 
@@ -1443,33 +1332,27 @@
             const docSnap = await getDoc(doc(db, "articles", id));
 
             if (!docSnap.exists()) {
-                document.getElementById('detail-title').innerText = '文章不存在或已下架';
-                document.getElementById('detail-content').innerHTML = '<p class="text-center text-textSub py-12">找不到此文章的內容。</p>';
+                document.getElementById('detail-title').innerText = '文章不存在';
+                document.getElementById('detail-content').innerHTML = '<p class="text-center text-textSub py-12">找不到此文章。</p>';
                 return;
             }
 
             const article = docSnap.data();
-            const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
+            const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛';
             
             document.getElementById('detail-title').innerText = article.title;
             document.getElementById('detail-category').innerText = article.category || '未分類';
             document.getElementById('detail-date').innerHTML = `<i class="fa-regular fa-calendar mr-1"></i> ${dateStr}`;
-            document.getElementById('detail-cover').src = article.coverImage || 'https://placehold.co/1200x600/E2E8F0/64748B?text=Article+Cover';
+            document.getElementById('detail-cover').src = article.coverImage || 'https://placehold.co/1200x600/E2E8F0/64748B?text=Cover';
+            document.getElementById('detail-content').innerHTML = article.content || '<p>尚無內容</p>';
             
-            // 渲染真實內容
-            document.getElementById('detail-content').innerHTML = article.content || '<p class="text-textSub">尚無詳細內容。</p>';
-            
-            // 檢查是否已收藏
             window.updateBookmarkButtonUI(id);
-            
         } catch (error) {
-            console.error("Fetch detail error:", error);
-            document.getElementById('detail-title').innerText = '無權限檢視';
-            document.getElementById('detail-content').innerHTML = '<p class="text-center text-red-500 py-12">這可能是一篇草稿，您必須擁有管理員權限才能檢視。</p>';
+            console.error(error);
+            document.getElementById('detail-title').innerText = '無法讀取';
         }
     };
 
-    // 真實 Firestore 收藏功能
     window.toggleBookmark = async () => {
         const { user, db } = window.AppState;
         if (!user) {
@@ -1489,28 +1372,23 @@
             const btn = document.getElementById('btn-bookmark');
             
             if (docSnap.exists()) {
-                // 已收藏 -> 取消收藏
                 await deleteDoc(bookmarkRef);
                 showToast('已取消收藏', 'info');
                 if (btn) btn.className = 'w-10 h-10 rounded-full bg-secondary hover:bg-white hover:text-primary transition flex items-center justify-center text-white shadow-sm';
             } else {
-                // 未收藏 -> 加入收藏
-                // 抓取文章當下資料一併存入，方便在會員中心顯示 (Denormalization)
                 const articleTitle = document.getElementById('detail-title').innerText;
                 const articleCategory = document.getElementById('detail-category').innerText;
-                
                 await setDoc(bookmarkRef, {
                     articleId: articleId,
                     title: articleTitle,
                     category: articleCategory,
                     savedAt: serverTimestamp()
                 });
-                showToast('文章收藏成功！', 'success');
+                showToast('收藏成功！', 'success');
                 if (btn) btn.className = 'w-10 h-10 rounded-full bg-accent text-primary transition flex items-center justify-center shadow-md';
             }
         } catch (error) {
-            console.error("Bookmark error:", error);
-            showToast('收藏動作失敗', 'error');
+            showToast('動作失敗', 'error');
         }
     };
 
@@ -1518,27 +1396,19 @@
         const { user, db } = window.AppState;
         const btn = document.getElementById('btn-bookmark');
         if (!user || !btn || !articleId) return;
-        
         try {
             const { doc, getDoc } = window.FS;
             const docSnap = await getDoc(doc(db, "users", user.uid, "bookmarks", articleId));
             if (docSnap.exists()) {
                 btn.className = 'w-10 h-10 rounded-full bg-accent text-primary transition flex items-center justify-center shadow-md';
-            } else {
-                btn.className = 'w-10 h-10 rounded-full bg-secondary hover:bg-white hover:text-primary transition flex items-center justify-center text-white shadow-sm';
             }
-        } catch (e) {
-            console.log("Failed to check bookmark status", e);
-        }
+        } catch (e) {}
     };
 
     window.shareArticle = () => {
-        const url = window.location.href;
-        // 使用臨時 textarea 繞過 iframe 剪貼簿限制
         const textArea = document.createElement("textarea");
-        textArea.value = url;
+        textArea.value = window.location.href;
         document.body.appendChild(textArea);
-        textArea.focus();
         textArea.select();
         try {
             document.execCommand('copy');
@@ -1549,7 +1419,6 @@
         document.body.removeChild(textArea);
     };
 
-    // --- Admin CMS Logic ---
     window.loadAdminArticles = async () => {
         const tbody = document.getElementById('admin-articles-list');
         if (!tbody) return;
@@ -1557,13 +1426,11 @@
         try {
             const { db } = window.AppState;
             const { collection, getDocs, query, orderBy } = window.FS;
-            
-            // 管理員看得到所有狀態的文章 (無需過濾 published)
             const q = query(collection(db, "articles"), orderBy("createdAt", "desc"));
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">目前資料庫中沒有任何文章，請點擊右上角「新增文章」。</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">尚無文章。</td></tr>';
                 return;
             }
 
@@ -1581,16 +1448,15 @@
                         <td class="px-4 py-4 text-sm">${statusBadge}</td>
                         <td class="px-4 py-4 text-sm text-gray-500">${dateStr}</td>
                         <td class="px-4 py-4 text-right text-sm font-medium">
-                            <a href="#/article/${doc.id}" target="_blank" class="text-gray-400 hover:text-primary mr-3 transition" title="前台預覽"><i class="fa-solid fa-eye"></i></a>
-                            <a href="#/admin/articles/edit/${doc.id}" class="text-cta hover:text-blue-800 transition"><i class="fa-solid fa-pen"></i> 編輯</a>
+                            <a href="#/article/${doc.id}" target="_blank" class="text-gray-400 hover:text-primary mr-3" title="預覽"><i class="fa-solid fa-eye"></i></a>
+                            <a href="#/admin/articles/edit/${doc.id}" class="text-cta hover:text-blue-800"><i class="fa-solid fa-pen"></i> 編輯</a>
                         </td>
                     </tr>
                 `;
             });
             tbody.innerHTML = html;
         } catch (error) {
-            console.error(error);
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-500">載入失敗：權限不足或連線異常。</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-500">載入失敗。</td></tr>';
         }
     };
 
@@ -1599,9 +1465,94 @@
         if (!form) return;
         
         document.getElementById('article-id').value = id || '';
-        document.getElementById('editor-title').innerHTML = id 
-            ? '<i class="fa-solid fa-pen-to-square text-accent"></i> 編輯文章' 
-            : '<i class="fa-solid fa-plus text-accent"></i> 新增文章';
+        document.getElementById('editor-title').innerHTML = id ? '編輯文章' : '新增文章';
+            
+        if (window.quillEditor) {
+            window.quillEditor = null;
+        }
+        
+        const editorContainer = document.getElementById('editor-container');
+        if (editorContainer) {
+            editorContainer.innerHTML = '';
+            
+            const imageHandler = () => {
+                // 1. 動態建立一個隱藏的 input type="file"
+                const input = document.createElement('input');
+                input.setAttribute('type', 'file');
+                input.setAttribute('accept', 'image/*');
+                input.click(); // 觸發點擊，打開選檔視窗
+                
+                input.onchange = async () => {
+                    const file = input.files[0];
+                    if (file) {
+                        try {
+                            showToast("圖片壓縮與上傳中...", "info");
+                            
+                            // 2. 呼叫共用的圖片壓縮函式 (最大 1200px 寬)
+                            const compressed = await window.compressImage(file, 1200, 1200, 0.85);
+                            
+                            // 3. 上傳到 Firebase Storage
+                            const { storage } = window.AppState;
+                            const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
+                            const fileRef = ref(storage, `articles/general/images/${Date.now()}_${compressed.name}`);
+                            await uploadBytes(fileRef, compressed);
+                            
+                            // 4. 取得 Firebase 回傳的公開網址
+                            const url = await getDownloadURL(fileRef);
+                            
+                            // 5. 將網址作為 img 標籤插入到編輯器目前游標的位置
+                            const range = window.quillEditor.getSelection(true);
+                            window.quillEditor.insertEmbed(range.index, 'image', url);
+                            
+                            // 將游標移到圖片後方，方便繼續打字
+                            window.quillEditor.setSelection(range.index + 1);
+                            
+                            showToast("圖片插入成功！", "success");
+                        } catch (e) {
+                            console.error(e);
+                            showToast("圖片上傳失敗：" + e.message, "error");
+                        }
+                    }
+                };
+            };
+
+            window.quillEditor = new Quill('#editor-container', {
+                theme: 'snow',
+                placeholder: '在這裡開始撰寫您的精彩內容...',
+                modules: {
+                    toolbar: {
+                        container: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ],
+                        handlers: {
+                            // 覆寫 Quill 預設的 image 處理行為，改用我們剛剛寫的 imageHandler
+                            image: imageHandler
+                        }
+                    }
+                }
+            });
+        }
+        
+        const coverFileInput = document.getElementById('article-cover-file');
+        if (coverFileInput) {
+            coverFileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        document.getElementById('cover-preview-img').src = evt.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+        }
+        
+        // 預先載入分類選項，填入下拉選單
+        await window.loadCategories('article-category-input', 'select');
             
         if (id) {
             try {
@@ -1612,13 +1563,27 @@
                     const data = docSnap.data();
                     document.getElementById('article-title-input').value = data.title || '';
                     document.getElementById('article-cover-input').value = data.coverImage || '';
-                    document.getElementById('article-category-input').value = data.category || 'Vibe Coding';
+                    if (data.coverImage) {
+                        const previewImg = document.getElementById('cover-preview-img');
+                        if (previewImg) previewImg.src = data.coverImage;
+                    }
+                    
+                    // 如果文章本身已經有指定分類，重新載入並將該選項設為選取狀態
+                    if (data.category) {
+                        await window.loadCategories('article-category-input', 'select', data.category);
+                    }
+                    
                     document.getElementById('article-status-input').value = data.status || 'draft';
                     document.getElementById('article-excerpt-input').value = data.excerpt || '';
-                    document.getElementById('article-content-input').value = data.content || '';
+                    
+                    document.getElementById('article-tags-input').value = data.tags ? data.tags.join(', ') : '';
+                    
+                    if (window.quillEditor && data.content) {
+                        window.quillEditor.clipboard.dangerouslyPasteHTML(data.content);
+                    }
                 }
             } catch(e) {
-                showToast("無法載入文章資料", "error");
+                showToast("無法載入文章", "error");
             }
         }
     };
@@ -1631,29 +1596,54 @@
 
         const id = document.getElementById('article-id').value;
         const title = document.getElementById('article-title-input').value;
-        const coverImage = document.getElementById('article-cover-input').value;
+        let coverImage = document.getElementById('article-cover-input').value;
+        const coverFile = document.getElementById('article-cover-file')?.files[0];
         const category = document.getElementById('article-category-input').value;
         const status = document.getElementById('article-status-input').value;
         const excerpt = document.getElementById('article-excerpt-input').value;
-        const content = document.getElementById('article-content-input').value;
+        
+        const tagsInput = document.getElementById('article-tags-input').value;
+        const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t !== '');
+        
+        let content = '';
+        if (window.quillEditor) {
+            content = window.quillEditor.root.innerHTML;
+            if (content === '<p><br></p>') content = '';
+        }
+
+        if (!title || !content) {
+            showToast("標題與正文不能為空！", "warning");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 儲存文章';
+            return;
+        }
 
         try {
-            const { db, user } = window.AppState;
+            const { db, user, storage } = window.AppState;
             const { collection, doc, addDoc, updateDoc, serverTimestamp } = window.FS;
+            const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
+
+            if (coverFile) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳封面中...';
+                const compressedCover = await window.compressImage(coverFile, 1200, 630, 0.85); // 1200x630 適合社群分享圖比例
+                const coverRef = ref(storage, `articles/covers/${Date.now()}_${compressedCover.name}`);
+                await uploadBytes(coverRef, compressedCover);
+                coverImage = await getDownloadURL(coverRef);
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-database"></i> 寫入資料庫...';
 
             const articleData = {
-                title, coverImage, category, status, excerpt, content,
-                visibility: 'public', // 依 PRD 規定預設為公開，由 status 控制
+                title, coverImage, category, status, excerpt, content, tags, // 加入 tags
+                visibility: 'public',
                 updatedAt: serverTimestamp(),
                 updatedBy: user.uid
             };
 
             if (id) {
-                // 編輯已存在文章
                 await updateDoc(doc(db, "articles", id), articleData);
                 showToast("文章更新成功！", "success");
             } else {
-                // 建立新文章
                 articleData.createdAt = serverTimestamp();
                 articleData.createdBy = user.uid;
                 articleData.authorIds = [user.uid];
@@ -1662,7 +1652,6 @@
             }
             window.location.hash = '#/admin/articles';
         } catch (error) {
-            console.error("Save failed", error);
             showToast("儲存失敗：" + error.message, "error");
         } finally {
             btn.disabled = false;
@@ -1670,12 +1659,8 @@
         }
     };
 
-    // --- Leads (Contact Form) Logic ---
-    
-    window.compressImage = async (file, maxWidth = 1920, maxHeight = 1920, quality = 0.8) => {
-        // 如果不是圖片（例如 PDF），直接回傳原始檔案
+    window.compressImage = async (file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) => {
         if (!file || !file.type.startsWith('image/')) return file;
-        
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -1685,8 +1670,6 @@
                 img.onload = () => {
                     let width = img.width;
                     let height = img.height;
-
-                    // 計算等比例縮小的尺寸
                     if (width > height) {
                         if (width > maxWidth) {
                             height = Math.round(height * (maxWidth / width));
@@ -1698,32 +1681,290 @@
                             height = maxHeight;
                         }
                     }
-
-                    // 繪製到 Canvas 上
                     const canvas = document.createElement('canvas');
                     canvas.width = width;
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-
-                    // 轉換為 Blob (JPEG 格式)
                     canvas.toBlob((blob) => {
                         if (blob) {
-                            // 將副檔名強制改為 .jpg
                             const newName = file.name.replace(/\.[^/.]+$/, ".jpg");
-                            const compressedFile = new File([blob], newName, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            });
-                            resolve(compressedFile);
+                            resolve(new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() }));
                         } else {
-                            resolve(file); // 如果壓縮失敗，退回原檔
+                            resolve(file);
                         }
                     }, 'image/jpeg', quality);
                 };
-                img.onerror = () => resolve(file); // 圖片載入失敗，退回原檔
+                img.onerror = () => resolve(file);
             };
-            reader.onerror = () => resolve(file); // 讀取失敗，退回原檔
+            reader.onerror = () => resolve(file);
+        });
+    };
+
+    window.generateAIContent = async () => {
+        const btn = document.getElementById('btn-ai-generate');
+        const style = document.getElementById('ai-style').value;
+        const audience = document.getElementById('ai-audience').value;
+        const prompt = document.getElementById('ai-prompt').value;
+
+        if (!prompt) {
+            showToast('請先輸入想要撰寫的主題或大綱喔！', 'warning');
+            return;
+        }
+
+        // 按鈕鎖定，並提示正在生成
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 魔法施展中 (約需幾秒鐘)...';
+
+        try {
+            const { functions } = window.AppState;
+            const { httpsCallable } = window.FunctionsAPI;
+            const aiAssistantFunction = httpsCallable(functions, 'aiAssistant');
+
+            // 呼叫雲端函式
+            const result = await aiAssistantFunction({ style, audience, prompt });
+            const htmlContent = result.data.html;
+
+            // 將生成的 HTML 直接插入到 Quill 編輯器的游標位置
+            if (window.quillEditor) {
+                // 取得目前游標位置，若無游標則插在最前面
+                let range = window.quillEditor.getSelection();
+                let insertIndex = range ? range.index : 0;
+                
+                window.quillEditor.clipboard.dangerouslyPasteHTML(insertIndex, htmlContent);
+                
+                // 將游標移到剛插入的內容後面，方便繼續編輯
+                window.quillEditor.setSelection(window.quillEditor.getLength(), 0);
+                showToast('✨ AI 內容已成功插入！', 'success');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('AI 生成失敗：' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 讓 AI 生成內容並插入編輯器';
+        }
+    };
+
+    window.loadCategories = async (targetElementId, mode = 'admin', selectedValue = null) => {
+        let categories = ["Vibe Coding", "架構設計", "AI 應用"]; // 預設防呆分類
+        
+        try {
+            const { db } = window.AppState;
+            const { doc, getDoc } = window.FS;
+            const docSnap = await getDoc(doc(db, "settings", "categories"));
+            
+            if (docSnap.exists() && docSnap.data().list) {
+                categories = docSnap.data().list;
+            }
+        } catch (error) {
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限不足：無法從資料庫讀取分類設定，將暫時使用預設分類。若要修復此問題，請確定已將 firestore.rules 部署到您的 Firebase 專案。");
+            } else {
+                console.error("載入分類失敗:", error);
+            }
+        }
+
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl) return;
+
+        if (mode === 'select') {
+            let html = '';
+            categories.forEach(cat => {
+                const selected = cat === selectedValue ? 'selected' : '';
+                html += `<option value="${cat}" ${selected}>${cat}</option>`;
+            });
+            targetEl.innerHTML = html;
+        } else if (mode === 'filters') {
+            let html = `<button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-4 py-1.5 ${window.AppState.currentCategory === '全部' || !window.AppState.currentCategory ? 'bg-primary text-white' : 'bg-bg text-textSub hover:bg-gray-200'} text-sm font-medium rounded-full whitespace-nowrap transition">全部</button>`;
+            categories.forEach(cat => {
+                const isSelected = window.AppState.currentCategory === cat;
+                const activeClass = isSelected ? 'bg-primary text-white' : 'bg-bg text-textSub hover:bg-gray-200';
+                html += `<button onclick="window.filterArticles('${cat}')" data-cat="${cat}" class="cat-btn px-4 py-1.5 ${activeClass} text-sm font-medium rounded-full whitespace-nowrap transition">${cat}</button>`;
+            });
+            targetEl.innerHTML = html;
+        } else {
+            let html = '';
+            categories.forEach(cat => {
+                html += `
+                    <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded">
+                        <span class="text-sm font-medium text-gray-700">${cat}</span>
+                        <div class="flex items-center gap-4">
+                            <button onclick="window.editCategory('${cat}')" class="text-cta hover:text-blue-800 transition" title="修改分類名稱"><i class="fa-solid fa-pen text-sm"></i></button>
+                            <button onclick="window.deleteCategory('${cat}')" class="text-red-500 hover:text-red-700 transition" title="刪除分類"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+            targetEl.innerHTML = html;
+        }
+    };
+
+    window.showModal = (type, title, message, defaultValue = '', onConfirm) => {
+        // 先移除可能殘留的彈窗
+        const existingModal = document.getElementById('custom-modal');
+        if (existingModal) existingModal.remove();
+
+        const isPrompt = type === 'prompt';
+        const inputHtml = isPrompt ? `<input type="text" id="modal-input" class="w-full px-4 py-2 mt-4 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm" value="${defaultValue}">` : '';
+
+        // 建立彈窗的 HTML 結構
+        const modalHtml = `
+            <div id="custom-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
+                <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+                    <h3 class="text-xl font-bold text-primary mb-2">${title}</h3>
+                    <p class="text-sm text-gray-600">${message}</p>
+                    ${inputHtml}
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button id="modal-cancel" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition">取消</button>
+                        <button id="modal-confirm" class="px-4 py-2 text-sm font-medium text-white bg-cta hover:bg-blue-700 rounded transition shadow-sm">確認</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // 插入到畫面中
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        const modalEl = document.getElementById('custom-modal');
+        const inputEl = document.getElementById('modal-input');
+        
+        // 如果是輸入框模式，自動聚焦並選取文字方便修改
+        if (isPrompt && inputEl) {
+            inputEl.focus();
+            inputEl.select();
+        }
+
+        // 綁定關閉事件
+        const closeModal = () => modalEl.remove();
+
+        document.getElementById('modal-cancel').onclick = closeModal;
+        document.getElementById('modal-confirm').onclick = () => {
+            const result = isPrompt ? inputEl.value : true;
+            if (isPrompt && (!result || result.trim() === '')) {
+                showToast('請輸入有效名稱', 'warning');
+                return;
+            }
+            closeModal();
+            if (onConfirm) onConfirm(isPrompt ? result.trim() : true);
+        };
+    };
+
+    window.editCategory = (oldCat) => {
+        window.showModal('prompt', '修改分類', `請輸入「${oldCat}」的新名稱：`, oldCat, async (newCatTrimmed) => {
+            if (newCatTrimmed === oldCat) return;
+            
+            showToast("分類更新中，並同步修改相關文章，請稍候...", "info");
+
+            try {
+                const { db } = window.AppState;
+                const { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch } = window.FS;
+                const catRef = doc(db, "settings", "categories");
+                const docSnap = await getDoc(catRef);
+                
+                let categories = [];
+                if (docSnap.exists() && docSnap.data().list) {
+                    categories = docSnap.data().list;
+                }
+
+                if (categories.includes(newCatTrimmed)) {
+                    showToast("此分類名稱已經存在囉！", "warning");
+                    return;
+                }
+
+                // 1. 更新全域分類陣列中的名稱
+                const index = categories.indexOf(oldCat);
+                if (index !== -1) {
+                    categories[index] = newCatTrimmed;
+                    await setDoc(catRef, { list: categories });
+                }
+
+                // 2. 批次更新 (Batch) 找出所有掛著「舊分類」的文章，改為「新分類」
+                const q = query(collection(db, "articles"), where("category", "==", oldCat));
+                const querySnapshot = await getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    const batch = writeBatch(db);
+                    querySnapshot.forEach((articleDoc) => {
+                        batch.update(articleDoc.ref, { category: newCatTrimmed });
+                    });
+                    await batch.commit();
+                }
+
+                showToast(`分類已成功修改為「${newCatTrimmed}」！`, "success");
+                await window.loadCategories('settings-categories-list', 'admin');
+            } catch (error) {
+                console.error(error);
+                showToast("修改分類失敗，請確認資料庫連線", "error");
+            }
+        });
+    };
+
+    window.createCategory = async () => {
+        const input = document.getElementById('new-category-input');
+        const btn = document.getElementById('btn-add-category');
+        const newCat = input.value.trim();
+        
+        if (!newCat) {
+            showToast("請輸入分類名稱", "warning");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        try {
+            const { db } = window.AppState;
+            const { doc, getDoc, setDoc } = window.FS;
+            const catRef = doc(db, "settings", "categories");
+            const docSnap = await getDoc(catRef);
+            
+            let categories = [];
+            if (docSnap.exists() && docSnap.data().list) {
+                categories = docSnap.data().list;
+            }
+
+            if (categories.includes(newCat)) {
+                showToast("此分類已存在！", "warning");
+            } else {
+                categories.push(newCat);
+                await setDoc(catRef, { list: categories });
+                showToast("分類新增成功！", "success");
+                input.value = '';
+                await window.loadCategories('settings-categories-list', 'admin');
+            }
+        } catch (error) {
+            showToast("新增分類失敗", "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plus"></i> 新增';
+        }
+    };
+
+    window.deleteCategory = (catToDelete) => {
+        window.showModal('confirm', '刪除分類', `確定要刪除「${catToDelete}」嗎？<br><span class="text-xs text-gray-500">注意：這不會刪除該分類下的文章，但文章將會失去此分類。</span>`, '', async () => {
+            try {
+                const { db } = window.AppState;
+                const { doc, getDoc, setDoc } = window.FS;
+                const catRef = doc(db, "settings", "categories");
+                const docSnap = await getDoc(catRef);
+                
+                let categories = ["Vibe Coding", "架構設計", "AI 應用"];
+                if (docSnap.exists() && docSnap.data().list) {
+                    categories = docSnap.data().list;
+                }
+                
+                categories = categories.filter(c => c !== catToDelete);
+                await setDoc(catRef, { list: categories });
+                showToast("分類已刪除！", "success");
+                await window.loadCategories('settings-categories-list', 'admin');
+            } catch (error) {
+                if (error.code === 'permission-denied') {
+                    showToast("權限不足：無法刪除分類，請部署 firestore.rules", "error");
+                } else {
+                    showToast("刪除分類失敗", "error");
+                }
+            }
         });
     };
 
@@ -1746,7 +1987,6 @@
             const { collection, addDoc, updateDoc, doc, serverTimestamp } = window.FS;
             const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
 
-            // 1. 先儲存表單文字資料到 Firestore
             const leadData = {
                 name, email, company, type, message,
                 status: 'new',
@@ -1754,32 +1994,23 @@
             };
             const docRef = await addDoc(collection(db, "leads"), leadData);
 
-            // 2. 處理附件上傳
             if (file) {
-                // 如果是圖片，進行壓縮 (最大 1200x1200px, 80% 品質)
                 if (file.type.startsWith('image/')) {
-                    btn.innerHTML = '<i class="fa-solid fa-compress fa-fade"></i> 壓縮圖片中...';
-                    file = await window.compressImage(file, 1200, 1200, 0.8);
+                    btn.innerHTML = '<i class="fa-solid fa-compress"></i> 壓縮圖片中...';
+                    file = await window.compressImage(file);
                 }
-
-                // 檢查檔案大小 (壓縮後/PDF 限制 5MB)
-                if (file.size > 5 * 1024 * 1024) throw new Error("檔案大小不能超過 5MB");
+                if (file.size > 5 * 1024 * 1024) throw new Error("檔案大小超過 5MB");
                 
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳附件中...';
-                // 建立上傳路徑：/leads/{leadId}/attachments/{fileName}
                 const fileRef = ref(storage, `leads/${docRef.id}/attachments/${file.name}`);
                 await uploadBytes(fileRef, file);
-                
-                // 取得下載網址，並更新回 Firestore 的表單紀錄中
                 const fileUrl = await getDownloadURL(fileRef);
                 await updateDoc(doc(db, "leads", docRef.id), { attachmentUrl: fileUrl, fileName: file.name });
             }
 
             showToast("感謝您的來信！我們將盡快與您聯繫。", "success");
             document.getElementById('contact-form').reset();
-            
         } catch (error) {
-            console.error("Lead submission failed", error);
             showToast("送出失敗：" + error.message, "error");
         } finally {
             btn.disabled = false;
@@ -1794,8 +2025,6 @@
         try {
             const { db } = window.AppState;
             const { collection, getDocs, query, orderBy } = window.FS;
-            
-            // 讀取所有 leads (單純時間排序，不需要額外複合索引)
             const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
             const querySnapshot = await getDocs(q);
             
@@ -1805,12 +2034,10 @@
             }
 
             let html = '';
-            window.AppState.loadedLeads = {}; // 暫存在記憶體供彈出視窗使用
-
+            window.AppState.loadedLeads = {};
             querySnapshot.forEach((docSnap) => {
                 const lead = docSnap.data();
                 window.AppState.loadedLeads[docSnap.id] = lead;
-
                 const dateStr = lead.createdAt ? new Date(lead.createdAt.seconds * 1000).toLocaleString() : '剛送出';
                 const statusBadge = lead.status === 'new' 
                     ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">新進</span>'
@@ -1829,7 +2056,6 @@
             });
             tbody.innerHTML = html;
         } catch (error) {
-            console.error(error);
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-500">載入失敗。</td></tr>';
         }
     };
@@ -1837,20 +2063,15 @@
     window.viewLead = (id) => {
         const lead = window.AppState.loadedLeads[id];
         if (!lead) return;
-
         const content = document.getElementById('lead-modal-content');
-        let attachmentHtml = '';
-        if (lead.attachmentUrl) {
-            // 提供帶有憑證的 Firebase Storage 網址直接打開或下載
-            attachmentHtml = `
-                <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded">
-                    <span class="text-sm text-gray-500 block mb-1">夾帶附件：</span>
-                    <a href="${lead.attachmentUrl}" target="_blank" class="text-cta hover:underline text-sm font-medium flex items-center gap-1">
-                        <i class="fa-solid fa-paperclip"></i> ${lead.fileName || '開啟檔案'}
-                    </a>
-                </div>
-            `;
-        }
+        let attachmentHtml = lead.attachmentUrl ? `
+            <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded">
+                <span class="text-sm text-gray-500 block mb-1">夾帶附件：</span>
+                <a href="${lead.attachmentUrl}" target="_blank" class="text-cta hover:underline text-sm font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-paperclip"></i> ${lead.fileName || '開啟檔案'}
+                </a>
+            </div>
+        ` : '';
 
         content.innerHTML = `
             <div class="grid grid-cols-2 gap-4 border-b border-gray-100 pb-4">
@@ -1865,24 +2086,17 @@
             </div>
             ${attachmentHtml}
         `;
-        
         document.getElementById('lead-modal').classList.remove('hidden');
     };
 
-    // --- Member Dashboard ---
     window.renderMemberDashboard = async () => {
         const { user, db } = window.AppState;
         if (!user) return;
         
-        const nameEl = document.getElementById('member-name');
-        const emailEl = document.getElementById('member-email');
-        const avatarEl = document.getElementById('member-avatar');
+        document.getElementById('member-name').innerText = user.displayName || user.email?.split('@')[0] || '會員';
+        document.getElementById('member-email').innerText = user.email || '';
+        document.getElementById('member-avatar').src = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + (user.displayName || 'M').charAt(0).toUpperCase());
         
-        if (nameEl) nameEl.innerText = user.displayName || user.email?.split('@')[0] || '會員';
-        if (emailEl) emailEl.innerText = user.email || '';
-        if (avatarEl) avatarEl.src = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + (user.displayName || 'M').charAt(0).toUpperCase());
-        
-        // 從 Firestore 撈取真實收藏清單
         const container = document.getElementById('member-bookmarks-container');
         if (!container) return;
         
@@ -1920,42 +2134,111 @@
             });
             container.innerHTML = html;
         } catch (error) {
-            console.error(error);
             container.innerHTML = '<p class="col-span-full text-red-500">載入收藏失敗</p>';
         }
     };
 
-    window.testFirestoreWrite = async () => {
-        const logEl = document.getElementById('admin-log');
-        if (!logEl) return;
-        
-        logEl.innerHTML += `\n> 正在發送寫入請求...`;
-        
+    window.loadHomeData = async () => {
         try {
-            const { db, user } = window.AppState;
-            const { collection, addDoc, serverTimestamp } = window.FS;
+            const { db } = window.AppState;
+            const { doc, getDoc } = window.FS;
+            const docSnap = await getDoc(doc(db, "settings", "global"));
             
-            const docRef = await addDoc(collection(db, "articles"), {
-                title: "Vibe Coding 自動化測試文章",
-                content: "<p>這是一篇測試文章，確認超級管理員寫入權限。</p>",
-                status: "published",
-                visibility: "public",
-                authorIds: [user.uid],
-                createdAt: serverTimestamp()
-            });
-            
-            logEl.innerHTML += `\n<span class="text-white">✅ 寫入成功！</span> 文件 ID: ${docRef.id}`;
-            showToast("測試文章寫入成功！", "success");
-            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.heroTitle) document.getElementById('home-hero-title').innerHTML = data.heroTitle;
+                if (data.heroBio) document.getElementById('home-hero-bio').innerHTML = data.heroBio;
+                if (data.profileImageUrl) document.getElementById('home-profile-img').src = data.profileImageUrl;
+            }
         } catch (error) {
-            console.error("Firestore write error:", error);
-            logEl.innerHTML += `\n<span class="text-red-400">❌ 寫入失敗！</span> 錯誤代碼: ${error.code}`;
-            logEl.innerHTML += `\n<span class="text-gray-400">可能原因：Security Rules 阻擋，或您的帳號尚未取得 super_admin 權限。</span>`;
-            showToast("寫入失敗，請檢查 Log", "error");
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限不足：無法載入首頁設定。請前往 Firebase Console -> Firestore Database -> Rules 更新安全規則。目前將顯示預設內容。");
+            } else {
+                console.error("無法載入首頁設定:", error);
+            }
         }
     };
 
-    // --- Ask TONY AI Logic (Gemini + Firestore RAG Simulation) ---
+    window.loadSiteSettings = async () => {
+        // 1. 嘗試載入全域設定 (標題、照片)
+        try {
+            const { db } = window.AppState;
+            const { doc, getDoc } = window.FS;
+            const docSnap = await getDoc(doc(db, "settings", "global"));
+            
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('settings-hero-title').value = data.heroTitle || '';
+                document.getElementById('settings-hero-bio').value = data.heroBio || '';
+                if (data.profileImageUrl) {
+                    document.getElementById('settings-preview-img').src = data.profileImageUrl;
+                }
+            }
+        } catch (error) {
+            // 將 console.error 改為 console.warn，避免觸發系統中斷警告
+            if (error.code === 'permission-denied') {
+                console.warn("⚠️ 權限警告：無法從資料庫讀取首頁設定，請確認您的 firestore.rules 已部署至 Firebase。");
+                showToast("權限警告：設定讀取受限，目前顯示預設畫面。", "warning");
+            } else {
+                console.error("載入全域設定發生未知的錯誤:", error);
+                showToast("載入設定失敗：" + error.message, "error");
+            }
+        }
+
+        // 2. 獨立載入分類管理列表 (無論首頁設定是否成功，這一步都會確實執行)
+        await window.loadCategories('settings-categories-list', 'admin');
+    };
+
+    window.saveSiteSettings = async (event) => {
+        event.preventDefault();
+        const btn = document.getElementById('btn-save-settings');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 儲存中...';
+
+        const heroTitle = document.getElementById('settings-hero-title').value;
+        const heroBio = document.getElementById('settings-hero-bio').value;
+        const fileInput = document.getElementById('settings-profile-img');
+        let file = fileInput.files[0];
+
+        try {
+            const { db, storage } = window.AppState;
+            const { doc, setDoc, serverTimestamp } = window.FS;
+            const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
+
+            let profileImageUrl = document.getElementById('settings-preview-img').src;
+
+            // 如果有上傳新圖片，進行壓縮與上傳
+            if (file) {
+                if (file.type.startsWith('image/')) {
+                    btn.innerHTML = '<i class="fa-solid fa-compress"></i> 壓縮圖片中...';
+                    file = await window.compressImage(file, 800, 800, 0.85); // 壓縮為 800x800 正方形
+                }
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 上傳圖片中...';
+                const fileRef = ref(storage, `site/settings/profile_${Date.now()}.jpg`);
+                await uploadBytes(fileRef, file);
+                profileImageUrl = await getDownloadURL(fileRef);
+                document.getElementById('settings-preview-img').src = profileImageUrl;
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-database"></i> 更新資料庫...';
+            // 將設定寫入 Firestore
+            await setDoc(doc(db, "settings", "global"), {
+                heroTitle,
+                heroBio,
+                profileImageUrl,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            showToast("網站設定儲存成功！回首頁即可看到變化。", "success");
+            fileInput.value = ''; // 清空選擇檔案狀態
+        } catch (error) {
+            showToast("儲存失敗：" + error.message, "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 儲存所有設定';
+        }
+    };
+
     window.setAskTonyInput = (text) => {
         const input = document.getElementById('ask-tony-input');
         if (input) {
@@ -1986,7 +2269,6 @@
         const query = inputEl.value.trim();
         if (!query) return;
 
-        // 1. 顯示使用者訊息
         const userAvatar = window.AppState.user?.photoURL || 'https://placehold.co/100x100/2563EB/FFF?text=U';
         chatHistory.insertAdjacentHTML('beforeend', `
             <div class="flex gap-4 justify-end">
@@ -2002,24 +2284,21 @@
         btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
-        // 2. 顯示 AI 載入中訊息
         const loadingId = 'loading-' + Date.now();
         chatHistory.insertAdjacentHTML('beforeend', `
             <div id="${loadingId}" class="flex gap-4">
                 <div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-accent font-bold shadow-sm">T</div>
                 <div class="bg-gray-100 p-4 rounded-2xl rounded-tl-none text-textMain text-sm max-w-[85%] flex items-center gap-2 shadow-sm border border-transparent animate-pulse">
-                    <i class="fa-solid fa-circle-notch fa-spin text-accent"></i> 正在翻閱知識庫文章...
+                    <i class="fa-solid fa-circle-notch fa-spin text-accent"></i> 正在透過安全後端詢問 Ask TONY...
                 </div>
             </div>
         `);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
         try {
-            // 3. RAG 知識庫檢索 (從 Firestore 撈取最近的 3 篇已發布文章作為 Context)
             const { db } = window.AppState;
             const { collection, getDocs, query: fsQuery, where, orderBy, limit } = window.FS;
             
-            // 【修正】查詢條件必須與我們稍早建立的「複合索引」完全一致
             const q = fsQuery(
                 collection(db, "articles"), 
                 where("status", "==", "published"), 
@@ -2030,65 +2309,45 @@
             const snap = await getDocs(q);
             
             let contextText = "【以下是從 TONY STUDIO 知識庫檢索到的相關文章內容】：\n\n";
-            let hasContext = false;
-            
             snap.forEach(doc => {
                 const data = doc.data();
-                hasContext = true;
-                // 清理簡單的 HTML 標籤，保留純文字給 AI 閱讀
                 const plainContent = (data.content || '').replace(/<[^>]*>?/gm, ''); 
                 contextText += `標題：${data.title}\n摘要：${data.excerpt}\n正文：${plainContent.substring(0, 1000)}...\n\n`;
             });
 
-            if (!hasContext) {
-                contextText = "【目前知識庫中尚無任何已發布的文章，請基於你的常識簡短回答，並說明知識庫尚在建置中。】";
-            }
-
-            // 4. 呼叫後端 Firebase Cloud Functions (超安全，金鑰在後端！)
             const { functions } = window.AppState;
             const { httpsCallable } = window.FunctionsAPI;
             const askTonyFunction = httpsCallable(functions, 'askTony');
 
-            // 將問題與背景知識打包送到後端
             const result = await askTonyFunction({ 
                 query: query,
                 contextText: contextText
             });
 
             const aiText = result.data.text;
-
-            // 5. 簡單的 Markdown 轉 HTML (粗體與換行)
             const formattedHtml = aiText
                 .replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary">$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/\n/g, '<br>');
 
-            // 6. 將 AI 回答渲染到畫面上
             document.getElementById(loadingId).outerHTML = `
                 <div class="flex gap-4">
                     <div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-accent font-bold shadow-sm">T</div>
                     <div class="bg-white border border-gray-200 p-4 rounded-2xl rounded-tl-none text-textMain text-sm max-w-[85%] leading-relaxed shadow-sm">
                         ${formattedHtml}
                         <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                            <span class="text-[10px] text-gray-400"><i class="fa-solid fa-bolt text-accent"></i> Gemini 驅動</span>
-                            <div class="flex gap-3">
-                                <button class="text-xs text-gray-400 hover:text-primary transition" title="有幫助" onclick="showToast('感謝您的回饋！', 'success')"><i class="fa-regular fa-thumbs-up text-lg"></i></button>
-                                <button class="text-xs text-gray-400 hover:text-red-500 transition" title="無幫助" onclick="showToast('我們會持續改進 AI 模型。', 'info')"><i class="fa-regular fa-thumbs-down text-lg"></i></button>
-                            </div>
+                            <span class="text-[10px] text-gray-400"><i class="fa-solid fa-bolt text-accent"></i> Gemini 雲端後端驅動</span>
                         </div>
                     </div>
                 </div>
             `;
         } catch (err) {
             console.error("Ask TONY Error:", err);
-            // 捕捉並顯示來自後端的真實錯誤
-            let errorMsg = err.message || '連線到 AI 伺服器失敗，請稍後再試。';
-            
             document.getElementById(loadingId).outerHTML = `
                 <div class="flex gap-4">
                     <div class="w-8 h-8 rounded-full bg-red-600 flex-shrink-0 flex items-center justify-center text-white font-bold shadow-sm"><i class="fa-solid fa-exclamation"></i></div>
                     <div class="bg-red-50 text-red-700 border border-red-200 p-4 rounded-2xl rounded-tl-none text-sm max-w-[85%] shadow-sm">
-                        抱歉，發生錯誤：<br><span class="text-xs font-mono mt-1 block">${errorMsg}</span>
+                        抱歉，AI 發生錯誤：<br><span class="text-xs font-mono mt-1 block">${err.message}</span>
                     </div>
                 </div>
             `;
@@ -2099,10 +2358,8 @@
         }
     };
 
-    // Initialize Router
     window.addEventListener('hashchange', router);
     window.addEventListener('load', router);
-
 </script>
 
 </body>
