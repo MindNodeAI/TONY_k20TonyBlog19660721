@@ -88,12 +88,15 @@
         .ql-editor {
             min-height: 300px;
         }
-        .ql-editor h1 { font-size: 2.25rem; font-weight: bold; margin-bottom: 1rem; }
-        .ql-editor h2 { font-size: 1.875rem; font-weight: bold; margin-bottom: 0.875rem; }
-        .ql-editor h3 { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.75rem; }
-        .ql-editor p { margin-bottom: 1rem; }
-        .ql-editor ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
-        .ql-editor ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+        /* 同步編輯器 (.ql-editor) 與前台文章 (.prose) 的樣式，確保完全的所見即所得 */
+        .ql-editor h1, .prose h1 { font-size: 2.25rem !important; font-weight: bold !important; margin-bottom: 1rem !important; line-height: 1.3 !important; }
+        .ql-editor h2, .prose h2 { font-size: 1.875rem !important; font-weight: bold !important; margin-bottom: 0.875rem !important; line-height: 1.4 !important; }
+        .ql-editor h3, .prose h3 { font-size: 1.5rem !important; font-weight: bold !important; margin-bottom: 0.75rem !important; line-height: 1.5 !important; }
+        .ql-editor p, .prose p { margin-bottom: 1rem !important; line-height: 1.7 !important; }
+        .ql-editor ul, .prose ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin-bottom: 1rem !important; }
+        .ql-editor ol, .prose ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin-bottom: 1rem !important; }
+        .ql-editor strong, .prose strong { font-weight: 700 !important; color: #0B1F3A !important; }
+        .ql-editor em, .prose em { font-style: italic !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -330,7 +333,7 @@
         }, '確定刪除', true);
     };
 
-    // Enhanced Authentication Handlers with clear diagnostic messages
+    // Enhanced Authentication Handlers
     window.handleEmailRegister = async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
@@ -376,9 +379,9 @@
         } catch (error) {
             console.error("Login failed", error);
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                showToast("帳號或密碼錯誤。若尚未註冊請先點擊「註冊」分頁，或檢查 Firebase 是否已啟用 Email 登入", "error");
+                showToast("帳號或密碼錯誤。若尚未註冊請先點擊「註冊」分頁", "error");
             } else if (error.code === 'auth/operation-not-allowed') {
-                showToast("錯誤：尚未在 Firebase Console 啟用 Email/Password 登入服務！", "error");
+                showToast("錯誤：尚未在 Firebase Console 啟用 Email 登入服務！", "error");
             } else {
                 showToast("登入失敗：" + error.message, "error");
             }
@@ -596,7 +599,7 @@
                 <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-secondary opacity-50 blur-3xl"></div>
                 <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-cta opacity-30 blur-3xl"></div>
                 
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col lg:flex-row items-center">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col lg:flex-row items-center gap-12">
                     <div class="lg:w-3/5 text-left mb-12 lg:mb-0">
                         <span class="inline-block py-1 px-3 rounded-full bg-secondary text-accent text-xs font-bold tracking-wider mb-6">VIBE CODING EXPERT</span>
                         <h1 id="home-hero-title" class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
@@ -606,6 +609,10 @@
                         <p id="home-hero-bio" class="text-lg text-gray-300 mb-8 max-w-2xl">
                             我是 TONY，專注於全端開發、AI 知識庫建置與個人品牌營運。在這裡，我將經驗化為可被搜尋、引用與實踐的知識資產。
                         </p>
+                        
+                        <!-- 預留社群按鈕區域 -->
+                        <div id="home-social-links" class="flex flex-wrap gap-3 mb-8 hidden"></div>
+
                         <div class="flex flex-wrap gap-4">
                             <a href="#/articles" class="bg-cta hover:bg-blue-600 text-white px-8 py-3 rounded font-medium transition shadow-lg flex items-center gap-2">
                                 探索專業觀點 <i class="fa-solid fa-arrow-right"></i>
@@ -615,13 +622,16 @@
                             </a>
                         </div>
                     </div>
-                    <div class="lg:w-2/5 flex justify-center">
-                        <div class="w-72 h-72 md:w-96 md:h-96 rounded-full border-4 border-accent/30 p-2 relative">
+                    <div class="lg:w-2/5 flex flex-col items-center justify-center">
+                        <div class="w-72 h-72 md:w-96 md:h-96 rounded-full border-4 border-accent/30 p-2 relative shadow-2xl mb-8">
                             <div class="absolute inset-0 rounded-full border-2 border-dashed border-accent animate-[spin_60s_linear_infinite]"></div>
                             <img id="home-profile-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY+Profile" alt="TONY 老師" class="w-full h-full object-cover rounded-full shadow-2xl">
                         </div>
                     </div>
                 </div>
+                
+                <!-- 預留 IP 專業歷程區域 -->
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10" id="home-ip-info-container"></div>
             </section>
 
             <section class="py-16 bg-white">
@@ -1121,10 +1131,23 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">請描述您想寫的主題或大綱 *</label>
                                 <textarea id="ai-prompt" rows="2" placeholder="例如：幫我寫一段關於『為什麼企業需要導入 RAG 知識庫』的引言..." class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm shadow-inner"></textarea>
                             </div>
-                            <div class="text-right">
-                                <button type="button" id="btn-ai-generate" onclick="window.generateAIContent()" class="bg-primary hover:bg-secondary text-accent px-5 py-2 rounded font-medium transition shadow flex items-center gap-2 ml-auto text-sm">
+                            <div class="flex flex-wrap items-center justify-end gap-3">
+                                <button type="button" id="btn-ai-prompt" onclick="window.generateCoverPrompt()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2 rounded font-medium transition shadow-sm flex items-center gap-2 text-sm">
+                                    <i class="fa-solid fa-image"></i> 生成封面圖 Prompt
+                                </button>
+                                <button type="button" id="btn-ai-generate" onclick="window.generateAIContent()" class="bg-primary hover:bg-secondary text-accent px-5 py-2 rounded font-medium transition shadow flex items-center gap-2 text-sm">
                                     <i class="fa-solid fa-wand-magic-sparkles"></i> 讓 AI 生成內容並插入編輯器
                                 </button>
+                            </div>
+                            <!-- 隱藏的提示詞結果區塊 -->
+                            <div id="ai-prompt-result-container" class="mt-4 hidden bg-white p-4 rounded border border-gray-200 shadow-inner">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">生成結果 (請複製至 Midjourney 或 DALL-E)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="ai-cover-prompt-result" readonly class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-600 focus:outline-none">
+                                    <button type="button" onclick="window.copyCoverPrompt()" class="bg-secondary hover:bg-primary text-white px-4 py-2 rounded text-sm font-medium transition flex-shrink-0 shadow-sm">
+                                        <i class="fa-regular fa-copy"></i> 複製
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1343,7 +1366,32 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">首頁個人簡介</label>
                                 <textarea id="settings-hero-bio" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-cta text-sm">我是 TONY，專注於全端開發、AI 知識庫建置與個人品牌營運。在這裡，我將經驗化為可被搜尋、引用與實踐的知識資產。</textarea>
                             </div>
-                            <div class="pt-4 border-t border-gray-100">
+
+                            <hr class="border-gray-100">
+                            
+                            <h3 class="text-lg font-bold text-primary mb-2"><i class="fa-solid fa-address-card text-accent"></i> 專業背景與里程碑 (支援換行)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm text-gray-700 mb-1">核心專長</label><textarea id="settings-skills" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></textarea></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">重要經歷</label><textarea id="settings-experience" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></textarea></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">輔導 / 證照</label><textarea id="settings-certifications" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></textarea></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">出版 / 專案</label><textarea id="settings-books" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></textarea></div>
+                            </div>
+
+                            <hr class="border-gray-100 mt-4">
+                            
+                            <h3 class="text-lg font-bold text-primary mb-2"><i class="fa-solid fa-share-nodes text-accent"></i> 社群連結設定</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div><label class="block text-sm text-gray-700 mb-1">YouTube 頻道網址</label><input type="url" id="settings-social-yt" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">Facebook 粉絲專頁</label><input type="url" id="settings-social-fb" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">Instagram 網址</label><input type="url" id="settings-social-ig" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">LinkedIn 網址</label><input type="url" id="settings-social-in" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">TikTok 網址</label><input type="url" id="settings-social-tk" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">個人部落格 / Medium</label><input type="url" id="settings-social-blog" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">LINE 個人連結</label><input type="url" id="settings-social-line" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                                <div><label class="block text-sm text-gray-700 mb-1">LINE 官方帳號 (OA)</label><input type="url" id="settings-social-lineoa" class="w-full px-3 py-2 border border-gray-300 rounded text-sm"></div>
+                            </div>
+
+                            <div class="pt-4 border-t border-gray-100 mt-4">
                                 <button type="submit" id="btn-save-settings" class="bg-cta hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition shadow flex items-center gap-2">
                                     <i class="fa-solid fa-cloud-arrow-up"></i> 儲存所有設定
                                 </button>
@@ -1452,7 +1500,10 @@
         } else if (path === '/admin/settings') {
             if (!window.AppState.user || !['super_admin', 'admin'].includes(window.AppState.role)) return;
             root.innerHTML = Views.adminSettings;
-            setTimeout(window.loadSiteSettings, 100);
+            setTimeout(() => {
+                window.loadSiteSettings();
+                window.loadCategories('settings-categories-list', 'admin');
+            }, 100);
         } else if (path === '/login') {
             if (window.AppState.user) {
                 window.location.hash = '#/member';
@@ -1833,6 +1884,82 @@
             } catch(e) {
                 showToast("無法載入文章", "error");
             }
+        }
+    };
+
+    window.generateAIContent = async () => {
+        const prompt = document.getElementById('ai-prompt').value.trim();
+        const style = document.getElementById('ai-style').value;
+        const audience = document.getElementById('ai-audience').value;
+        
+        if (!prompt) return showToast('請先輸入主題或大綱！', 'warning');
+
+        const btn = document.getElementById('btn-ai-generate');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 撰寫中...';
+        
+        try {
+            // 恢復使用 Cloud Functions
+            const { functions } = window.AppState;
+            const { httpsCallable } = window.FunctionsAPI;
+            const aiAssistant = httpsCallable(functions, 'aiAssistant');
+            
+            const result = await aiAssistant({ prompt, style, audience });
+            const aiText = result.data.html;
+            
+            if (window.quillEditor && aiText) {
+                const range = window.quillEditor.getSelection(true) || { index: window.quillEditor.getLength() };
+                window.quillEditor.clipboard.dangerouslyPasteHTML(range.index, aiText);
+                showToast('AI 內容已插入編輯器！', 'success');
+            }
+        } catch (error) {
+            console.warn("AI 寫作失敗:", error);
+            showToast('雲端連線錯誤: ' + error.message, 'error'); 
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
+
+    window.generateCoverPrompt = async () => {
+        const prompt = document.getElementById('ai-prompt').value.trim();
+        if (!prompt) return showToast('請先輸入主題大綱！', 'warning');
+        
+        const btn = document.getElementById('btn-ai-prompt');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 發想中...';
+        
+        try {
+            // 恢復使用 Cloud Functions
+            const { functions } = window.AppState;
+            const { httpsCallable } = window.FunctionsAPI;
+            const aiImagePrompt = httpsCallable(functions, 'aiImagePrompt');
+            
+            const result = await aiImagePrompt({ prompt });
+            
+            document.getElementById('ai-prompt-result-container').classList.remove('hidden');
+            document.getElementById('ai-cover-prompt-result').value = result.data.prompt;
+            showToast('繪圖提示詞生成成功！', 'success');
+        } catch (error) {
+            console.warn("AI 發想失敗:", error);
+            showToast('雲端連線錯誤: ' + error.message, 'error'); 
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
+
+    window.copyCoverPrompt = () => {
+        const copyText = document.getElementById("ai-cover-prompt-result");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); 
+        try {
+            document.execCommand("copy");
+            showToast("已複製提示詞！", "success");
+        } catch (err) {
+            showToast("複製失敗", "error");
         }
     };
 
@@ -2228,37 +2355,47 @@
                 if (data.heroTitle) document.getElementById('home-hero-title').innerHTML = data.heroTitle;
                 if (data.heroBio) document.getElementById('home-hero-bio').innerHTML = data.heroBio;
                 if (data.profileImageUrl) document.getElementById('home-profile-img').src = data.profileImageUrl;
+                
+                const socialContainer = document.getElementById('home-social-links');
+                let socialHtml = '';
+                if (data.socialYT) socialHtml += `<a href="${data.socialYT}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#FF0000] hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-youtube"></i></a>`;
+                if (data.socialFB) socialHtml += `<a href="${data.socialFB}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#1877F2] hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-facebook"></i></a>`;
+                if (data.socialIG) socialHtml += `<a href="${data.socialIG}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#E4405F] hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-instagram"></i></a>`;
+                if (data.socialIN) socialHtml += `<a href="${data.socialIN}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#0A66C2] hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-linkedin-in"></i></a>`;
+                if (data.socialTK) socialHtml += `<a href="${data.socialTK}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#000000] hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-tiktok"></i></a>`;
+                if (data.socialBlog) socialHtml += `<a href="${data.socialBlog}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-gray-700 hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-medium"></i></a>`;
+                if (data.socialLine || data.socialLineOA) {
+                    const lineUrl = data.socialLineOA || data.socialLine;
+                    socialHtml += `<a href="${lineUrl}" target="_blank" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#00B900] hover:scale-110 transition duration-300 shadow-lg"><i class="fa-brands fa-line"></i></a>`;
+                }
+                
+                if (socialHtml && socialContainer) {
+                    socialContainer.innerHTML = socialHtml;
+                    socialContainer.classList.remove('hidden');
+                }
+                
+                const ipContainer = document.getElementById('home-ip-info-container');
+                if (ipContainer && (data.skills || data.experience || data.certifications || data.books)) {
+                    let ipHtml = '<div class="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 mt-12 mb-8 shadow-2xl">';
+                    ipHtml += '<h3 class="text-2xl font-bold text-accent mb-6 flex items-center gap-2"><i class="fa-solid fa-address-card"></i> 專業里程碑</h3>';
+                    ipHtml += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">';
+                    
+                    const renderBlock = (title, icon, content) => {
+                        if (!content) return '';
+                        const formatted = content.split('\\n').join('<br>');
+                        return `<div><h4 class="text-white font-bold mb-3 flex items-center gap-2"><i class="${icon} text-gray-300"></i> ${title}</h4><p class="text-gray-300 text-sm leading-relaxed">${formatted}</p></div>`;
+                    };
+                    
+                    ipHtml += renderBlock('核心專長', 'fa-solid fa-star', data.skills);
+                    ipHtml += renderBlock('重要經歷', 'fa-solid fa-briefcase', data.experience);
+                    ipHtml += renderBlock('輔導 / 證照', 'fa-solid fa-certificate', data.certifications);
+                    ipHtml += renderBlock('出版 / 專案', 'fa-solid fa-book', data.books);
+                    
+                    ipHtml += '</div></div>';
+                    ipContainer.innerHTML = ipHtml;
+                }
             }
         } catch (error) {
-            if (error.code === 'permission-denied') {
-                console.warn("⚠️ 權限不足：無法載入首頁設定。請前往 Firebase Console -> Firestore Database -> Rules 更新安全規則。目前將顯示預設內容。");
-            } else {
-                console.error("無法載入首頁設定:", error);
-            }
-        }
-    };
-
-    window.loadSiteSettings = async () => {
-        // 1. 嘗試載入全域設定 (標題、照片)
-        try {
-            const { db } = window.AppState;
-            const { doc, getDoc } = window.FS;
-            const docSnap = await getDoc(doc(db, "settings", "global"));
-            
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById('settings-hero-title').value = data.heroTitle || '';
-                document.getElementById('settings-hero-bio').value = data.heroBio || '';
-                if (data.profileImageUrl) {
-                    document.getElementById('settings-preview-img').src = data.profileImageUrl;
-                }
-                if (data.siteLogoUrl) {
-                    const logoPreview = document.getElementById('settings-logo-preview');
-                    if (logoPreview) logoPreview.src = data.siteLogoUrl;
-                }
-            }
-        } catch (error) {
-            // 將 console.error 改為 console.warn，避免觸發系統中斷警告
             if (error.code === 'permission-denied') {
                 console.warn("⚠️ 權限警告：無法從資料庫讀取首頁設定，請確認您的 firestore.rules 已部署至 Firebase。");
                 showToast("權限警告：設定讀取受限，目前顯示預設畫面。", "warning");
@@ -2268,8 +2405,43 @@
             }
         }
 
-        // 2. 獨立載入分類管理列表 (無論首頁設定是否成功，這一步都會確實執行)
+        // 2. 獨立載入分類管理列表
         await window.loadCategories('settings-categories-list', 'admin');
+    };
+
+    window.loadSiteSettings = async () => {
+        try {
+            const { db } = window.AppState;
+            const { doc, getDoc } = window.FS;
+            const docSnap = await getDoc(doc(db, "settings", "global"));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                
+                if (data.heroTitle) document.getElementById('settings-hero-title').value = data.heroTitle;
+                if (data.heroBio) document.getElementById('settings-hero-bio').value = data.heroBio;
+                if (data.profileImageUrl) document.getElementById('settings-preview-img').src = data.profileImageUrl;
+                if (data.siteLogoUrl) {
+                    const logoPreview = document.getElementById('settings-logo-preview');
+                    if (logoPreview) logoPreview.src = data.siteLogoUrl;
+                }
+
+                if (document.getElementById('settings-skills')) document.getElementById('settings-skills').value = data.skills || '';
+                if (document.getElementById('settings-experience')) document.getElementById('settings-experience').value = data.experience || '';
+                if (document.getElementById('settings-certifications')) document.getElementById('settings-certifications').value = data.certifications || '';
+                if (document.getElementById('settings-books')) document.getElementById('settings-books').value = data.books || '';
+
+                if (document.getElementById('settings-social-yt')) document.getElementById('settings-social-yt').value = data.socialYT || '';
+                if (document.getElementById('settings-social-fb')) document.getElementById('settings-social-fb').value = data.socialFB || '';
+                if (document.getElementById('settings-social-ig')) document.getElementById('settings-social-ig').value = data.socialIG || '';
+                if (document.getElementById('settings-social-in')) document.getElementById('settings-social-in').value = data.socialIN || '';
+                if (document.getElementById('settings-social-tk')) document.getElementById('settings-social-tk').value = data.socialTK || '';
+                if (document.getElementById('settings-social-blog')) document.getElementById('settings-social-blog').value = data.socialBlog || '';
+                if (document.getElementById('settings-social-line')) document.getElementById('settings-social-line').value = data.socialLine || '';
+                if (document.getElementById('settings-social-lineoa')) document.getElementById('settings-social-lineoa').value = data.socialLineOA || '';
+            }
+        } catch (error) {
+            console.warn("無法載入後台設定");
+        }
     };
 
     window.saveSiteSettings = async (event) => {
@@ -2336,6 +2508,19 @@
                 updateData.siteLogoUrl = siteLogoUrl;
             }
 
+            updateData.skills = document.getElementById('settings-skills')?.value || '';
+            updateData.experience = document.getElementById('settings-experience')?.value || '';
+            updateData.certifications = document.getElementById('settings-certifications')?.value || '';
+            updateData.books = document.getElementById('settings-books')?.value || '';
+            updateData.socialYT = document.getElementById('settings-social-yt')?.value || '';
+            updateData.socialFB = document.getElementById('settings-social-fb')?.value || '';
+            updateData.socialIG = document.getElementById('settings-social-ig')?.value || '';
+            updateData.socialIN = document.getElementById('settings-social-in')?.value || '';
+            updateData.socialTK = document.getElementById('settings-social-tk')?.value || '';
+            updateData.socialBlog = document.getElementById('settings-social-blog')?.value || '';
+            updateData.socialLine = document.getElementById('settings-social-line')?.value || '';
+            updateData.socialLineOA = document.getElementById('settings-social-lineoa')?.value || '';
+
             await setDoc(doc(db, "settings", "global"), updateData, { merge: true });
 
             showToast("網站設定儲存成功！回首頁即可看到變化。", "success");
@@ -2353,7 +2538,6 @@
         }
     };
 
-    // --- 新增：電子報訂閱邏輯 ---
     window.subscribeNewsletter = async (event) => {
         event.preventDefault();
         const form = event.target;
@@ -2372,8 +2556,6 @@
             const { collection, addDoc, serverTimestamp } = window.FS;
             const subscribersRef = collection(db, "subscribers");
             
-            // 💡 安全機制修正：移除「讀取資料庫檢查是否重複」的動作。
-            // 訪客現在是「盲寫入」(Append-only)，完全符合最嚴格的安全規則！
             await addDoc(subscribersRef, {
                 email: email,
                 subscribedAt: serverTimestamp(),
@@ -2518,15 +2700,16 @@
             <div id="${loadingId}" class="flex gap-4">
                 <div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-accent font-bold shadow-sm">T</div>
                 <div class="bg-gray-100 p-4 rounded-2xl rounded-tl-none text-textMain text-sm max-w-[85%] flex items-center gap-2 shadow-sm border border-transparent animate-pulse">
-                    <i class="fa-solid fa-circle-notch fa-spin text-accent"></i> 正在透過安全後端詢問 Ask TONY...
+                    <i class="fa-solid fa-circle-notch fa-spin text-accent"></i> 正在詢問 Ask TONY...
                 </div>
             </div>
         `);
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
         try {
-            const { db } = window.AppState;
+            const { db, functions } = window.AppState;
             const { collection, getDocs, query: fsQuery, where, orderBy, limit } = window.FS;
+            const { httpsCallable } = window.FunctionsAPI;
             
             const q = fsQuery(
                 collection(db, "articles"), 
@@ -2544,16 +2727,11 @@
                 contextText += `標題：${data.title}\n摘要：${data.excerpt}\n正文：${plainContent.substring(0, 1000)}...\n\n`;
             });
 
-            const { functions } = window.AppState;
-            const { httpsCallable } = window.FunctionsAPI;
-            const askTonyFunction = httpsCallable(functions, 'askTony');
-
-            const result = await askTonyFunction({ 
-                query: query,
-                contextText: contextText
-            });
-
+            // 恢復呼叫 Cloud Functions
+            const askTonyCloud = httpsCallable(functions, 'askTony');
+            const result = await askTonyCloud({ query, contextText });
             const aiText = result.data.text;
+
             const formattedHtml = aiText
                 .replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary">$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -2565,18 +2743,19 @@
                     <div class="bg-white border border-gray-200 p-4 rounded-2xl rounded-tl-none text-textMain text-sm max-w-[85%] leading-relaxed shadow-sm">
                         ${formattedHtml}
                         <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                            <span class="text-[10px] text-gray-400"><i class="fa-solid fa-bolt text-accent"></i> Gemini 雲端後端驅動</span>
+                            <span class="text-[10px] text-gray-400"><i class="fa-solid fa-shield-halved text-green-500"></i> 後端加密處理</span>
                         </div>
                     </div>
                 </div>
             `;
         } catch (err) {
             console.error("Ask TONY Error:", err);
+            showToast("AI 回覆失敗：" + err.message, "error");
             document.getElementById(loadingId).outerHTML = `
                 <div class="flex gap-4">
-                    <div class="w-8 h-8 rounded-full bg-red-600 flex-shrink-0 flex items-center justify-center text-white font-bold shadow-sm"><i class="fa-solid fa-exclamation"></i></div>
-                    <div class="bg-red-50 text-red-700 border border-red-200 p-4 rounded-2xl rounded-tl-none text-sm max-w-[85%] shadow-sm">
-                        抱歉，AI 發生錯誤：<br><span class="text-xs font-mono mt-1 block">${err.message}</span>
+                    <div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-accent font-bold shadow-sm">T</div>
+                    <div class="bg-red-50 border border-red-200 p-4 rounded-2xl rounded-tl-none text-red-700 text-sm max-w-[85%] leading-relaxed shadow-sm">
+                        抱歉，連線到 AI 時發生錯誤：${err.message}
                     </div>
                 </div>
             `;
