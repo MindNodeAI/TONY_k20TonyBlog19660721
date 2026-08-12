@@ -1166,7 +1166,27 @@
         document.getElementById('article-id').value = id || '';
         document.getElementById('editor-title').innerHTML = id ? '編輯文章' : '新增文章';
         if (window.quillEditor) window.quillEditor = null;
-        window.quillEditor = new Quill('#editor-container', { theme: 'snow', modules: { toolbar: [ [{ 'header': [1, 2, false] }], ['bold', 'italic'], ['clean'] ] } });
+        
+        // 專業級編輯器工具列設定
+        const toolbarOptions = [
+            ['bold', 'italic', 'underline', 'strike'],        // 字體基本樣式
+            ['blockquote', 'code-block'],                     // 引用與程式碼區塊
+            [{ 'header': 1 }, { 'header': 2 }],               // 大標題/次標題
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],     // 有序/無序列表
+            [{ 'script': 'sub'}, { 'script': 'super' }],      // 上標/下標
+            [{ 'indent': '-1'}, { 'indent': '+1' }],          // 減少/增加縮排
+            [{ 'size': ['small', false, 'large', 'huge'] }],  // 字體大小
+            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],        // 多級標題
+            [{ 'color': [] }, { 'background': [] }],          // 字體顏色與反白背景色
+            [{ 'align': [] }],                                // 對齊方式 (置左/中/右/分散)
+            ['link', 'image', 'video'],                       // 插入超連結、圖片、影片
+            ['clean']                                         // 清除格式
+        ];
+
+        window.quillEditor = new Quill('#editor-container', { 
+            theme: 'snow', 
+            modules: { toolbar: toolbarOptions } 
+        });
         
         await window.loadCategories('article-category-input', 'select');
 
