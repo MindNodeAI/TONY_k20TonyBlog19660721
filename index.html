@@ -472,7 +472,7 @@
                         <img src="${avatarUrl}" alt="Avatar" class="w-8 h-8 rounded-full border border-gray-200">
                         <span class="text-sm font-medium hidden sm:block">${displayName}</span>
                     </a>
-                    <button onclick="window.handleLogout()" class="text-sm text-textSub hover:text-red-600 transition">登入管理/登出</button>
+                    <button onclick="window.handleLogout()" class="text-sm text-textSub hover:text-red-600 transition">登出</button>
                 </div>
             `;
         } else {
@@ -644,53 +644,10 @@
                         <a href="#/articles" class="text-cta hover:text-blue-800 font-medium transition hidden sm:block">查看所有文章 <i class="fa-solid fa-angle-right ml-1"></i></a>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div class="group bg-bg rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
-                            <div class="h-48 bg-gray-200 relative overflow-hidden">
-                                <img src="https://placehold.co/600x400/E2E8F0/64748B?text=Article+Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
-                                <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded">Vibe Coding</div>
-                            </div>
-                            <div class="p-6">
-                                <div class="flex items-center text-xs text-textSub mb-3 gap-4">
-                                    <span><i class="fa-regular fa-calendar mr-1"></i> 2026-08-11</span>
-                                    <span><i class="fa-regular fa-clock mr-1"></i> 5 min read</span>
-                                </div>
-                                <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2">如何使用 Gemini Canvas 打造全端個人部落格架構</h3>
-                                <p class="text-sm text-textSub line-clamp-3 mb-4">透過 Vibe Coding 的方式，以模組化的指引與嚴謹的 PRD 規格，讓 AI 成為你的完美 Pair Programmer...</p>
-                                <a href="#/articles" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
-                            </div>
-                        </div>
-
-                        <div class="group bg-bg rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
-                            <div class="h-48 bg-gray-200 relative overflow-hidden">
-                                <img src="https://placehold.co/600x400/E2E8F0/64748B?text=Article+Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
-                                <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded">AI 策略</div>
-                            </div>
-                            <div class="p-6">
-                                <div class="flex items-center text-xs text-textSub mb-3 gap-4">
-                                    <span><i class="fa-regular fa-calendar mr-1"></i> 2026-08-05</span>
-                                    <span><i class="fa-regular fa-clock mr-1"></i> 8 min read</span>
-                                </div>
-                                <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2">企業 AI 轉型：從 RAG 知識庫開始的第一步</h3>
-                                <p class="text-sm text-textSub line-clamp-3 mb-4">不只是導入工具，而是重新設計知識流動的途徑。本文解析如何利用 Firebase 與 Gemini Embedding 建置專屬知識庫。</p>
-                                <a href="#/articles" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
-                            </div>
-                        </div>
-
-                        <div class="group bg-bg rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
-                            <div class="h-48 bg-gray-200 relative overflow-hidden">
-                                <img src="https://placehold.co/600x400/E2E8F0/64748B?text=Article+Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
-                                <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded">架構設計</div>
-                            </div>
-                            <div class="p-6">
-                                <div class="flex items-center text-xs text-textSub mb-3 gap-4">
-                                    <span><i class="fa-regular fa-calendar mr-1"></i> 2026-07-28</span>
-                                    <span><i class="fa-regular fa-clock mr-1"></i> 12 min read</span>
-                                </div>
-                                <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2">Serverless 全端架構安全實務：App Check 與 Rules 雙重防護</h3>
-                                <p class="text-sm text-textSub line-clamp-3 mb-4">前端按鈕隱藏不等於安全，深入探討 Firestore Security Rules 與 Custom Claims 的權限矩陣設計...</p>
-                                <a href="#/articles" class="text-cta text-sm font-medium hover:underline">閱讀更多</a>
-                            </div>
+                    <div id="home-featured-articles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div class="col-span-full py-12 text-center text-textSub">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i>
+                            <p>載入最新文章中...</p>
                         </div>
                     </div>
                 </div>
@@ -726,37 +683,12 @@
             <div class="bg-bg min-h-screen py-20">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 class="text-3xl md:text-4xl font-bold text-primary mb-4">主題專題</h1>
-                    <p class="text-textSub max-w-2xl mx-auto mb-12">系統化的學習路徑與深度探討，幫助您建立完整的知識體系。</p>
+                    <p class="text-textSub max-w-2xl mx-auto mb-12">自動為您統整各大分類的系列文章，幫助建立完整的知識體系。</p>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group">
-                            <div class="h-48 bg-gray-200 relative overflow-hidden">
-                                <img src="https://placehold.co/800x400/E2E8F0/64748B?text=RAG+Series" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="RAG 專題">
-                                <div class="absolute top-4 left-4 bg-accent text-primary text-xs font-bold px-3 py-1 rounded">連載中</div>
-                            </div>
-                            <div class="p-8">
-                                <h3 class="text-2xl font-bold text-primary mb-3">企業 AI 知識庫 (RAG) 實戰全指南</h3>
-                                <p class="text-textSub mb-6">從架構設計、向量資料庫選型，到提示工程與安全防護。帶您從零到一建置企業級的專屬 AI 顧問。</p>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-500"><i class="fa-solid fa-list-ol mr-1"></i> 共 8 篇文章</span>
-                                    <a href="#/articles" class="text-cta font-medium hover:underline">開始閱讀 <i class="fa-solid fa-arrow-right text-sm ml-1"></i></a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group">
-                            <div class="h-48 bg-gray-200 relative overflow-hidden">
-                                <img src="https://placehold.co/800x400/E2E8F0/64748B?text=Vibe+Coding" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Vibe Coding">
-                                <div class="absolute top-4 left-4 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded">已完結</div>
-                            </div>
-                            <div class="p-8">
-                                <h3 class="text-2xl font-bold text-primary mb-3">Vibe Coding：AI 時代的極速開發心法</h3>
-                                <p class="text-textSub mb-6">探討如何利用 Cursor、Gemini Canvas 等工具，透過精準的 PRD 與模組化思維，將開發效率提升 10 倍。</p>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-500"><i class="fa-solid fa-list-ol mr-1"></i> 共 5 篇文章</span>
-                                    <a href="#/articles" class="text-cta font-medium hover:underline">開始閱讀 <i class="fa-solid fa-arrow-right text-sm ml-1"></i></a>
-                                </div>
-                            </div>
+                    <div id="series-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div class="col-span-full py-12 text-center text-textSub">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i>
+                            <p>載入專題中...</p>
                         </div>
                     </div>
                 </div>
@@ -794,7 +726,7 @@
                             </div>
                             <h3 class="text-xl font-bold text-primary mb-3">線上課程 (籌備中)</h3>
                             <p class="text-sm text-textSub mb-8 flex-grow">將顧問經驗轉化為系統化課程，提供完整的實戰任務包、架構圖與檢核表。敬請期待。</p>
-                            <button onclick="showToast('課程正在籌備中，歡迎訂閱電子報獲取最新消息', 'info')" class="w-full block py-3 bg-gray-100 text-gray-500 font-medium rounded hover:bg-gray-200 transition">即將推出</button>
+                            <button onclick="showToast('課程正在籌備中，歡迎訂閱電子報獲取最新消息', 'info')" class="w-full block py-3 bg-gray-100 text-gray-500 font-medium rounded hover:bg-gray-200 transition">即ষ্ঠ推出</button>
                         </div>
                     </div>
                 </div>
@@ -1456,6 +1388,7 @@
             window.scrollTo(0,0);
         } else if (path === '/series') {
             root.innerHTML = Views.series;
+            setTimeout(window.loadSeriesData, 100);
             window.scrollTo(0,0);
         } else if (path === '/services' || path === '/courses') {
             root.innerHTML = Views.services;
@@ -1471,7 +1404,7 @@
                 return;
             }
             root.innerHTML = Views.member;
-            setTimeout(renderMemberDashboard, 100);
+            setTimeout(window.renderMemberDashboard, 100);
         } else if (path === '/admin') {
             if (!window.AppState.user || !['super_admin', 'admin'].includes(window.AppState.role)) {
                 showToast("無權限訪問", "error");
@@ -1702,21 +1635,7 @@
                 btn.className = 'w-10 h-10 rounded-full bg-accent text-primary transition flex items-center justify-center shadow-md';
             }
         } catch (e) {}
-    };
-
-    window.shareArticle = () => {
-        const textArea = document.createElement("textarea");
-        textArea.value = window.location.href;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showToast('文章連結已複製！', 'success');
-        } catch (err) {
-            showToast('複製失敗', 'error');
-        }
-        document.body.removeChild(textArea);
-    };
+    }; 
 
     window.loadAdminArticles = async () => {
         const tbody = document.getElementById('admin-articles-list');
@@ -1748,7 +1667,8 @@
                         <td class="px-4 py-4 text-sm text-gray-500">${dateStr}</td>
                         <td class="px-4 py-4 text-right text-sm font-medium">
                             <a href="#/article/${doc.id}" target="_blank" class="text-gray-400 hover:text-primary mr-3" title="預覽"><i class="fa-solid fa-eye"></i></a>
-                            <a href="#/admin/articles/edit/${doc.id}" class="text-cta hover:text-blue-800"><i class="fa-solid fa-pen"></i> 編輯</a>
+                            <a href="#/admin/articles/edit/${doc.id}" class="text-cta hover:text-blue-800 mr-3"><i class="fa-solid fa-pen"></i> 編輯</a>
+                            <button onclick="window.deleteArticle('${doc.id}', '${article.title.replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-600 transition" title="刪除"><i class="fa-solid fa-trash"></i> 刪除</button>
                         </td>
                     </tr>
                 `;
@@ -1757,6 +1677,21 @@
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-500">載入失敗。</td></tr>';
         }
+    };
+
+    window.deleteArticle = (id, title) => {
+        const content = `<p>您確定要刪除文章 <strong>${title}</strong> 嗎？</p><p class="text-red-500 text-xs mt-2 bg-red-50 p-2 rounded">注意：此操作無法復原，文章將會從資料庫中永久移除。</p>`;
+        window.showModal('刪除文章確認', content, async () => {
+            try {
+                const { db } = window.AppState;
+                const { doc, deleteDoc } = window.FS;
+                await deleteDoc(doc(db, "articles", id));
+                showToast('文章已成功刪除！', 'success');
+                window.loadAdminArticles(); 
+            } catch (error) {
+                showToast('刪除失敗，請檢查權限', 'error');
+            }
+        }, '確定永久刪除', true);
     };
 
     window.initArticleEditor = async (id) => {
@@ -2343,6 +2278,74 @@
             container.innerHTML = '<p class="col-span-full text-red-500">載入收藏失敗</p>';
         }
     };
+    
+    window.loadSeriesData = async () => {
+        const container = document.getElementById('series-list-container');
+        if (!container) return;
+
+        try {
+            const { db } = window.AppState;
+            const { collection, getDocs, query, where, orderBy } = window.FS;
+            
+            const catSnap = await getDocs(query(collection(db, "categories"), orderBy("order", "asc")));
+            if (catSnap.empty) {
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前尚無主題專題。</div>';
+                return;
+            }
+
+            let html = '';
+            for (const doc of catSnap.docs) {
+                const cat = doc.data();
+                const q = query(
+                    collection(db, "articles"),
+                    where("category", "==", cat.name),
+                    where("status", "==", "published"),
+                    where("visibility", "==", "public"),
+                    orderBy("createdAt", "desc")
+                );
+                
+                try {
+                    const artSnap = await getDocs(q);
+                    const count = artSnap.size;
+                    
+                    if (count > 0) {
+                        const latestArticle = artSnap.docs[0].data();
+                        const coverUrl = latestArticle.coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=' + encodeURIComponent(cat.name);
+                        
+                        html += `
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group flex flex-col">
+                                <div class="h-48 bg-gray-200 relative overflow-hidden cursor-pointer" onclick="window.filterArticles('${cat.name}'); window.location.hash='#/articles';">
+                                    <img src="${coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="${cat.name}">
+                                    <div class="absolute top-4 left-4 bg-accent text-primary text-xs font-bold px-3 py-1 rounded">專題</div>
+                                </div>
+                                <div class="p-8 flex flex-col flex-grow">
+                                    <h3 class="text-2xl font-bold text-primary mb-3">${cat.name}</h3>
+                                    <p class="text-textSub mb-6 flex-grow">探索所有關於「${cat.name}」的深度解析與實戰經驗。</p>
+                                    <div class="flex items-center justify-between mt-auto">
+                                        <span class="text-sm text-gray-500"><i class="fa-solid fa-list-ol mr-1"></i> 共 ${count} 篇文章</span>
+                                        <button onclick="window.filterArticles('${cat.name}'); window.location.hash='#/articles';" class="text-cta font-medium hover:underline">開始閱讀 <i class="fa-solid fa-arrow-right text-sm ml-1"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    console.warn('載入專題文章數失敗:', err);
+                }
+            }
+            
+            container.innerHTML = html || '<div class="col-span-full py-12 text-center text-textSub">目前專題下尚無文章。</div>';
+        } catch (error) {
+            console.error("載入專題失敗:", error);
+            if (error.code === 'failed-precondition') {
+                const indexUrl = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+                const linkHtml = indexUrl ? `<a href="${indexUrl[0]}" target="_blank" class="mt-4 inline-block bg-white text-red-600 px-4 py-2 rounded font-bold shadow hover:bg-red-50 transition">👉 點擊這裡一鍵建立索引</a>` : '';
+                container.innerHTML = `<div class="col-span-full py-12 text-center text-red-500 bg-red-50 rounded-lg p-6 border border-red-200"><i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i><br><b>需要建立複合索引</b><br>Firebase 規定需要建立索引才能進行此查詢。${linkHtml}</div>`;
+            } else {
+                container.innerHTML = '<div class="col-span-full py-12 text-center text-red-500">載入專題失敗，請檢查權限或索引。</div>';
+            }
+        }
+    };
 
     window.loadHomeData = async () => {
         try {
@@ -2382,14 +2385,15 @@
                     
                     const renderBlock = (title, icon, content) => {
                         if (!content) return '';
-                        const formatted = content.split('\\n').join('<br>');
+                        // 修正換行 Bug：使用正規表示式取代真實的換行符 \n，變成 HTML 的 <br> 標籤
+                        const formatted = content.replace(/\n/g, '<br>');
                         return `<div><h4 class="text-white font-bold mb-3 flex items-center gap-2"><i class="${icon} text-gray-300"></i> ${title}</h4><p class="text-gray-300 text-sm leading-relaxed">${formatted}</p></div>`;
                     };
                     
                     ipHtml += renderBlock('核心專長', 'fa-solid fa-star', data.skills);
                     ipHtml += renderBlock('重要經歷', 'fa-solid fa-briefcase', data.experience);
-                    ipHtml += renderBlock('輔導 / 證照', 'fa-solid fa-certificate', data.certifications);
-                    ipHtml += renderBlock('出版 / 專案', 'fa-solid fa-book', data.books);
+                    ipHtml += renderBlock('企業輔導 / 人才認證', 'fa-solid fa-certificate', data.certifications);
+                    ipHtml += renderBlock('專案主持與政府產業專案紀錄', 'fa-solid fa-book', data.books);
                     
                     ipHtml += '</div></div>';
                     ipContainer.innerHTML = ipHtml;
@@ -2407,6 +2411,56 @@
 
         // 2. 獨立載入分類管理列表
         await window.loadCategories('settings-categories-list', 'admin');
+
+        // 3. 動態載入首頁最新的 3 篇文章
+        const featuredContainer = document.getElementById('home-featured-articles');
+        if (featuredContainer) {
+            try {
+                const { db } = window.AppState;
+                const { collection, getDocs, query, where, orderBy, limit } = window.FS;
+                const q = query(
+                    collection(db, "articles"),
+                    where("status", "==", "published"),
+                    where("visibility", "==", "public"),
+                    orderBy("createdAt", "desc"),
+                    limit(3)
+                );
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    featuredContainer.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前還沒有發布任何文章喔。</div>';
+                } else {
+                    let html = '';
+                    snap.forEach((doc) => {
+                        const article = doc.data();
+                        const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
+                        const cover = article.coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=TONY+STUDIO';
+                        html += `
+                            <div class="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col shadow-sm">
+                                <div class="h-48 bg-gray-200 relative overflow-hidden cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'">
+                                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
+                                    <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded shadow">${article.category || '未分類'}</div>
+                                </div>
+                                <div class="p-6 flex flex-col flex-grow">
+                                    <div class="flex items-center text-xs text-textSub mb-3 gap-4">
+                                        <span><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-textMain mb-3 group-hover:text-cta transition line-clamp-2 cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'">${article.title}</h3>
+                                    <p class="text-sm text-textSub line-clamp-3 mb-6 flex-grow">${article.excerpt}</p>
+                                    <a href="#/article/${doc.id}" class="text-cta text-sm font-bold flex items-center gap-1 hover:text-blue-800 mt-auto">
+                                        閱讀更多 <i class="fa-solid fa-arrow-right text-xs"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    featuredContainer.innerHTML = html;
+                }
+            } catch (error) {
+                console.error("載入首頁文章失敗:", error);
+                featuredContainer.innerHTML = '<div class="col-span-full py-12 text-center text-red-500">載入最新文章失敗，請檢查權限</div>';
+            }
+        }
     };
 
     window.loadSiteSettings = async () => {
