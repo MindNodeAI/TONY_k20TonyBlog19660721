@@ -276,8 +276,8 @@
         <div>
             <h4 class="font-bold mb-4 text-accent">訂閱電子報</h4>
             <p class="text-sm text-gray-300 mb-3 leading-relaxed">掌握最新的技術趨勢與洞察文章。</p>
-            <form class="flex" onsubmit="event.preventDefault(); showToast('訂閱成功', 'success');">
-                <input type="email" required placeholder="您的 Email" class="px-3 py-2 bg-secondary text-white placeholder-gray-400 border border-gray-600 rounded-l focus:outline-none focus:border-accent w-full text-sm">
+            <form class="flex" onsubmit="window.subscribeNewsletter(event)">
+                <input type="email" id="newsletter-email" required placeholder="您的 Email" class="px-3 py-2 bg-secondary text-white placeholder-gray-400 border border-gray-600 rounded-l focus:outline-none focus:border-accent w-full text-sm">
                 <button type="submit" class="bg-cta hover:bg-blue-600 px-4 py-2 rounded-r text-sm font-medium transition flex items-center justify-center min-w-[4rem]">訂閱</button>
             </form>
         </div>
@@ -360,10 +360,14 @@
         series: `
             <div class="bg-bg min-h-screen py-20">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h1 class="text-3xl md:text-5xl font-bold text-primary mb-6">主題專題</h1>
-                    <p class="text-textSub max-w-2xl mx-auto mb-16 text-lg">系統化的學習路徑與深度探討，幫助您建立完整的知識體系。</p>
-                    <div id="series-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
-                        <div class="col-span-full py-20 text-center text-textSub"><i class="fa-solid fa-spinner fa-spin text-5xl text-cta mb-6"></i><p class="font-bold text-lg">載入專題中...</p></div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-primary mb-4">主題專題</h1>
+                    <p class="text-textSub max-w-2xl mx-auto mb-12">系統化的學習路徑與深度探討，幫助您建立完整的知識體系。</p>
+                    
+                    <div id="series-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div class="col-span-full py-12 text-center text-textSub">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i>
+                            <p>載入專題中...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -410,7 +414,7 @@
                                 <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> OMO 數位行銷與品牌整合</li>
                                 <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> 專屬技術架構顧問諮詢</li>
                             </ul>
-                            <a href="mailto:mindnodeai@gmail.com" class="inline-block w-full text-center bg-primary hover:bg-secondary text-white px-6 py-3 rounded-xl font-bold transition shadow-md">預約企業諮詢</a>
+                            <a href="#/contact" class="inline-block w-full text-center bg-primary hover:bg-secondary text-white px-6 py-3 rounded-xl font-bold transition shadow-md">預約企業諮詢</a>
                         </div>
                         <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all group">
                             <div class="w-16 h-16 bg-amber-50 text-accent rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-graduation-cap"></i></div>
@@ -422,6 +426,23 @@
                                 <p class="text-xs text-gray-400 mt-2">敬請期待</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        contact: `
+            <div class="bg-bg min-h-screen py-20">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 md:p-12">
+                        <h1 class="text-3xl font-bold text-primary mb-2 text-center">預約企業諮詢</h1>
+                        <p class="text-textSub text-center mb-8">請填寫下方表單，我們將盡快與您聯繫</p>
+                        <form id="contact-form" onsubmit="window.submitLeadForm(event)" class="space-y-6">
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">您的姓名 *</label><input type="text" id="lead-name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta"></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">聯絡 Email *</label><input type="email" id="lead-email" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta"></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">公司名稱</label><input type="text" id="lead-company" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta" placeholder="選填"></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">需求說明 *</label><textarea id="lead-message" rows="4" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta" placeholder="請描述您的企業培訓或顧問需求..."></textarea></div>
+                            <button type="submit" id="lead-submit-btn" class="w-full bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md transition">送出預約</button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -606,10 +627,10 @@
                     </nav>
                 </div>
                 <div class="flex-grow p-6 md:p-10 relative">
-                    <h1 class="text-3xl font-bold text-primary mb-8">商機與聯絡表單</h1>
+                    <h1 class="text-3xl font-bold text-primary mb-8">商機與預約名單</h1>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                         <table class="w-full text-left border-collapse">
-                            <thead><tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold">時間</th><th class="px-6 py-4 font-bold">聯絡人 / Email</th></tr></thead>
+                            <thead><tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold">送出時間</th><th class="px-6 py-4 font-bold">預約細節</th></tr></thead>
                             <tbody id="admin-leads-list" class="divide-y divide-gray-200"><tr><td colspan="2" class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr></tbody>
                         </table>
                     </div>
@@ -777,6 +798,9 @@
             window.scrollTo(0,0);
         } else if (path === '/services' || path === '/courses') {
             root.innerHTML = Views.services;
+            window.scrollTo(0,0);
+        } else if (path === '/contact') {
+            root.innerHTML = Views.contact;
             window.scrollTo(0,0);
         } else if (path === '/member') {
             if (!window.AppState.user) return window.location.hash = '#/login';
@@ -1016,6 +1040,64 @@
         } catch(e) { document.getElementById('detail-content').innerHTML = '讀取失敗'; }
     };
 
+    window.subscribeNewsletter = async (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('newsletter-email');
+        const email = emailInput.value.trim();
+        if (!email) return;
+
+        const btn = e.target.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        try {
+            const { db } = window.AppState;
+            const { collection, addDoc, serverTimestamp } = window.FS;
+            await addDoc(collection(db, "subscribers"), {
+                email: email,
+                timestamp: serverTimestamp()
+            });
+            showToast('訂閱成功！感謝您的支持', 'success');
+            emailInput.value = '';
+        } catch(error) {
+            showToast('訂閱失敗，請稍後再試', 'error');
+            console.error(error);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
+
+    window.submitLeadForm = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('lead-name').value.trim();
+        const email = document.getElementById('lead-email').value.trim();
+        const company = document.getElementById('lead-company').value.trim();
+        const message = document.getElementById('lead-message').value.trim();
+        const btn = document.getElementById('lead-submit-btn');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
+        
+        try {
+            const { db } = window.AppState;
+            const { collection, addDoc, serverTimestamp } = window.FS;
+            await addDoc(collection(db, "leads"), {
+                name, email, company, message,
+                createdAt: serverTimestamp()
+            });
+            showToast('預約成功！我們將盡快與您聯絡', 'success');
+            setTimeout(() => { window.location.hash = '#/'; }, 1500);
+        } catch(error) {
+            showToast('送出失敗，請稍後再試', 'error');
+            console.error(error);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '送出預約';
+        }
+    };
+
     window.loadAdminDashboard = async () => {
         try {
             const { db } = window.AppState; const { collection, getDocs, query, orderBy, limit } = window.FS;
@@ -1036,11 +1118,20 @@
             const { db } = window.AppState; const { collection, getDocs, query, orderBy, limit } = window.FS;
             const snap = await getDocs(query(collection(db, "leads"), orderBy("createdAt", "desc"), limit(20)));
             const container = document.getElementById('admin-leads-list');
-            if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-4">無商機資料</td></tr>'; return; }
+            if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">目前尚無商機或預約資料</td></tr>'; return; }
             let html = '';
             snap.forEach(d => {
                 const data = d.data();
-                html += `<tr><td class="px-6 py-4 border-b">${new Date(data.createdAt?.seconds*1000).toLocaleDateString()}</td><td class="px-6 py-4 border-b">${data.name} <br><span class="text-xs text-gray-500">${data.email}</span></td></tr>`;
+                html += `
+                    <tr>
+                        <td class="px-6 py-4 border-b text-sm align-top w-32">${new Date(data.createdAt?.seconds*1000).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 border-b text-sm">
+                            <p class="font-bold text-primary text-base mb-1">${data.name} <span class="text-xs text-gray-500 font-normal ml-2"><i class="fa-solid fa-building"></i> ${data.company || '未提供公司名稱'}</span></p>
+                            <p class="text-xs text-cta mb-3"><i class="fa-solid fa-envelope"></i> ${data.email}</p>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 text-gray-700 whitespace-pre-wrap">${data.message}</div>
+                        </td>
+                    </tr>
+                `;
             });
             container.innerHTML = html;
         } catch(e) {}
