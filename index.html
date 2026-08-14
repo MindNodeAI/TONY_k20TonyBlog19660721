@@ -42,7 +42,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .ql-container { font-family: 'Inter', 'Noto Sans TC', sans-serif !important; font-size: 1rem !important; background-color: #ffffff; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
         .ql-toolbar { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; background-color: #f8fafc; }
-        .ql-editor { min-height: 300px; }
+        .ql-editor { min-height: 400px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -52,9 +52,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyBycn2thYzf2H4YRe21cK7SBZPTWCZG8K4",
@@ -62,21 +61,92 @@
         projectId: "k20-tony-blogger",
         storageBucket: "k20-tony-blogger.firebasestorage.app",
         messagingSenderId: "322587779924",
-        appId: "1:322587779924:web:e3f3c0704902afa2551ec1",
-        measurementId: "G-GMKH7KM8N7"
+        appId: "1:322587779924:web:e3f3c0704902afa2551ec1"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
-    const functions = getFunctions(app);
-
-    window.AppState = { user: null, role: null, db: db, auth: auth, storage: storage, functions: functions, currentCategory: '全部', searchQuery: '' };
-    window.FS = { collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc };
+    
+    window.AppState = { user: null, role: null, db: db, auth: auth, storage: storage, currentCategory: '全部', searchQuery: '' };
+    window.FS = { collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc, writeBatch };
     window.StorageAPI = { ref, uploadBytes, getDownloadURL };
-    window.FunctionsAPI = { httpsCallable };
     window.AuthAPI = { createUserWithEmailAndPassword, signInWithEmailAndPassword };
+
+    // --- 前端 API 金鑰管理 (LocalStorage) ---
+    window.getApiKey = () => localStorage.getItem('tony_gemini_api_key') || '';
+    window.saveApiKey = (key) => {
+        localStorage.setItem('tony_gemini_api_key', key.trim());
+        showToast('API 金鑰已儲存於本機', 'success');
+    };
+
+    window.showApiKeyModal = () => {
+        const existing = document.getElementById('apikey-modal');
+        if (existing) existing.remove();
+        const currentKey = window.getApiKey();
+        const modalHtml = `
+            <div id="apikey-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300">
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform scale-95 transition-transform duration-300">
+                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                        <h3 class="text-lg font-bold text-primary"><i class="fa-solid fa-key text-accent mr-2"></i>設定 Gemini API 金鑰</h3>
+                        <button onclick="document.getElementById('apikey-modal').remove()" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <div class="p-6 text-textMain text-sm leading-relaxed">
+                        <p class="mb-4 text-gray-600">請輸入您的 Google Gemini API 金鑰。<br>金鑰將安全地儲存於您的瀏覽器本地端，不會上傳至伺服器。</p>
+                        <input type="password" id="modal-apikey-input" placeholder="輸入 AIza... 開頭的金鑰" value="${currentKey}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-mono text-sm shadow-inner">
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+                        <button onclick="document.getElementById('apikey-modal').remove()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-sm font-medium">取消</button>
+                        <button onclick="const k=document.getElementById('modal-apikey-input').value; if(k){window.saveApiKey(k); document.getElementById('apikey-modal').remove();}else{showToast('請輸入金鑰', 'warning');}" class="px-4 py-2 bg-cta hover:bg-blue-700 text-white rounded transition text-sm font-medium shadow-sm">儲存</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = document.getElementById('apikey-modal');
+        void modal.offsetWidth; 
+        modal.classList.remove('opacity-0');
+        modal.querySelector('div').classList.remove('scale-95');
+    };
+
+    // --- 前端直接呼叫 Gemini API 的共用函式 ---
+    window.callGeminiAPI = async (systemPrompt, userPrompt) => {
+        const apiKey = window.getApiKey();
+        if (!apiKey) {
+            window.showApiKeyModal();
+            throw new Error("請先設定 Gemini API Key");
+        }
+        
+        // 使用您指定的 gemini-3.5-flash
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] }
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+            console.error("Gemini API Error:", result);
+            if(result.error?.code === 403 || result.error?.message?.includes('API key')) {
+                window.showApiKeyModal();
+                throw new Error("API 金鑰無效，請重新設定");
+            }
+            if(result.error?.code === 404) {
+                throw new Error("模型找不到，請確認您的 API 權限支援 gemini-3.5-flash");
+            }
+            throw new Error(result.error?.message || "Google API 拒絕連線");
+        }
+
+        return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    };
 
     window.updateSEO = (title, description = '', imageUrl = '') => {
         const baseTitle = 'TONY STUDIO';
@@ -137,7 +207,6 @@
             try {
                 const idTokenResult = await user.getIdTokenResult(true);
                 window.AppState.role = idTokenResult.claims.role || 'member';
-                // 站長絕對權限防護
                 if (user.email === 'mindnodeai@gmail.com') {
                     window.AppState.role = 'super_admin';
                 }
@@ -270,7 +339,7 @@
             <h4 class="font-bold mb-4 text-accent">服務與合作</h4>
             <ul class="space-y-3 text-sm text-gray-300">
                 <li><a href="#/services" class="hover:text-white transition">企業培訓 & 顧問</a></li>
-                <li><a href="#/courses" class="hover:text-white transition">線上課程</a></li>
+                <li><a href="#/contact" class="hover:text-white transition">預約諮詢</a></li>
             </ul>
         </div>
         <div>
@@ -590,7 +659,13 @@
                                         </div>
                                         <input type="hidden" id="article-cover-input">
                                     </div>
-                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">文章摘要 *</label><textarea id="article-excerpt-input" required rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea></div>
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="block text-sm font-bold text-gray-700">文章摘要 *</label>
+                                            <button type="button" onclick="window.generateAIExcerpt()" class="text-xs font-bold text-accent bg-secondary hover:bg-primary px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 依正文產出摘要</button>
+                                        </div>
+                                        <textarea id="article-excerpt-input" required rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea>
+                                    </div>
                                 </div>
                                 <div class="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
                                     <div><label class="block text-sm font-bold text-gray-700 mb-2">發布狀態 *</label><select id="article-status-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-sm bg-white shadow-sm"><option value="draft">草稿 (隱藏)</option><option value="published">已發布 (公開)</option></select></div>
@@ -599,16 +674,22 @@
                             </div>
                         </div>
                         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl shadow-sm border border-blue-100">
-                            <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-wand-magic-sparkles text-accent"></i> AI 寫作助手 (雲端安全版)</h3>
+                            <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-wand-magic-sparkles text-accent"></i> AI 寫作助手</h3>
                             <div class="mb-6"><label class="block text-sm font-bold text-gray-700 mb-2">請描述寫作主題 *</label><textarea id="ai-prompt" rows="3" placeholder="幫我寫一篇關於..." class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base bg-white"></textarea></div>
                             <div class="flex gap-4">
-                                <button type="button" onclick="window.generateCoverPrompt()" class="bg-white border border-gray-300 px-6 py-2.5 rounded-lg font-bold shadow-sm"><i class="fa-solid fa-image"></i> 產生封面 Prompt</button>
+                                <button type="button" onclick="window.generateCoverPrompt()" class="bg-white border border-gray-300 px-6 py-2.5 rounded-lg font-bold shadow-sm"><i class="fa-solid fa-image"></i> 依正文產生封面 Prompt</button>
                                 <button type="button" onclick="window.generateAIContent()" class="bg-primary text-accent px-6 py-2.5 rounded-lg font-bold shadow-md"><i class="fa-solid fa-pen-nib"></i> AI 生成內文</button>
                             </div>
-                            <div id="ai-prompt-result-container" class="mt-4 hidden"><input type="text" id="ai-cover-prompt-result" readonly class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"></div>
+                            <div id="ai-prompt-result-container" class="mt-4 hidden gap-3">
+                                <input type="text" id="ai-cover-prompt-result" readonly class="flex-grow px-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-700 font-mono text-sm">
+                                <button type="button" onclick="window.copyPrompt()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold shadow-sm transition whitespace-nowrap"><i class="fa-solid fa-copy text-cta"></i> 複製</button>
+                            </div>
                         </div>
                         <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-                            <label class="block text-sm font-bold text-gray-700 mb-4">文章正文 *</label>
+                            <div class="flex justify-between items-center mb-4">
+                                <label class="block text-sm font-bold text-gray-700">文章正文 *</label>
+                                <button type="button" onclick="window.formatContentWithAI()" class="text-sm font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm"><i class="fa-solid fa-highlighter"></i> AI 智能排版與畫重點</button>
+                            </div>
                             <div id="editor-container"></div>
                         </div>
                     </form>
@@ -675,8 +756,18 @@
                                 <div><label class="block text-sm font-bold text-gray-700 mb-2">專案主持與政府產業專案紀錄</label><textarea id="settings-books" rows="4" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"></textarea></div>
                             </div>
 
+                            <h3 class="text-xl font-bold text-primary mb-4 mt-8 flex items-center gap-2"><i class="fa-solid fa-robot text-accent"></i> AI 系統與金鑰設定</h3>
+                            <div class="bg-blue-50 border border-blue-100 p-6 rounded-xl">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Gemini API 金鑰 (存於本地端)</label>
+                                <div class="flex gap-4">
+                                    <input type="password" id="settings-api-key" placeholder="輸入您的 AIza... 金鑰" class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-mono text-sm shadow-inner">
+                                    <button type="button" onclick="window.saveSettingsApiKey()" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-bold shadow-sm transition whitespace-nowrap">儲存金鑰</button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-circle-info mr-1"></i> 此金鑰僅儲存於您的瀏覽器 (LocalStorage) 中，絕不會上傳至任何伺服器或資料庫，請安心使用。</p>
+                            </div>
+
                             <div class="pt-8 border-t border-gray-100 mt-8">
-                                <button type="submit" id="btn-save-settings" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md w-full md:w-auto"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存設定</button>
+                                <button type="submit" id="btn-save-settings" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md w-full md:w-auto"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存全域設定</button>
                             </div>
                         </form>
                     </div>
@@ -693,6 +784,9 @@
             </div>
         `
     };
+
+    window.UserInteractions = { bookmarks: new Set(), currentArticleId: null };
+    window.quillEditor = null;
 
     window.authMode = 'login';
     
@@ -866,7 +960,6 @@
                     }
                 }
 
-                // 動態更新前台 LOGO
                 if (data.siteLogoUrl) {
                     const navLogo = document.getElementById('nav-logo-container');
                     if (navLogo) navLogo.innerHTML = `<img src="${data.siteLogoUrl}" alt="Logo" class="h-8 w-auto">`;
@@ -874,18 +967,14 @@
                     if (footerLogo) footerLogo.innerHTML = `<img src="${data.siteLogoUrl}" alt="Logo" class="h-10 w-auto">`;
                 }
 
-                // 動態排版：專業里程碑 (深色微透明卡片、2欄式佈局、加倍行距、換行修正)
                 const ipContainer = document.getElementById('home-ip-info-container');
                 if (ipContainer && (data.skills || data.experience || data.certifications || data.books)) {
                     let ipHtml = '<div class="bg-white/10 backdrop-blur-md rounded-2xl p-8 md:p-10 border border-white/20 mt-12 mb-8 shadow-2xl">';
                     ipHtml += '<h3 class="text-3xl font-bold text-accent mb-8 flex items-center gap-3"><i class="fa-solid fa-address-card"></i> 專業里程碑</h3>';
-                    
-                    // 改為 2欄式佈局，加大間隔
                     ipHtml += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">';
                     
                     const renderBlock = (title, icon, content) => {
                         if (!content) return '';
-                        // 修正換行 Bug：使用 \n 轉換
                         const formatted = content.replace(/\n/g, '<br>');
                         return `
                             <div class="bg-white/5 p-6 md:p-8 rounded-xl border border-white/10 hover:bg-white/10 transition duration-300">
@@ -907,7 +996,6 @@
                 }
             }
             
-            // 動態載入首頁最新的 3 篇文章
             const featuredContainer = document.getElementById('home-featured-articles');
             if (featuredContainer) {
                 const q = query(collection(db, "articles"), where("status", "==", "published"), where("visibility", "==", "public"), orderBy("createdAt", "desc"), limit(3));
@@ -976,17 +1064,10 @@
                             </div>
                         `;
                     }
-                } catch (e) {
-                    if (e.code === 'failed-precondition') {
-                        container.innerHTML = `<div class="col-span-full py-12 text-center text-red-500 bg-red-50 rounded-lg p-6 border border-red-200"><i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i><br><b>需要建立複合索引</b><br>請按鍵盤 <kbd>F12</kbd> 打開開發者工具，點擊 Console 內的藍色連結建立索引。</div>`;
-                        return;
-                    }
-                }
+                } catch (e) {}
             }
             container.innerHTML = html || '<div class="col-span-full py-12 text-center text-textSub">專題下無文章。</div>';
-        } catch (error) {
-            container.innerHTML = '<div class="col-span-full text-center">載入失敗。</div>';
-        }
+        } catch (error) { container.innerHTML = '<div class="col-span-full text-center text-red-500">載入失敗。</div>'; }
     };
 
     window.renderMemberDashboard = () => {
@@ -1054,48 +1135,30 @@
         try {
             const { db } = window.AppState;
             const { collection, addDoc, serverTimestamp } = window.FS;
-            await addDoc(collection(db, "subscribers"), {
-                email: email,
-                timestamp: serverTimestamp()
-            });
+            await addDoc(collection(db, "subscribers"), { email: email, timestamp: serverTimestamp() });
             showToast('訂閱成功！感謝您的支持', 'success');
             emailInput.value = '';
-        } catch(error) {
-            showToast('訂閱失敗，請稍後再試', 'error');
-            console.error(error);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
+        } catch(error) { showToast('訂閱失敗，請稍後再試', 'error'); } 
+        finally { btn.disabled = false; btn.innerHTML = originalText; }
     };
 
     window.submitLeadForm = async (e) => {
         e.preventDefault();
-        const name = document.getElementById('lead-name').value.trim();
-        const email = document.getElementById('lead-email').value.trim();
-        const company = document.getElementById('lead-company').value.trim();
-        const message = document.getElementById('lead-message').value.trim();
         const btn = document.getElementById('lead-submit-btn');
-        
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
-        
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
         try {
-            const { db } = window.AppState;
-            const { collection, addDoc, serverTimestamp } = window.FS;
+            const { db } = window.AppState; const { collection, addDoc, serverTimestamp } = window.FS;
             await addDoc(collection(db, "leads"), {
-                name, email, company, message,
+                name: document.getElementById('lead-name').value.trim(),
+                email: document.getElementById('lead-email').value.trim(),
+                company: document.getElementById('lead-company').value.trim(),
+                message: document.getElementById('lead-message').value.trim(),
                 createdAt: serverTimestamp()
             });
             showToast('預約成功！我們將盡快與您聯絡', 'success');
             setTimeout(() => { window.location.hash = '#/'; }, 1500);
-        } catch(error) {
-            showToast('送出失敗，請稍後再試', 'error');
-            console.error(error);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = '送出預約';
-        }
+        } catch(error) { showToast('送出失敗，請稍後再試', 'error'); } 
+        finally { btn.disabled = false; btn.innerText = '送出預約'; }
     };
 
     window.loadAdminDashboard = async () => {
@@ -1167,26 +1230,15 @@
         document.getElementById('editor-title').innerHTML = id ? '編輯文章' : '新增文章';
         if (window.quillEditor) window.quillEditor = null;
         
-        // 專業級編輯器工具列設定
+        // 使用專業版旗艦編輯器工具列
         const toolbarOptions = [
-            ['bold', 'italic', 'underline', 'strike'],        // 字體基本樣式
-            ['blockquote', 'code-block'],                     // 引用與程式碼區塊
-            [{ 'header': 1 }, { 'header': 2 }],               // 大標題/次標題
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],     // 有序/無序列表
-            [{ 'script': 'sub'}, { 'script': 'super' }],      // 上標/下標
-            [{ 'indent': '-1'}, { 'indent': '+1' }],          // 減少/增加縮排
-            [{ 'size': ['small', false, 'large', 'huge'] }],  // 字體大小
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],        // 多級標題
-            [{ 'color': [] }, { 'background': [] }],          // 字體顏色與反白背景色
-            [{ 'align': [] }],                                // 對齊方式 (置左/中/右/分散)
-            ['link', 'image', 'video'],                       // 插入超連結、圖片、影片
-            ['clean']                                         // 清除格式
+            ['bold', 'italic', 'underline', 'strike'], ['blockquote', 'code-block'],
+            [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'script': 'sub'}, { 'script': 'super' }], [{ 'indent': '-1'}, { 'indent': '+1' }],
+            [{ 'size': ['small', false, 'large', 'huge'] }], [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+            [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], ['link', 'image', 'video'], ['clean']
         ];
-
-        window.quillEditor = new Quill('#editor-container', { 
-            theme: 'snow', 
-            modules: { toolbar: toolbarOptions } 
-        });
+        window.quillEditor = new Quill('#editor-container', { theme: 'snow', modules: { toolbar: toolbarOptions } });
         
         await window.loadCategories('article-category-input', 'select');
 
@@ -1246,47 +1298,28 @@
         const question = input.value.trim();
         if (!question) return;
 
-        chatbox.innerHTML += `
-            <div class="flex gap-4 justify-end">
-                <div class="bg-cta text-white px-5 py-3 rounded-2xl rounded-tr-sm shadow-sm max-w-[80%]">${question.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
-            </div>
-        `;
-        input.value = '';
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        chatbox.scrollTop = chatbox.scrollHeight;
+        chatbox.innerHTML += `<div class="flex gap-4 justify-end"><div class="bg-cta text-white px-5 py-3 rounded-2xl rounded-tr-sm shadow-sm max-w-[80%]">${question.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div></div>`;
+        input.value = ''; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
 
         const loadingId = 'ai-msg-' + Date.now();
-        chatbox.innerHTML += `
-            <div class="flex gap-4" id="${loadingId}">
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div>
-                <div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textSub max-w-[80%]"><i class="fa-solid fa-ellipsis fa-fade"></i> AI 顧問思考中...</div>
-            </div>
-        `;
+        chatbox.innerHTML += `<div class="flex gap-4" id="${loadingId}"><div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div><div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textSub max-w-[80%]"><i class="fa-solid fa-ellipsis fa-fade"></i> AI 顧問思考中...</div></div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
-            if (!window.AppState.user) throw new Error("請先登入會員，才能與 Ask TONY 對話喔！");
-            const { functions } = window.AppState; const { httpsCallable } = window.FunctionsAPI;
-            const askTonyCloud = httpsCallable(functions, 'askTony');
-            
-            const result = await askTonyCloud({ query: question, contextText: "這是 TONY 知識庫提供的內容。" });
+            const systemPrompt = `你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。語氣要專業、友善，像是一位經驗豐富的全端工程師。`;
+            const resultText = await window.callGeminiAPI(systemPrompt, question);
             
             document.getElementById(loadingId).innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div>
-                <div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[80%] prose prose-sm leading-relaxed">${result.data.text.replace(/\n/g, '<br>')}</div>
+                <div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[80%] prose prose-sm leading-relaxed">${resultText.replace(/\n/g, '<br>')}</div>
             `;
         } catch (error) {
-            let errorMsg = error.message || "抱歉，連線發生錯誤。";
             document.getElementById(loadingId).innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold shadow-sm flex-shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="bg-red-50 px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[80%]">${errorMsg}</div>
+                <div class="bg-red-50 px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[80%]">${error.message}</div>
             `;
-            if (errorMsg.includes('登入')) setTimeout(() => window.location.hash = '#/login', 2000);
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg"></i>';
-            chatbox.scrollTop = chatbox.scrollHeight;
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
         }
     };
 
@@ -1295,35 +1328,98 @@
         if (!prompt) return showToast("請輸入寫作主題", "warning");
         try {
             showToast("AI 撰寫中...", "info");
-            const { functions } = window.AppState; const { httpsCallable } = window.FunctionsAPI;
-            const aiAssistantCloud = httpsCallable(functions, 'aiAssistant');
-            const result = await aiAssistantCloud({ prompt: prompt, style: "專業技術", audience: "工程師" });
-            window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), result.data.html);
+            const systemPrompt = `你是一個專業的部落格寫作專家。請以專業技術風格撰寫文章。輸出為乾淨的 HTML 格式 (支援 <h2>, <h3>, <p>, <ul>, <li>, <strong>)。絕對不要包含 \`\`\`html 這類標記。`;
+            const resultText = await window.callGeminiAPI(systemPrompt, `主題大綱：${prompt}`);
+            
+            window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), resultText.replace(/```html/g, '').replace(/```/g, ''));
             showToast("生成完成", "success");
-        } catch(e) { showToast("生成失敗", "error"); }
+        } catch(e) { showToast(`生成失敗: ${e.message}`, "error"); }
     };
 
     window.generateCoverPrompt = async () => {
-        const prompt = document.getElementById('ai-prompt').value;
-        if (!prompt) return showToast("請輸入寫作主題", "warning");
+        if (!window.quillEditor) return;
+        const content = window.quillEditor.getText().trim();
+        if (content.length < 50) return showToast("正文內容過少，請先撰寫文章再產生封面 Prompt", "warning");
+
+        const btn = document.querySelector('button[onclick="window.generateCoverPrompt()"]');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在閱讀正文並設計...';
+        btn.disabled = true;
+
         try {
-            showToast("AI 設計提示詞中...", "info");
-            const { functions } = window.AppState; const { httpsCallable } = window.FunctionsAPI;
-            const aiImagePromptCloud = httpsCallable(functions, 'aiImagePrompt');
-            const result = await aiImagePromptCloud({ prompt: prompt });
+            const systemPrompt = `你是一位頂級視覺藝術總監，專門為 Midjourney v6 撰寫具備高度視覺衝擊力的英文 Prompt。
+任務：請閱讀提供的文章內容，擷取核心概念並轉化為隱喻的實體場景，擺脫廉價科技套版。
+格式要求：[主體與核心隱喻場景] + [具體的材質與細節] + [光影與環境] + [攝影視角] + --no text, fonts, letters, words --ar 16:9 --v 6.0 --style raw。絕對全英文純文字輸出，不要 Markdown 標記。`;
+            
+            // 擷取前 3000 字避免超過 Token 限制
+            const resultText = await window.callGeminiAPI(systemPrompt, `文章內容：${content.substring(0, 3000)}`);
+            
             document.getElementById('ai-prompt-result-container').classList.remove('hidden');
-            document.getElementById('ai-cover-prompt-result').value = result.data.prompt;
+            document.getElementById('ai-prompt-result-container').classList.add('flex');
+            document.getElementById('ai-cover-prompt-result').value = resultText.replace(/```/g, '').trim();
             showToast("Prompt 已生成", "success");
-        } catch(e) { showToast("生成失敗", "error"); }
+        } catch(e) { 
+            showToast(`生成失敗: ${e.message}`, "error"); 
+        } finally {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
     };
 
+    window.copyPrompt = () => {
+        const copyText = document.getElementById("ai-cover-prompt-result");
+        copyText.select(); copyText.setSelectionRange(0, 99999);
+        document.execCommand("copy"); showToast("已複製提示詞！", "success");
+    };
+
+    window.generateAIExcerpt = async () => {
+        if (!window.quillEditor) return;
+        const content = window.quillEditor.getText().trim();
+        if (content.length < 50) return showToast("正文內容過少，請先豐富正文再產生摘要", "warning");
+
+        const btn = document.querySelector('button[onclick="window.generateAIExcerpt()"]');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在閱讀分析...'; btn.disabled = true;
+
+        try {
+            const systemPrompt = `你是一位專業編輯。請為提供的文章正文，撰寫「大約 80 到 100 字」的吸睛摘要。直接輸出摘要純文字，不要任何引言或標籤。`;
+            const resultText = await window.callGeminiAPI(systemPrompt, content.substring(0, 3000));
+            document.getElementById('article-excerpt-input').value = resultText.trim();
+            showToast("摘要產生成功！", "success");
+        } catch(e) { showToast(`摘要失敗：${e.message}`, "error"); } 
+        finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+    };
+
+    window.formatContentWithAI = async () => {
+        if (!window.quillEditor) return;
+        const htmlContent = window.quillEditor.root.innerHTML;
+        const textContent = window.quillEditor.getText().trim();
+        if (!textContent) return showToast("編輯器內無內容", "warning");
+
+        const btn = document.querySelector('button[onclick="window.formatContentWithAI()"]');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 排版與畫重點...'; btn.disabled = true;
+
+        try {
+            showToast("請稍候幾秒...", "info");
+            const systemPrompt = `你是一位專業的網頁視覺編輯。請針對傳入的 HTML 進行排版與畫重點：
+1. 找出「核心概念、重要結論」，使用 <strong> 加粗。
+2. 若無明顯標題，可適當加入 <h2> 或 <h3>。
+3. 嚴禁改變語意或刪減文字。直接輸出乾淨 HTML 碼，嚴禁包含 \`\`\`html 標記。`;
+            
+            const resultText = await window.callGeminiAPI(systemPrompt, htmlContent);
+            window.quillEditor.clipboard.dangerouslyPasteHTML(resultText.replace(/```html/g, '').replace(/```/g, ''));
+            showToast("排版完成！", "success");
+        } catch(e) { showToast(`排版失敗：${e.message}`, "error"); } 
+        finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+    };
+    
     window.previewImage = async (event, previewId) => {
         const file = event.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => document.getElementById(previewId).src = e.target.result;
             reader.readAsDataURL(file);
-            
             try {
                 showToast("上傳圖片中...", "info");
                 const { storage } = window.AppState; const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
@@ -1365,7 +1461,21 @@
                     document.getElementById('hidden-profile-img').value = data.profileImageUrl;
                 }
             }
+            
+            const currentKey = window.getApiKey();
+            if (currentKey) {
+                document.getElementById('settings-api-key').value = currentKey;
+            }
         } catch(e) { }
+    };
+
+    window.saveSettingsApiKey = () => {
+        const key = document.getElementById('settings-api-key').value;
+        if (key) {
+            window.saveApiKey(key);
+        } else {
+            showToast("請輸入金鑰", "warning");
+        }
     };
 
     window.saveSiteSettings = async (e) => {
