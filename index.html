@@ -84,7 +84,7 @@
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } catch(e) {
-                    console.warn("環境憑證驗證失敗，自動切換至訪客匿名模式 (確保按讚功能正常)", e);
+                    console.warn("環境憑證驗證失敗，自動切換至訪客匿名模式", e);
                     await signInAnonymously(auth);
                 }
             } else {
@@ -116,19 +116,27 @@
         if (existing) existing.remove();
         const currentKey = window.getApiKey() || '';
         const modalHtml = `
-            <div id="apikey-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300">
-                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform scale-95 transition-transform duration-300">
-                    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
-                        <h3 class="text-lg font-bold text-primary"><i class="fa-solid fa-key text-accent mr-2"></i>設定 Gemini API 金鑰</h3>
-                        <button onclick="document.getElementById('apikey-modal').remove()" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div id="apikey-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform scale-95 transition-transform duration-300 overflow-hidden">
+                    <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 class="text-lg font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-key text-accent"></i>設定 AI 系統金鑰</h3>
+                        <button onclick="document.getElementById('apikey-modal').remove()" class="text-gray-400 hover:text-red-500 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
                     <div class="p-6 text-textMain text-sm leading-relaxed">
-                        <p class="mb-4 text-gray-600">請輸入您的 Google Gemini API 金鑰。<br>金鑰將安全地儲存於您的瀏覽器本地端，不會上傳至伺服器。</p>
-                        <input type="password" id="modal-apikey-input" placeholder="輸入 AIza... 開頭的金鑰" value="${currentKey}" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-mono text-sm shadow-inner">
+                        <p class="mb-4 text-gray-700 font-medium">為啟用智能新聞抓取與 AI 顧問功能，請輸入您的 Google Gemini API 金鑰。</p>
+                        
+                        <!-- 加入申請引導 -->
+                        <div class="mb-5 p-4 bg-blue-50/50 border border-blue-100 rounded-xl text-sm text-blue-800 shadow-inner">
+                            <p class="font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-accent"></i> 還沒有金鑰？</p>
+                            <p>請前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-cta font-bold hover:underline inline-flex items-center gap-1">Google AI Studio <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a> 免費申請一組金鑰 (API Key)。</p>
+                        </div>
+
+                        <input type="password" id="modal-apikey-input" placeholder="輸入 AIza... 開頭的 39 碼金鑰" value="${currentKey}" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-cta focus:ring-1 focus:ring-cta font-mono text-sm transition">
+                        <p class="mt-3 text-xs text-gray-400"><i class="fa-solid fa-shield-halved mr-1"></i>金鑰將安全地儲存於您的瀏覽器本地端，不會外流。</p>
                     </div>
-                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end gap-3">
-                        <button onclick="document.getElementById('apikey-modal').remove()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-sm font-medium">取消</button>
-                        <button onclick="const k=document.getElementById('modal-apikey-input').value; if(k){window.saveApiKey(k); document.getElementById('apikey-modal').remove();}else{showToast('請輸入金鑰', 'warning');}" class="px-4 py-2 bg-cta hover:bg-blue-700 text-white rounded transition text-sm font-medium shadow-sm">儲存</button>
+                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                        <button onclick="document.getElementById('apikey-modal').remove()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm font-bold">取消</button>
+                        <button onclick="const k=document.getElementById('modal-apikey-input').value; if(k){window.saveApiKey(k); document.getElementById('apikey-modal').remove();}else{showToast('請輸入金鑰', 'warning');}" class="px-5 py-2.5 bg-cta hover:bg-blue-700 text-white rounded-lg transition text-sm font-bold shadow-md">儲存並啟用</button>
                     </div>
                 </div>
             </div>
@@ -147,7 +155,6 @@
             throw new Error("MISSING_API_KEY");
         }
         
-        // 強制鎖定 gemini-3.5-flash
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
         
         const payload = {
@@ -156,7 +163,6 @@
             generationConfig: { maxOutputTokens: 8192, ...(extraOptions.generationConfig || {}) }
         };
 
-        // 修正 Google 搜尋工具的官方命名格式 (由 google_search 改為 googleSearch)
         if (useSearch) payload.tools = [{ "googleSearch": {} }];
 
         try {
@@ -468,7 +474,6 @@
                 </div>
             </div>
         `,
-        // --- 重構：每日 AI 報 (全網熱門版) ---
         dailyNews: `
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-primary text-white pt-12 pb-24 text-center relative overflow-hidden">
@@ -491,9 +496,9 @@
                     </div>
                 </div>
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
-                    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 min-h-[500px]">
+                    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-12 min-h-[400px]">
                         <div class="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
-                            <h2 class="text-2xl font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-fire text-red-500"></i> 全網熱門情報</h2>
+                            <h2 class="text-2xl font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-fire text-red-500"></i> 今日最新情報</h2>
                             <span class="px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100">任何人皆可按讚推薦</span>
                         </div>
                         <div id="daily-news-container">
@@ -502,6 +507,17 @@
                                 <p class="text-xl font-bold text-gray-400 mb-2">情報站待命中</p>
                                 <p class="text-sm text-gray-500">點擊上方按鈕，讓 AI 為您彙整最新新聞</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- 全網歷史熱門總榜單 -->
+                    <div class="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl shadow-md border border-orange-100 p-8">
+                        <div class="flex items-center gap-3 mb-6 border-b border-orange-100 pb-4">
+                            <h2 class="text-2xl font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-trophy text-accent"></i> 🔥 歷史熱門總榜單</h2>
+                            <span class="px-3 py-1 bg-white text-gray-500 text-xs font-bold rounded-full border border-gray-200">史上最多人推薦</span>
+                        </div>
+                        <div id="all-time-trending-container" class="min-h-[150px] flex flex-col justify-center">
+                            <p class="text-textSub text-center"><i class="fa-solid fa-spinner fa-spin text-xl text-accent mb-2"></i><br>載入熱門榜單中...</p>
                         </div>
                     </div>
                 </div>
@@ -604,7 +620,6 @@
                 </div>
             </div>
         `,
-        // --- 重構：精簡會員專區，移除非必要的新聞收藏 ---
         member: `
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-white border-b border-gray-200 pt-16 pb-12 shadow-sm">
@@ -903,6 +918,9 @@
                     </div>`;
             }
         }
+
+        // 同步載入歷史總榜單
+        window.renderAllTimeTrending();
     };
 
     window.fetchDailyNews = async () => {
@@ -926,89 +944,90 @@
         `;
         
         try {
-            // 採用絕對防彈的純文字分隔法，放棄 JSON Schema 以避免超長網址截斷導致的解析崩潰
             const systemPrompt = `你是一位頂尖的國際科技與財經新聞總編。
             【嚴格輸出格式指示】
-            請搜尋今日最新新聞，並輸出 6 到 8 則重點新聞。
-            絕對不要使用 JSON 格式！請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。
-
+            你必須搜尋今日最新新聞，並精準輸出 8 則新聞 (6則全球重點, 2則台灣重點)。
+            絕對不要使用 JSON 格式。請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。
+            
             範例格式：
             CATEGORY: 科技情報
             TITLE: 蘋果發表最新 AI 功能
             SUMMARY: 蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮...
             URL: https://example.com/news1
             ===NEWS===
-            CATEGORY: 財經趨勢
+            CATEGORY: 財經趨势
             ...
-
+            
             【內容規範】
-            1. SUMMARY (摘要) 必須充實，深入分析。
-            2. 請在 SUMMARY 中將專有名詞、企業名稱、數據用**雙星號**包裝起來。
-            3. URL 必須是真實、可點擊的新聞網址。`;
+            1. SUMMARY (摘要) 必須達 150 - 200 字，深入分析。
+            2. 請務必在 SUMMARY 中，將專有名詞、企業名稱、重要數據用**雙星號**包裝起來。
+            3. URL 必須是真實、可點擊的新聞網址。
+            `;
 
-            const userPrompt = "請開始搜尋並輸出今日最新的 AI、財經與數位行銷新聞。";
+            const userPrompt = "請開始搜尋並輸出今日最新的 8 則 AI、財經與數位行銷新聞。";
             
             const extraOptions = {
                 generationConfig: {
-                    maxOutputTokens: 8192 // 確保給予最大輸出長度
+                    maxOutputTokens: 8192
                 }
             };
 
             const textResponse = await window.callGeminiAPI(systemPrompt, userPrompt, true, extraOptions);
             
             if (!textResponse || textResponse.trim() === '') {
-                throw new Error("AI 回傳空白內容，請稍後重試。");
+                throw new Error("AI 回傳了空白內容，請稍後重試。");
             }
 
             const newsData = [];
             const newsBlocks = textResponse.split('===NEWS===');
             
-            for (let block of newsBlocks) {
-                block = block.trim();
-                if (!block) continue;
+            for (const block of newsBlocks) {
+                const lines = block.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                if (lines.length < 4) continue; 
 
-                let category = '重點情報';
-                let title = '';
+                let category = '科技情報';
+                let title = '未命名新聞';
                 let summary = '';
-                let url = '';
+                let url = '#';
 
-                const lines = block.split('\n');
-                let currentKey = '';
-
-                for (let line of lines) {
-                    line = line.trim();
-                    if (line.startsWith('CATEGORY:')) { category = line.replace('CATEGORY:', '').trim(); currentKey = 'category'; }
-                    else if (line.startsWith('TITLE:')) { title = line.replace('TITLE:', '').trim(); currentKey = 'title'; }
-                    else if (line.startsWith('URL:')) { url = line.replace('URL:', '').trim(); currentKey = 'url'; }
-                    else if (line.startsWith('SUMMARY:')) { summary = line.replace('SUMMARY:', '').trim(); currentKey = 'summary'; }
-                    else if (currentKey === 'summary' && line !== '') {
-                        summary += ' ' + line; // 處理多行摘要
+                for (const line of lines) {
+                    if (line.startsWith('CATEGORY:')) category = line.replace('CATEGORY:', '').trim();
+                    else if (line.startsWith('TITLE:')) title = line.replace('TITLE:', '').trim();
+                    else if (line.startsWith('URL:')) url = line.replace('URL:', '').trim();
+                    else if (line.startsWith('SUMMARY:')) summary = line.replace('SUMMARY:', '').trim();
+                    else if (summary !== '' && !line.startsWith('CATEGORY:') && !line.startsWith('TITLE:') && !line.startsWith('URL:')) {
+                        summary += ' ' + line;
                     }
                 }
                 
-                // 【容錯防護機制】：只收錄欄位完整的資料。如果最後一筆資料被截斷導致沒有 URL，就會自動被過濾掉！
-                if (title && summary && url) {
+                if (title !== '未命名新聞' && url !== '#') {
                     newsData.push({ category, title, summary, url });
                 }
             }
 
             if (newsData.length === 0) {
-                 throw new Error("無法從 AI 回應中解析出完整的新聞資料。");
+                 throw new Error("無法從 AI 回應中解析出新聞資料。");
             }
 
-            window.currentNewsData = newsData;
+            window.currentNewsData = newsData.slice(0, 8); 
             const timestamp = new Date().toLocaleString('zh-TW');
-            localStorage.setItem('tony_news_cache_json', JSON.stringify(newsData));
+            localStorage.setItem('tony_news_cache_json', JSON.stringify(window.currentNewsData));
             localStorage.setItem('tony_news_cache_time', timestamp);
             
             document.getElementById('daily-news-date').innerHTML = `<i class="fa-regular fa-clock"></i> 最新更新：${timestamp}`;
             window.renderNewsGrid();
+            window.renderAllTimeTrending(); // 更新完同步刷新榜單
             showToast("今日新聞情報彙整完畢！", "success");
             
         } catch (error) {
             console.error("新聞抓取失敗:", error);
             if (error.message.includes("MISSING_API_KEY")) return;
-            container.innerHTML = `<div class="py-20 text-center text-red-500 bg-red-50 rounded-xl border border-red-100"><i class="fa-solid fa-triangle-exclamation text-4xl mb-4"></i><p class="font-bold text-lg">抓取失敗，請稍後重試。</p><p class="text-sm text-red-400 mt-2">${error.message}</p></div>`;
+            container.innerHTML = `<div class="py-20 text-center text-red-500 bg-red-50 rounded-xl border border-red-100 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation text-4xl mb-4"></i>
+                <p class="font-bold text-lg">抓取失敗，請稍後重試。</p>
+                <p class="text-sm text-red-400 mt-2">${error.message}</p>
+                <div class="mt-4 p-4 bg-white/50 rounded text-left text-xs font-mono text-gray-600 max-w-2xl mx-auto overflow-auto border border-red-200">如果錯誤持續發生，請確認您的 API 金鑰額度，或嘗試重新整理頁面。</div>
+            </div>`;
             showToast("新聞抓取失敗", "error");
         }
     };
@@ -1017,7 +1036,6 @@
         const container = document.getElementById('daily-news-container');
         if (!container || !window.currentNewsData || window.currentNewsData.length === 0) return;
 
-        // 1. 抓取全網即時按讚數 (全域熱門指標)
         let globalLikes = {};
         try {
             const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
@@ -1026,10 +1044,9 @@
                 globalLikes[doc.data().url] = doc.data().count;
             });
         } catch (e) {
-            console.warn("無法取得全網熱門數據，可能是第一次執行或權限問題", e);
+            console.warn("無法取得全網熱門數據", e);
         }
 
-        // 2. 取得本機已按讚記錄
         let likedUrls = [];
         try {
             likedUrls = JSON.parse(localStorage.getItem('tony_liked_news') || '[]');
@@ -1041,7 +1058,6 @@
             const likeCount = globalLikes[news.url] || 0;
             const hasLiked = likedUrls.includes(news.url);
             
-            // 安全清洗 HTML，並將雙星號轉換為黃色螢光重點 (徹底分離資料與視覺)
             let safeSummary = (news.summary || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
             safeSummary = safeSummary.replace(/\*\*(.*?)\*\*/g, '<strong class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold mx-0.5">$1</strong>');
 
@@ -1053,7 +1069,7 @@
             <div class="p-6 bg-white rounded-xl border border-gray-200 hover:shadow-xl hover:border-blue-200 transition flex flex-col h-full group">
                 <div class="mb-5 flex items-center justify-between border-b border-gray-50 pb-4">
                     <span class="px-3 py-1 bg-blue-50 text-cta text-xs font-bold rounded-full border border-blue-100">${news.category || '科技情報'}</span>
-                    <button id="btn-like-${index}" ${clickEvent} class="flex items-center gap-2 ${btnClass} px-3 py-1.5 rounded-full hover:bg-red-50 transition" title="推薦這則新聞">
+                    <button id="btn-like-${index}" ${clickEvent} class="flex items-center gap-2 ${btnClass} px-3 py-1.5 rounded-full hover:bg-red-50 transition shadow-sm border border-transparent hover:border-red-100" title="推薦這則新聞">
                         <i class="${iconClass} text-xl"></i>
                         <span id="like-count-${index}" class="font-bold text-sm ${hasLiked ? 'text-red-500' : 'text-gray-500'}">${likeCount > 0 ? likeCount : '推薦'}</span>
                     </button>
@@ -1072,7 +1088,56 @@
         container.innerHTML = finalHtml;
     };
 
-    // 全網按讚寫入邏輯 (免登入、無痕寫入)
+        // --- 全網歷史總榜單渲染 ---
+    window.renderAllTimeTrending = async () => {
+        const container = document.getElementById('all-time-trending-container');
+        if(!container) return;
+        try {
+            const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
+            const q = window.FS.query(likesRef, window.FS.orderBy("count", "desc"), window.FS.limit(5));
+            const snap = await window.FS.getDocs(q);
+            
+            if(snap.empty) {
+                container.innerHTML = '<p class="text-textSub text-center py-6 bg-white/50 rounded-xl border border-dashed border-orange-200">目前尚無熱門推薦，快去為喜歡的新聞按讚吧！</p>';
+                return;
+            }
+            
+            let html = '<div class="space-y-4">';
+            let rank = 1;
+            snap.forEach(doc => {
+                const data = doc.data();
+                let rankColor = rank === 1 ? 'text-yellow-500' : (rank === 2 ? 'text-gray-400' : (rank === 3 ? 'text-amber-600' : 'text-gray-300'));
+                
+                // 處理摘要的黃色螢光筆效果 (若舊資料無摘要，則顯示提示)
+                let safeSummary = (data.summary || '此為早期推薦新聞，暫無摘要紀錄。').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                safeSummary = safeSummary.replace(/\*\*(.*?)\*\*/g, '<strong class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold mx-0.5">$1</strong>');
+
+                html += `
+                    <a href="${data.url}" target="_blank" class="block p-5 bg-white border border-orange-50 rounded-xl hover:shadow-lg hover:border-orange-200 transition group relative overflow-hidden">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-4 flex-grow mr-4">
+                                <span class="font-bold text-xl ${rankColor} w-8 text-center flex-shrink-0"><i class="fa-solid ${rank <= 3 ? 'fa-medal' : 'fa-hashtag'}"></i> ${rank > 3 ? rank : ''}</span>
+                                <h3 class="font-bold text-lg text-textMain group-hover:text-accent transition line-clamp-2">${data.title}</h3>
+                            </div>
+                            <span class="flex items-center gap-1.5 text-red-500 font-bold bg-red-50 px-3 py-1.5 rounded-full whitespace-nowrap border border-red-100 shadow-sm flex-shrink-0">
+                                <i class="fa-solid fa-heart fa-beat"></i> ${data.count}
+                            </span>
+                        </div>
+                        <div class="pl-12 pr-2">
+                            <p class="text-sm text-textSub line-clamp-5 leading-relaxed">${safeSummary}</p>
+                        </div>
+                    </a>
+                `;
+                rank++;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        } catch(e) {
+            console.error("載入熱門總榜失敗", e);
+            container.innerHTML = '<p class="text-red-400 text-center py-4">榜單載入失敗</p>';
+        }
+    };
+
     window.likeNews = async (index) => {
         const news = window.currentNewsData[index];
         if (!news) return;
@@ -1086,36 +1151,41 @@
         if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-500"></i>';
 
         try {
-            // 利用 Base64 將 URL 轉成安全的 Document ID
-            const docId = btoa(news.url).replace(/[/+=]/g, '_');
-            const docRef = window.FS.doc(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes', docId);
-
-            const docSnap = await window.FS.getDoc(docRef);
+            // 更安全的 URL 驗證與查詢寫入法
+            const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
+            const q = window.FS.query(likesRef, window.FS.where("url", "==", news.url));
+            const snap = await window.FS.getDocs(q);
+            
             let newCount = 1;
             
-            if (docSnap.exists()) {
-                newCount = (docSnap.data().count || 0) + 1;
-                await window.FS.updateDoc(docRef, { count: newCount, lastUpdated: window.FS.serverTimestamp() });
+            if (!snap.empty) {
+                const docRef = snap.docs[0].ref;
+                newCount = (snap.docs[0].data().count || 0) + 1;
+                // 更新時，順便把最新的摘要也更新進去
+                await window.FS.updateDoc(docRef, { count: newCount, lastUpdated: window.FS.serverTimestamp(), title: news.title, summary: news.summary });
             } else {
-                await window.FS.setDoc(docRef, {
+                await window.FS.addDoc(likesRef, {
                     url: news.url,
                     title: news.title,
+                    summary: news.summary, // 新增：寫入時連同摘要一起打包存入 Firestore
                     count: 1,
                     lastUpdated: window.FS.serverTimestamp()
                 });
             }
 
-            // 記錄於本地，防止重複洗讚
             likedUrls.push(news.url);
             localStorage.setItem('tony_liked_news', JSON.stringify(likedUrls));
 
             if(countSpan) countSpan.innerText = newCount;
             if(btn) {
                 btn.innerHTML = `<i class="fa-solid fa-heart text-red-500 text-xl"></i> <span class="font-bold text-sm text-red-500">${newCount}</span>`;
-                btn.className = "flex items-center gap-2 text-red-500 cursor-default px-3 py-1.5 rounded-full bg-red-50";
+                btn.className = "flex items-center gap-2 text-red-500 cursor-default px-3 py-1.5 rounded-full bg-red-50 shadow-inner";
                 btn.onclick = null;
             }
             showToast("推薦成功！全網熱門指標已更新", "success");
+            
+            // 點讚成功後，重新整理總榜單
+            window.renderAllTimeTrending();
 
         } catch (e) {
             console.error("按讚失敗", e);
@@ -1396,7 +1466,7 @@
                                 <div class="p-6 flex flex-col flex-grow">
                                     <p class="text-xs text-gray-400 mb-2"><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</p>
                                     <h3 class="text-xl font-bold text-textMain mb-3 cursor-pointer group-hover:text-cta transition line-clamp-2" onclick="window.location.hash='#/article/${doc.id}'">${article.title}</h3>
-                                    <p class="text-sm text-textSub line-clamp-3 mb-6 flex-grow">${article.excerpt}</p>
+                                    <p class="text-sm text-textSub line-clamp-5 mb-6 flex-grow">${article.excerpt}</p>
                                     <a href="#/article/${doc.id}" class="text-cta text-sm font-bold flex items-center gap-1 mt-auto hover:text-blue-800">閱讀更多 <i class="fa-solid fa-arrow-right text-xs"></i></a>
                                 </div>
                             </div>
