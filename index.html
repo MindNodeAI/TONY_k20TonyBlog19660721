@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,9 +41,15 @@
         ::-webkit-scrollbar-thumb:hover { background: theme('colors.primary'); }
         .page-enter { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 編輯器與原生表格樣式強化 (已解除 table-layout 鎖定，允許調整欄寬) */
         .ql-container { font-family: 'Inter', 'Noto Sans TC', sans-serif !important; font-size: 1rem !important; background-color: #ffffff; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
         .ql-toolbar { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; background-color: #f8fafc; }
         .ql-editor { min-height: 400px; }
+        .ql-editor table { width: 100%; border-collapse: collapse; }
+        .ql-editor td { border: 1px solid #d1d5db; padding: 10px; min-width: 50px; position: relative; word-break: break-word; }
+        .ql-editor td.selected { background-color: #eff6ff; outline: 2px solid #2563EB; outline-offset: -2px; }
+        
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -83,13 +90,14 @@
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } catch(e) {
+                    console.warn("環境憑證驗證失敗，自動切換至訪客匿名模式", e);
                     await signInAnonymously(auth);
                 }
             } else {
                 await signInAnonymously(auth);
             }
         } catch (error) {
-            console.error("Auth error", error);
+            console.error("Auth 初始嚴重錯誤", error);
         }
     };
     initAuth();
@@ -159,7 +167,6 @@
             generationConfig: { maxOutputTokens: 8192, ...(extraOptions.generationConfig || {}) }
         };
 
-        // 完美修復: 使用正確的底線命名參數
         if (useSearch) payload.tools = [{ "google_search": {} }];
 
         try {
@@ -383,6 +390,7 @@
     </div>
 </footer>
 
+<!-- 載入官方 Quill 2.0.2 -->
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
 <script>
@@ -760,6 +768,7 @@
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-2xl shadow-sm border border-blue-100">
                             <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-wand-magic-sparkles text-accent"></i> AI 寫作助手</h3>
                             <div class="mb-6"><label class="block text-sm font-bold text-gray-700 mb-2">請描述寫作主題 *</label><textarea id="ai-prompt" rows="3" placeholder="幫我寫一篇關於..." class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base bg-white"></textarea></div>
@@ -772,12 +781,34 @@
                                 <button type="button" onclick="window.copyPrompt()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold shadow-sm transition whitespace-nowrap"><i class="fa-solid fa-copy text-cta"></i> 複製</button>
                             </div>
                         </div>
-                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+
+                        <!-- 編輯器區塊 -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 relative">
                             <div class="flex justify-between items-center mb-4">
-                                <label class="block text-sm font-bold text-gray-700">文章正文 *</label>
+                                <label class="block text-sm font-bold text-gray-700">文章正文 * <span class="text-xs text-gray-400 font-normal ml-2">提示：在表格內按右鍵可增減行列與調整寬度，或將滑鼠移至框線直接拖曳</span></label>
                                 <button type="button" onclick="window.formatContentWithAI()" class="text-sm font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm"><i class="fa-solid fa-highlighter"></i> AI 智能排版與畫重點</button>
                             </div>
+                            
                             <div id="editor-container"></div>
+                            
+                            <!-- 專屬手刻的原生右鍵表格選單與寬度控制 -->
+                            <div id="table-context-menu" class="hidden absolute z-[100] bg-white border border-gray-200 shadow-2xl rounded-xl py-2 w-56 text-sm transform transition-all">
+                                <button type="button" onclick="window.handleTableAction('insertRowAbove')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-up mr-3 text-gray-400 w-4"></i>向上插入一列</button>
+                                <button type="button" onclick="window.handleTableAction('insertRowBelow')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-down mr-3 text-gray-400 w-4"></i>向下插入一列</button>
+                                <button type="button" onclick="window.handleTableAction('insertColumnLeft')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-left mr-3 text-gray-400 w-4"></i>向左插入一欄</button>
+                                <button type="button" onclick="window.handleTableAction('insertColumnRight')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-right mr-3 text-gray-400 w-4"></i>向右插入一欄</button>
+                                
+                                <div class="my-1 border-t border-gray-100"></div>
+                                <div class="px-5 py-1 text-gray-400 text-[10px] font-bold bg-gray-50 uppercase tracking-widest">欄位寬度調整</div>
+                                <button type="button" onclick="window.handleTableAction('increaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-expand mr-3 text-cta w-4"></i>加寬此欄位 (+40px)</button>
+                                <button type="button" onclick="window.handleTableAction('decreaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-compress mr-3 text-cta w-4"></i>縮窄此欄位 (-40px)</button>
+                                <button type="button" onclick="window.handleTableAction('autoWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-wand-magic-sparkles mr-3 text-accent w-4"></i>自動適應內容寬度</button>
+
+                                <div class="my-1 border-t border-gray-100"></div>
+                                <button type="button" onclick="window.handleTableAction('deleteRow')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這列</button>
+                                <button type="button" onclick="window.handleTableAction('deleteColumn')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這欄</button>
+                                <button type="button" onclick="window.handleTableAction('deleteTable')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-bold transition flex items-center"><i class="fa-solid fa-trash-can mr-3 w-4"></i>刪除整個表格</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -938,25 +969,7 @@
         `;
         
         try {
-            const systemPrompt = `你是一位頂尖的國際科技與財經新聞總編。
-            【嚴格輸出格式指示】
-            你必須搜尋今日最新新聞，並精準輸出 8 則新聞 (6則全球重點, 2則台灣重點)。
-            絕對不要使用 JSON 格式。請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。
-            
-            範例格式：
-            CATEGORY: 科技情報
-            TITLE: 蘋果發表最新 AI 功能
-            SUMMARY: 蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮...
-            URL: https://example.com/news1
-            ===NEWS===
-            CATEGORY: 財經趨势
-            ...
-            
-            【內容規範】
-            1. SUMMARY (摘要) 必須達 150 - 200 字，深入分析。
-            2. 請務必在 SUMMARY 中，將專有名詞、企業名稱、重要數據用**雙星號**包裝起來。
-            3. URL 必須是真實、可點擊的新聞網址。
-            `;
+            const systemPrompt = "你是一位頂尖的國際科技與財經新聞總編。\n【嚴格輸出格式指示】\n你必須搜尋今日最新新聞，並精準輸出 8 則新聞 (6則全球重點, 2則台灣重點)。\n絕對不要使用 JSON 格式。請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。\n\n範例格式：\nCATEGORY: 科技情報\nTITLE: 蘋果發表最新 AI 功能\nSUMMARY: 蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮...\nURL: https://example.com/news1\n===NEWS===\nCATEGORY: 財經趨势\n...\n\n【內容規範】\n1. SUMMARY (摘要) 必須達 150 - 200 字，深入分析。\n2. 請務必在 SUMMARY 中，將專有名詞、企業名稱、重要數據用**雙星號**包裝起來。\n3. URL 必須是真實、可點擊的新聞網址。";
 
             const userPrompt = "請開始搜尋並輸出今日最新的 8 則 AI、財經與數位行銷新聞。";
             
@@ -1539,7 +1552,6 @@
                 document.getElementById('detail-category').innerText = article.category || '未分類';
                 document.getElementById('detail-cover').src = article.coverImage || 'https://placehold.co/800x400';
                 
-                // 【完美修復】包裹在 ql-editor 中，前台完整呈現清單、置中、標點與樣式
                 document.getElementById('detail-content').innerHTML = `<div class="ql-editor" style="padding:0; overflow:visible;">${article.content || ''}</div>`;
                 
                 window.updateSEO(article.title, article.excerpt, article.coverImage);
@@ -1560,66 +1572,33 @@
         } catch(e) { document.getElementById('detail-content').innerHTML = '讀取失敗'; }
     };
 
-    window.subscribeNewsletter = async (e) => {
-        e.preventDefault();
-        const emailInput = document.getElementById('newsletter-email');
-        const email = emailInput.value.trim();
-        if (!email) return;
-
-        const btn = e.target.querySelector('button');
-        const originalText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        try {
-            await window.FS.addDoc(window.FS.collection(window.AppState.db, "subscribers"), { email: email, timestamp: window.FS.serverTimestamp() });
-            showToast('訂閱成功！感謝您的支持', 'success');
-            emailInput.value = '';
-        } catch(error) { showToast('訂閱失敗，請稍後再試', 'error'); } 
-        finally { btn.disabled = false; btn.innerHTML = originalText; }
-    };
-
-    window.submitLeadForm = async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('lead-submit-btn');
-        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
-        try {
-            await window.FS.addDoc(window.FS.collection(window.AppState.db, "leads"), {
-                name: document.getElementById('lead-name').value.trim(),
-                email: document.getElementById('lead-email').value.trim(),
-                company: document.getElementById('lead-company').value.trim(),
-                message: document.getElementById('lead-message').value.trim(),
-                createdAt: window.FS.serverTimestamp()
-            });
-            showToast('預約成功！我們將盡快與您聯絡', 'success');
-            setTimeout(() => { window.location.hash = '#/'; }, 1500);
-        } catch(error) { showToast('送出失敗，請稍後再試', 'error'); } 
-        finally { btn.disabled = false; btn.innerText = '送出預約'; }
-    };
-
     window.loadAdminDashboard = async () => {
+        const container = document.getElementById('admin-subscribers-list');
         try {
             const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "subscribers"), window.FS.orderBy("timestamp", "desc"), window.FS.limit(10)));
-            const container = document.getElementById('admin-subscribers-list');
             if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-4">無訂閱者</td></tr>'; return; }
             let html = '';
             snap.forEach(d => {
                 const data = d.data();
-                html += `<tr><td class="px-6 py-4 border-b">${new Date(data.timestamp?.seconds*1000).toLocaleDateString()}</td><td class="px-6 py-4 border-b">${data.email}</td></tr>`;
+                html += `<tr><td class="px-6 py-4 border-b">${data.timestamp ? new Date(data.timestamp.seconds*1000).toLocaleDateString() : '無日期'}</td><td class="px-6 py-4 border-b">${data.email}</td></tr>`;
             });
             container.innerHTML = html;
-        } catch(e) {}
+        } catch(e) {
+            container.innerHTML = `<tr><td colspan="2" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
     };
 
     window.loadAdminLeads = async () => {
+        const container = document.getElementById('admin-leads-list');
         try {
             const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "leads"), window.FS.orderBy("createdAt", "desc"), window.FS.limit(20)));
-            const container = document.getElementById('admin-leads-list');
             if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">目前尚無商機或預約資料</td></tr>'; return; }
             let html = '';
             snap.forEach(d => {
                 const data = d.data();
                 html += `
                     <tr>
-                        <td class="px-6 py-4 border-b text-sm align-top w-32">${new Date(data.createdAt?.seconds*1000).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 border-b text-sm align-top w-32">${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleDateString() : '無日期'}</td>
                         <td class="px-6 py-4 border-b text-sm">
                             <p class="font-bold text-primary text-base mb-1">${data.name} <span class="text-xs text-gray-500 font-normal ml-2"><i class="fa-solid fa-building"></i> ${data.company || '未提供公司名稱'}</span></p>
                             <p class="text-xs text-cta mb-3"><i class="fa-solid fa-envelope"></i> ${data.email}</p>
@@ -1629,7 +1608,9 @@
                 `;
             });
             container.innerHTML = html;
-        } catch(e) {}
+        } catch(e) {
+            container.innerHTML = `<tr><td colspan="2" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
     };
 
     window.loadAdminArticles = async () => {
@@ -1644,7 +1625,7 @@
                     <tr>
                         <td class="px-6 py-4 border-b"><p class="font-bold text-primary">${data.title}</p><span class="text-xs bg-gray-100 px-2 py-1 rounded">${data.category}</span></td>
                         <td class="px-6 py-4 border-b">${data.status === 'published' ? '<span class="text-green-600 font-bold text-xs">已發布</span>' : '<span class="text-gray-400 font-bold text-xs">草稿</span>'}</td>
-                        <td class="px-6 py-4 border-b text-sm">${new Date(data.createdAt?.seconds*1000).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 border-b text-sm">${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleDateString() : '無日期'}</td>
                         <td class="px-6 py-4 border-b text-right">
                             <a href="#/admin/articles/edit/${d.id}" class="text-blue-500 hover:underline mr-3 text-sm">編輯</a>
                             <button onclick="window.deleteArticle('${d.id}')" class="text-red-500 hover:underline text-sm">刪除</button>
@@ -1653,10 +1634,11 @@
                 `;
             });
             container.innerHTML = html;
-        } catch(e) {}
+        } catch(e) {
+            container.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
     };
 
-    // 【完美修復】自訂上傳控制器：攔截圖片/影片按鈕，自動上傳至 Firebase Storage
     window.quillUploadHandler = async (type) => {
         const input = document.createElement('input');
         input.setAttribute('type', 'file');
@@ -1684,31 +1666,150 @@
         };
     };
 
+    window.handleTableAction = (action) => {
+        if (!window.quillEditor) return;
+        const tableModule = window.quillEditor.getModule('table');
+        if (!tableModule) return;
+        const activeTd = document.querySelector('#editor-container td.selected');
+        let keepMenuOpen = false;
+
+        if (action === 'increaseWidth' && activeTd) {
+            const currentWidth = activeTd.offsetWidth;
+            activeTd.style.minWidth = (currentWidth + 40) + 'px';
+            activeTd.style.width = (currentWidth + 40) + 'px';
+            keepMenuOpen = true;
+        }
+        if (action === 'decreaseWidth' && activeTd) {
+            const currentWidth = activeTd.offsetWidth;
+            activeTd.style.minWidth = Math.max(40, currentWidth - 40) + 'px';
+            activeTd.style.width = Math.max(40, currentWidth - 40) + 'px';
+            keepMenuOpen = true;
+        }
+        if (action === 'autoWidth' && activeTd) {
+            activeTd.style.minWidth = 'auto';
+            activeTd.style.width = 'auto';
+            keepMenuOpen = true;
+        }
+        
+        if (action === 'insertRowAbove') tableModule.insertRowAbove();
+        if (action === 'insertRowBelow') tableModule.insertRowBelow();
+        if (action === 'insertColumnLeft') tableModule.insertColumnLeft();
+        if (action === 'insertColumnRight') tableModule.insertColumnRight();
+        if (action === 'deleteRow') tableModule.deleteRow();
+        if (action === 'deleteColumn') tableModule.deleteColumn();
+        if (action === 'deleteTable') tableModule.deleteTable();
+        
+        if (!keepMenuOpen) {
+            document.getElementById('table-context-menu').classList.add('hidden');
+        }
+    };
+
+    window.onclick = (e) => {
+        const menu = document.getElementById('table-context-menu');
+        if (menu && !menu.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    };
+
     window.initArticleEditor = async (id) => {
         document.getElementById('article-id').value = id || '';
         document.getElementById('editor-title').innerHTML = id ? '編輯文章' : '新增文章';
         if (window.quillEditor) window.quillEditor = null;
-        
+
+        const icons = Quill.import('ui/icons');
+        icons['table'] = '<svg viewBox="0 0 18 18"> <rect class="ql-stroke" height="12" width="12" x="3" y="3"></rect> <line class="ql-stroke" x1="3" x2="15" y1="9" y2="9"></line> <line class="ql-stroke" x1="9" x2="9" y1="3" y2="15"></line> </svg>';
+
         const toolbarOptions = [
             ['bold', 'italic', 'underline', 'strike'], ['blockquote', 'code-block'],
             [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
             [{ 'script': 'sub'}, { 'script': 'super' }], [{ 'indent': '-1'}, { 'indent': '+1' }],
             [{ 'size': ['small', false, 'large', 'huge'] }], [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], ['link', 'image', 'video'], ['clean']
+            [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], ['link', 'image', 'video', 'table'], ['clean']
         ];
         
         window.quillEditor = new Quill('#editor-container', { 
             theme: 'snow', 
             modules: { 
+                table: true, 
                 toolbar: {
                     container: toolbarOptions,
                     handlers: {
                         image: () => window.quillUploadHandler('image'),
-                        video: () => window.quillUploadHandler('video')
+                        video: () => window.quillUploadHandler('video'),
+                        table: function() {
+                           this.quill.getModule('table').insertTable(3, 3);
+                        }
                     }
-                } 
+                }
             } 
         });
+
+        const quillRoot = window.quillEditor.root;
+        const editorNode = document.getElementById('editor-container');
+
+        quillRoot.oncontextmenu = (e) => {
+            const td = e.target.closest('td');
+            if (td) {
+                e.preventDefault();
+                const menu = document.getElementById('table-context-menu');
+                menu.style.top = e.clientY + 'px';
+                menu.style.left = e.clientX + 'px';
+                menu.classList.remove('hidden');
+                
+                editorNode.querySelectorAll('td').forEach(el => el.classList.remove('selected'));
+                td.classList.add('selected');
+            }
+        };
+
+        let isResizing = false;
+        let startX, startWidth, resizeTd;
+
+        quillRoot.addEventListener('mousemove', (e) => {
+            if (isResizing) return;
+            const td = e.target.closest('td');
+            if (td) {
+                const rect = td.getBoundingClientRect();
+                if (rect.right - e.clientX < 10 && rect.right - e.clientX >= 0) {
+                    td.style.cursor = 'col-resize';
+                } else {
+                    td.style.cursor = 'text';
+                }
+            }
+        });
+
+        quillRoot.addEventListener('mousedown', (e) => {
+            const td = e.target.closest('td');
+            if (td) {
+                const rect = td.getBoundingClientRect();
+                if (rect.right - e.clientX < 10 && rect.right - e.clientX >= 0) {
+                    isResizing = true;
+                    resizeTd = td;
+                    startX = e.clientX;
+                    startWidth = td.offsetWidth;
+                    e.preventDefault(); 
+                }
+            }
+        });
+
+        if(!window.isTableResizerBound) {
+            document.addEventListener('mousemove', (e) => {
+                if (isResizing && resizeTd) {
+                    const diff = e.clientX - startX;
+                    const newWidth = Math.max(40, startWidth + diff);
+                    resizeTd.style.width = newWidth + 'px';
+                    resizeTd.style.minWidth = newWidth + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => { 
+                if (isResizing) {
+                    isResizing = false; 
+                    if (resizeTd) resizeTd.style.cursor = 'text';
+                    resizeTd = null; 
+                }
+            });
+            window.isTableResizerBound = true;
+        }
         
         await window.loadCategories('article-category-input', 'select');
 
@@ -1773,7 +1874,7 @@
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
-            const systemPrompt = `你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。語氣要專業、友善，像是一位經驗豐富的全端工程師。`;
+            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。語氣要專業、友善，像是一位經驗豐富的全端工程師。";
             const resultText = await window.callGeminiAPI(systemPrompt, question);
             document.getElementById(loadingId).innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div>
@@ -1794,8 +1895,9 @@
         if (!prompt) return showToast("請輸入寫作主題", "warning");
         try {
             showToast("AI 撰寫中...", "info");
-            const resultText = await window.callGeminiAPI("你是一個部落格寫作專家。輸出純 HTML，不要包含 ```html。", `主題大綱：${prompt}`);
-            window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), resultText.replace(/```html/g, '').replace(/```/g, ''));
+            const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，不要包含 \x60\x60\x60html。";
+            const resultText = await window.callGeminiAPI(safePromptText, `主題大綱：${prompt}`);
+            window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), resultText.replace(/\x60\x60\x60html/g, '').replace(/\x60\x60\x60/g, ''));
             showToast("生成完成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); }
     };
@@ -1812,7 +1914,7 @@
             const resultText = await window.callGeminiAPI("你是一位視覺藝術總監，專為 Midjourney v6 寫 Prompt。輸出全英文純文字。", `文章內容：${content.substring(0, 3000)}`);
             document.getElementById('ai-prompt-result-container').classList.remove('hidden');
             document.getElementById('ai-prompt-result-container').classList.add('flex');
-            document.getElementById('ai-cover-prompt-result').value = resultText.replace(/```/g, '').trim();
+            document.getElementById('ai-cover-prompt-result').value = resultText.replace(/\x60\x60\x60/g, '').trim();
             showToast("Prompt 已生成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -1850,8 +1952,9 @@
 
         try {
             showToast("請稍候...", "info");
-            const resultText = await window.callGeminiAPI("幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 ```html 標記。", htmlContent);
-            window.quillEditor.clipboard.dangerouslyPasteHTML(resultText.replace(/```html/g, '').replace(/```/g, ''));
+            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 \x60\x60\x60html 標記。";
+            const resultText = await window.callGeminiAPI(safePromptText, htmlContent);
+            window.quillEditor.clipboard.dangerouslyPasteHTML(resultText.replace(/\x60\x60\x60html/g, '').replace(/\x60\x60\x60/g, ''));
             showToast("排版完成！", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`排版失敗：${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -1937,6 +2040,41 @@
                 if (footerLogo) footerLogo.innerHTML = `<img src="${data.siteLogoUrl}" alt="Logo" class="h-10 w-auto">`;
             }
         } catch(err) { showToast("儲存失敗", "error"); }
+    };
+
+    window.subscribeNewsletter = async (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('newsletter-email');
+        const email = emailInput.value.trim();
+        if (!email) return;
+
+        const btn = e.target.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "subscribers"), { email: email, timestamp: window.FS.serverTimestamp() });
+            showToast('訂閱成功！感謝您的支持', 'success');
+            emailInput.value = '';
+        } catch(error) { showToast('訂閱失敗，請稍後再試', 'error'); } 
+        finally { btn.disabled = false; btn.innerHTML = originalText; }
+    };
+
+    window.submitLeadForm = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('lead-submit-btn');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
+        try {
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "leads"), {
+                name: document.getElementById('lead-name').value.trim(),
+                email: document.getElementById('lead-email').value.trim(),
+                company: document.getElementById('lead-company').value.trim(),
+                message: document.getElementById('lead-message').value.trim(),
+                createdAt: window.FS.serverTimestamp()
+            });
+            showToast('預約成功！我們將盡快與您聯絡', 'success');
+            setTimeout(() => { window.location.hash = '#/'; }, 1500);
+        } catch(error) { showToast('送出失敗，請稍後再試', 'error'); } 
+        finally { btn.disabled = false; btn.innerText = '送出預約'; }
     };
 
     window.loadCategories = async (containerId, mode = 'filters') => {
