@@ -51,7 +51,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -69,22 +69,52 @@
     const db = getFirestore(app);
     const storage = getStorage(app);
     
-    window.AppState = { user: null, role: null, db: db, auth: auth, storage: storage, currentCategory: '全部', searchQuery: '' };
+    window.AppState = { user: null, role: null, db: db, auth: auth, storage: storage, currentCategory: '全部', searchQuery: '', appId: 'tony-studio' };
     window.FS = { collection, getDocs, getDoc, doc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc, writeBatch };
     window.StorageAPI = { ref, uploadBytes, getDownloadURL };
     window.AuthAPI = { createUserWithEmailAndPassword, signInWithEmailAndPassword };
 
-    // --- 前端 API 金鑰管理 (LocalStorage) ---
-    window.getApiKey = () => localStorage.getItem('tony_gemini_api_key') || '';
+    window.currentNewsData = []; 
+    window.userBookmarksCache = [];
+
+    // --- 【重大修復】強固版 Auth 初始機制，確保匿名權限生效 ---
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch(e) {
+                    console.warn("環境憑證驗證失敗，自動切換至訪客匿名模式 (確保按讚功能正常)", e);
+                    await signInAnonymously(auth);
+                }
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (error) {
+            console.error("Auth 初始嚴重錯誤", error);
+        }
+    };
+    initAuth();
+
+    // --- API Key 相關設定 ---
+    window.getApiKey = () => {
+        const key = localStorage.getItem('tony_gemini_api_key');
+        return (key && key.trim() !== '') ? key.trim() : null;
+    };
+    
     window.saveApiKey = (key) => {
-        localStorage.setItem('tony_gemini_api_key', key.trim());
-        showToast('API 金鑰已儲存於本機', 'success');
+        if(key && key.trim() !== '') {
+            localStorage.setItem('tony_gemini_api_key', key.trim());
+            showToast('API 金鑰已儲存於本機', 'success');
+        } else {
+            showToast('請提供有效的 API 金鑰', 'warning');
+        }
     };
 
     window.showApiKeyModal = () => {
         const existing = document.getElementById('apikey-modal');
         if (existing) existing.remove();
-        const currentKey = window.getApiKey();
+        const currentKey = window.getApiKey() || '';
         const modalHtml = `
             <div id="apikey-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300">
                 <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform scale-95 transition-transform duration-300">
@@ -110,42 +140,35 @@
         modal.querySelector('div').classList.remove('scale-95');
     };
 
-    // --- 前端直接呼叫 Gemini API 的共用函式 ---
-    window.callGeminiAPI = async (systemPrompt, userPrompt) => {
+    window.callGeminiAPI = async (systemPrompt, userPrompt, useSearch = false, extraOptions = {}) => {
         const apiKey = window.getApiKey();
         if (!apiKey) {
             window.showApiKeyModal();
-            throw new Error("請先設定 Gemini API Key");
+            throw new Error("MISSING_API_KEY");
         }
         
-        // 使用您指定的 gemini-3.5-flash
+        // 強制鎖定 gemini-3.5-flash
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+        
         const payload = {
             contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] }
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: { maxOutputTokens: 8192, ...(extraOptions.generationConfig || {}) }
         };
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        // 修正 Google 搜尋工具的官方命名格式 (由 google_search 改為 googleSearch)
+        if (useSearch) payload.tools = [{ "googleSearch": {} }];
 
-        const result = await response.json();
-        
-        if (!response.ok) {
-            console.error("Gemini API Error:", result);
-            if(result.error?.code === 403 || result.error?.message?.includes('API key')) {
-                window.showApiKeyModal();
-                throw new Error("API 金鑰無效，請重新設定");
-            }
-            if(result.error?.code === 404) {
-                throw new Error("模型找不到，請確認您的 API 權限支援 gemini-3.5-flash");
-            }
-            throw new Error(result.error?.message || "Google API 拒絕連線");
-        }
-
-        return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error?.message || `API Error: ${response.status}`);
+            return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } catch (error) { throw error; }
     };
 
     window.updateSEO = (title, description = '', imageUrl = '') => {
@@ -176,13 +199,16 @@
         void modal.offsetWidth; 
         modal.classList.remove('opacity-0');
         modal.querySelector('div').classList.remove('scale-95');
-        if (onConfirm) {
-            document.getElementById('modal-confirm-btn').onclick = () => { onConfirm(); modal.remove(); };
-        }
+        if (onConfirm) document.getElementById('modal-confirm-btn').onclick = () => { onConfirm(); modal.remove(); };
     };
 
     window.handleLogout = async () => {
-        try { await signOut(auth); window.AppState.role = null; showToast("已成功登出", "success"); window.location.hash = '#/'; } 
+        try { 
+            await signOut(auth); 
+            window.AppState.role = null; 
+            showToast("已成功登出", "success"); 
+            window.location.hash = '#/'; 
+        } 
         catch (error) { console.error("Logout failed", error); }
     };
 
@@ -203,13 +229,11 @@
     };
 
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
+        if (user && !user.isAnonymous) {
             try {
                 const idTokenResult = await user.getIdTokenResult(true);
                 window.AppState.role = idTokenResult.claims.role || 'member';
-                if (user.email === 'mindnodeai@gmail.com') {
-                    window.AppState.role = 'super_admin';
-                }
+                if (user.email === 'mindnodeai@gmail.com') window.AppState.role = 'super_admin';
             } catch(e) {
                 window.AppState.role = (user.email === 'mindnodeai@gmail.com') ? 'super_admin' : 'member';
             }
@@ -249,7 +273,7 @@
                         ${(role === 'super_admin' || role === 'admin') ? `<a href="#/admin" onclick="window.toggleMobileMenu()" class="text-xs font-bold text-accent"><i class="fa-solid fa-gauge"></i> 進入管理後台</a>` : ''}
                     </div>
                 </div>
-                <a href="#/member" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-md text-base font-medium text-textMain hover:bg-gray-50 transition border border-gray-100 mb-2 text-center">進入會員專區</a>
+                <a href="#/member" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-md text-base font-medium text-textMain hover:bg-gray-50 transition border border-gray-100 mb-2 text-center bg-blue-50 text-cta">進入會員專區</a>
                 <button onclick="window.toggleMobileMenu(); window.handleLogout();" class="w-full text-center block px-3 py-3 rounded-md text-base font-medium text-red-600 bg-red-50 hover:bg-red-100 transition shadow-sm">登出帳號</button>
             `;
         } else {
@@ -272,6 +296,7 @@
             <nav class="hidden md:flex space-x-8">
                 <a href="#/articles" class="text-textMain hover:text-cta font-medium transition">專欄文章</a>
                 <a href="#/series" class="text-textMain hover:text-cta font-medium transition">主題專題</a>
+                <a href="#/daily-news" class="text-textMain hover:text-cta font-medium transition flex items-center gap-1"><i class="fa-solid fa-newspaper text-accent text-sm"></i> 每日 AI 報</a>
                 <a href="#/ask-tony" class="text-textMain hover:text-cta font-medium transition flex items-center gap-1"><i class="fa-solid fa-sparkles text-accent text-sm"></i> Ask TONY</a>
                 <a href="#/services" class="text-textMain hover:text-cta font-medium transition">服務與課程</a>
             </nav>
@@ -289,6 +314,7 @@
         <div class="px-4 pt-2 pb-6 space-y-2">
             <a href="#/articles" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100">專欄文章</a>
             <a href="#/series" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100">主題專題</a>
+            <a href="#/daily-news" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100 flex items-center gap-2"><i class="fa-solid fa-newspaper text-accent"></i> 每日 AI 報</a>
             <a href="#/ask-tony" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100 flex items-center gap-2"><i class="fa-solid fa-sparkles text-accent"></i> Ask TONY</a>
             <a href="#/services" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100 mb-4">服務與課程</a>
             <div id="mobile-auth-container" class="pt-4 border-t border-gray-100"></div>
@@ -333,6 +359,7 @@
             <ul class="space-y-3 text-sm text-gray-300">
                 <li><a href="#/articles" class="hover:text-white transition">所有文章</a></li>
                 <li><a href="#/series" class="hover:text-white transition">主題專題</a></li>
+                <li><a href="#/daily-news" class="hover:text-white transition">每日 AI 報</a></li>
             </ul>
         </div>
         <div>
@@ -441,6 +468,45 @@
                 </div>
             </div>
         `,
+        // --- 重構：每日 AI 報 (全網熱門版) ---
+        dailyNews: `
+            <div class="bg-bg min-h-screen pb-20">
+                <div class="bg-primary text-white pt-12 pb-24 text-center relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    <div class="relative z-10">
+                        <h1 class="text-3xl md:text-5xl font-bold mb-4 flex justify-center items-center gap-3">
+                            <i class="fa-solid fa-globe text-accent"></i> 每日 AI 報
+                        </h1>
+                        <p class="text-gray-300 max-w-2xl mx-auto px-4 text-lg mb-4">
+                            免登入！全網共同熱門推薦指標。掌握最新全球與台灣科技脈動。
+                        </p>
+                        
+                        <div id="daily-news-date" class="inline-block px-5 py-2 bg-white/20 rounded-full text-sm font-bold text-white mb-6 backdrop-blur-md border border-white/30 shadow-sm transition-all">
+                            <i class="fa-regular fa-calendar mr-1"></i> 今日日期：載入中...
+                        </div>
+                        
+                        <button id="btn-fetch-news" onclick="window.fetchDailyNews()" class="mt-2 bg-cta hover:bg-blue-600 text-white px-8 py-3.5 rounded-full font-bold shadow-xl transition transform hover:scale-105 flex items-center gap-2 mx-auto">
+                            <i class="fa-solid fa-rotate"></i> 立即更新最新情報
+                        </button>
+                    </div>
+                </div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
+                    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 min-h-[500px]">
+                        <div class="flex items-center gap-3 mb-8 border-b border-gray-100 pb-4">
+                            <h2 class="text-2xl font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-fire text-red-500"></i> 全網熱門情報</h2>
+                            <span class="px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100">任何人皆可按讚推薦</span>
+                        </div>
+                        <div id="daily-news-container">
+                            <div class="py-24 text-center text-textSub">
+                                <i class="fa-solid fa-satellite-dish text-5xl text-gray-300 mb-6"></i>
+                                <p class="text-xl font-bold text-gray-400 mb-2">情報站待命中</p>
+                                <p class="text-sm text-gray-500">點擊上方按鈕，讓 AI 為您彙整最新新聞</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
         askTony: `
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-primary text-white pt-16 pb-20 text-center">
@@ -459,7 +525,7 @@
                         </div>
                         <div class="p-4 bg-white border-t border-gray-100">
                             <form onsubmit="window.submitAskTony(event)" class="flex gap-3 relative">
-                                <input type="text" id="ask-tony-input" placeholder="請輸入您的問題..." required class="flex-grow px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-cta focus:bg-white transition text-base shadow-inner">
+                                <input type="text" id="ask-tony-input" placeholder="請輸入您的問題..." required class="flex-grow px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta focus:bg-white transition text-base shadow-inner">
                                 <button type="submit" id="ask-tony-btn" class="bg-cta hover:bg-blue-700 text-white px-6 py-3.5 rounded-xl font-bold shadow-md transition flex items-center justify-center min-w-[5rem]"><i class="fa-solid fa-paper-plane text-lg"></i></button>
                             </form>
                         </div>
@@ -524,6 +590,7 @@
                         <h1 id="detail-title" class="text-3xl md:text-5xl font-bold leading-tight mb-8">文章載入中...</h1>
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4"><img src="https://placehold.co/100x100/163A63/FFF?text=T" class="w-12 h-12 rounded-full border-2 border-accent" alt="TONY"><div><p class="text-base font-bold">TONY 老師</p></div></div>
+                            <div id="bookmark-container"></div>
                         </div>
                     </div>
                 </div>
@@ -537,6 +604,7 @@
                 </div>
             </div>
         `,
+        // --- 重構：精簡會員專區，移除非必要的新聞收藏 ---
         member: `
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-white border-b border-gray-200 pt-16 pb-12 shadow-sm">
@@ -550,9 +618,18 @@
                     </div>
                 </div>
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+                    <!-- 文章收藏區塊 -->
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12">
-                        <h2 class="text-2xl font-bold text-primary mb-8 flex items-center gap-3"><i class="fa-solid fa-bookmark text-accent"></i> 我的收藏文章 (開發中)</h2>
-                        <div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><p>這項功能正在建置中，敬請期待。</p></div>
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-gray-100 pb-6">
+                            <h2 class="text-2xl font-bold text-primary flex items-center gap-3"><i class="fa-solid fa-bookmark text-accent"></i> 我的文章收藏</h2>
+                            <div class="relative w-full md:w-72">
+                                <input type="text" id="bookmark-search-input" oninput="window.searchBookmarks(event)" placeholder="搜尋文章標題..." class="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-cta transition shadow-inner">
+                                <i class="fa-solid fa-search absolute left-4 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div id="member-bookmarks-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><i class="fa-solid fa-spinner fa-spin text-2xl text-cta mb-3"></i><p>載入文章收藏中...</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -662,9 +739,9 @@
                                     <div>
                                         <div class="flex justify-between items-center mb-2">
                                             <label class="block text-sm font-bold text-gray-700">文章摘要 *</label>
-                                            <button type="button" onclick="window.generateAIExcerpt()" class="text-xs font-bold text-accent bg-secondary hover:bg-primary px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 依正文產出摘要</button>
+                                            <button type="button" onclick="window.generateAIExcerpt()" class="text-xs font-bold text-accent bg-secondary hover:bg-primary px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 依正文產出長篇摘要</button>
                                         </div>
-                                        <textarea id="article-excerpt-input" required rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea>
+                                        <textarea id="article-excerpt-input" required rows="5" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea>
                                     </div>
                                 </div>
                                 <div class="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
@@ -763,7 +840,7 @@
                                     <input type="password" id="settings-api-key" placeholder="輸入您的 AIza... 金鑰" class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-mono text-sm shadow-inner">
                                     <button type="button" onclick="window.saveSettingsApiKey()" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-bold shadow-sm transition whitespace-nowrap">儲存金鑰</button>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-circle-info mr-1"></i> 此金鑰僅儲存於您的瀏覽器 (LocalStorage) 中，絕不會上傳至任何伺服器或資料庫，請安心使用。</p>
+                                <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-circle-info mr-1"></i> 此金鑰僅儲存於您的瀏覽器 (LocalStorage) 中，絕不會上傳至任何資料庫，請安心使用。</p>
                             </div>
 
                             <div class="pt-8 border-t border-gray-100 mt-8">
@@ -785,11 +862,370 @@
         `
     };
 
-    window.UserInteractions = { bookmarks: new Set(), currentArticleId: null };
-    window.quillEditor = null;
+    window.restoreDailyNews = () => {
+        const cachedJson = localStorage.getItem('tony_news_cache_json');
+        const cachedTime = localStorage.getItem('tony_news_cache_time');
+        const container = document.getElementById('daily-news-container');
+        const dateDisplay = document.getElementById('daily-news-date');
+        const btn = document.getElementById('btn-fetch-news');
+
+        let shouldFetch = false;
+
+        if (cachedJson && cachedTime && container) {
+            try {
+                window.currentNewsData = JSON.parse(cachedJson);
+                window.renderNewsGrid(); 
+                if(dateDisplay) dateDisplay.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> 暫存更新時間：${cachedTime}`;
+                if(btn) btn.classList.add('animate-pulse', 'ring-4', 'ring-blue-500/30');
+
+                const cacheDate = new Date(cachedTime);
+                const now = new Date();
+                const diffHours = Math.abs(now - cacheDate) / 36e5;
+                if (diffHours > 12) shouldFetch = true;
+            } catch (e) {
+                shouldFetch = true;
+            }
+        } else {
+            if(dateDisplay) dateDisplay.innerHTML = `<i class="fa-regular fa-calendar"></i> 今日日期：${new Date().toLocaleDateString('zh-TW')}`;
+            if(btn) btn.classList.add('animate-pulse', 'ring-4', 'ring-blue-500/30');
+            shouldFetch = true;
+        }
+
+        if (shouldFetch) {
+            if(window.getApiKey()) {
+               setTimeout(() => { if(window.fetchDailyNews) window.fetchDailyNews(); }, 800);
+            } else {
+                if(container) container.innerHTML = `
+                    <div class="py-24 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <i class="fa-solid fa-key text-5xl text-gray-300 mb-6"></i>
+                        <p class="text-xl font-bold text-gray-400 mb-2">等待輸入金鑰</p>
+                        <p class="text-sm text-gray-500">請在上方設定金鑰後，點擊更新按鈕取得新聞。</p>
+                    </div>`;
+            }
+        }
+    };
+
+    window.fetchDailyNews = async () => {
+        const container = document.getElementById('daily-news-container');
+        const btn = document.getElementById('btn-fetch-news');
+        
+        if (!window.getApiKey()) {
+            window.showApiKeyModal();
+            return;
+        }
+
+        if(btn) btn.classList.remove('animate-pulse', 'ring-4', 'ring-blue-500/30');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="py-24 text-center text-textSub bg-blue-50/50 rounded-xl border border-blue-100 shadow-inner">
+                <i class="fa-solid fa-satellite-dish fa-beat text-5xl text-cta mb-6"></i>
+                <p class="text-xl font-bold text-primary mb-2">AI 正在啟動全球聯網機制</p>
+                <p class="text-sm text-gray-500">為您搜羅並深度分析今日最新情報... (約需 10-15 秒)</p>
+            </div>
+        `;
+        
+        try {
+            // 採用絕對防彈的純文字分隔法，放棄 JSON Schema 以避免超長網址截斷導致的解析崩潰
+            const systemPrompt = `你是一位頂尖的國際科技與財經新聞總編。
+            【嚴格輸出格式指示】
+            請搜尋今日最新新聞，並輸出 6 到 8 則重點新聞。
+            絕對不要使用 JSON 格式！請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。
+
+            範例格式：
+            CATEGORY: 科技情報
+            TITLE: 蘋果發表最新 AI 功能
+            SUMMARY: 蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮...
+            URL: https://example.com/news1
+            ===NEWS===
+            CATEGORY: 財經趨勢
+            ...
+
+            【內容規範】
+            1. SUMMARY (摘要) 必須充實，深入分析。
+            2. 請在 SUMMARY 中將專有名詞、企業名稱、數據用**雙星號**包裝起來。
+            3. URL 必須是真實、可點擊的新聞網址。`;
+
+            const userPrompt = "請開始搜尋並輸出今日最新的 AI、財經與數位行銷新聞。";
+            
+            const extraOptions = {
+                generationConfig: {
+                    maxOutputTokens: 8192 // 確保給予最大輸出長度
+                }
+            };
+
+            const textResponse = await window.callGeminiAPI(systemPrompt, userPrompt, true, extraOptions);
+            
+            if (!textResponse || textResponse.trim() === '') {
+                throw new Error("AI 回傳空白內容，請稍後重試。");
+            }
+
+            const newsData = [];
+            const newsBlocks = textResponse.split('===NEWS===');
+            
+            for (let block of newsBlocks) {
+                block = block.trim();
+                if (!block) continue;
+
+                let category = '重點情報';
+                let title = '';
+                let summary = '';
+                let url = '';
+
+                const lines = block.split('\n');
+                let currentKey = '';
+
+                for (let line of lines) {
+                    line = line.trim();
+                    if (line.startsWith('CATEGORY:')) { category = line.replace('CATEGORY:', '').trim(); currentKey = 'category'; }
+                    else if (line.startsWith('TITLE:')) { title = line.replace('TITLE:', '').trim(); currentKey = 'title'; }
+                    else if (line.startsWith('URL:')) { url = line.replace('URL:', '').trim(); currentKey = 'url'; }
+                    else if (line.startsWith('SUMMARY:')) { summary = line.replace('SUMMARY:', '').trim(); currentKey = 'summary'; }
+                    else if (currentKey === 'summary' && line !== '') {
+                        summary += ' ' + line; // 處理多行摘要
+                    }
+                }
+                
+                // 【容錯防護機制】：只收錄欄位完整的資料。如果最後一筆資料被截斷導致沒有 URL，就會自動被過濾掉！
+                if (title && summary && url) {
+                    newsData.push({ category, title, summary, url });
+                }
+            }
+
+            if (newsData.length === 0) {
+                 throw new Error("無法從 AI 回應中解析出完整的新聞資料。");
+            }
+
+            window.currentNewsData = newsData;
+            const timestamp = new Date().toLocaleString('zh-TW');
+            localStorage.setItem('tony_news_cache_json', JSON.stringify(newsData));
+            localStorage.setItem('tony_news_cache_time', timestamp);
+            
+            document.getElementById('daily-news-date').innerHTML = `<i class="fa-regular fa-clock"></i> 最新更新：${timestamp}`;
+            window.renderNewsGrid();
+            showToast("今日新聞情報彙整完畢！", "success");
+            
+        } catch (error) {
+            console.error("新聞抓取失敗:", error);
+            if (error.message.includes("MISSING_API_KEY")) return;
+            container.innerHTML = `<div class="py-20 text-center text-red-500 bg-red-50 rounded-xl border border-red-100"><i class="fa-solid fa-triangle-exclamation text-4xl mb-4"></i><p class="font-bold text-lg">抓取失敗，請稍後重試。</p><p class="text-sm text-red-400 mt-2">${error.message}</p></div>`;
+            showToast("新聞抓取失敗", "error");
+        }
+    };
+
+    window.renderNewsGrid = async () => {
+        const container = document.getElementById('daily-news-container');
+        if (!container || !window.currentNewsData || window.currentNewsData.length === 0) return;
+
+        // 1. 抓取全網即時按讚數 (全域熱門指標)
+        let globalLikes = {};
+        try {
+            const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
+            const snap = await window.FS.getDocs(likesRef);
+            snap.forEach(doc => {
+                globalLikes[doc.data().url] = doc.data().count;
+            });
+        } catch (e) {
+            console.warn("無法取得全網熱門數據，可能是第一次執行或權限問題", e);
+        }
+
+        // 2. 取得本機已按讚記錄
+        let likedUrls = [];
+        try {
+            likedUrls = JSON.parse(localStorage.getItem('tony_liked_news') || '[]');
+        } catch(e) {}
+
+        let finalHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
+        
+        window.currentNewsData.forEach((news, index) => {
+            const likeCount = globalLikes[news.url] || 0;
+            const hasLiked = likedUrls.includes(news.url);
+            
+            // 安全清洗 HTML，並將雙星號轉換為黃色螢光重點 (徹底分離資料與視覺)
+            let safeSummary = (news.summary || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            safeSummary = safeSummary.replace(/\*\*(.*?)\*\*/g, '<strong class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold mx-0.5">$1</strong>');
+
+            const iconClass = hasLiked ? "fa-solid fa-heart text-red-500" : "fa-regular fa-heart text-gray-400 group-hover:text-red-400";
+            const btnClass = hasLiked ? "text-red-500 cursor-default" : "text-gray-400 hover:text-red-500 transition cursor-pointer";
+            const clickEvent = hasLiked ? "" : `onclick="window.likeNews(${index})"`;
+
+            finalHtml += `
+            <div class="p-6 bg-white rounded-xl border border-gray-200 hover:shadow-xl hover:border-blue-200 transition flex flex-col h-full group">
+                <div class="mb-5 flex items-center justify-between border-b border-gray-50 pb-4">
+                    <span class="px-3 py-1 bg-blue-50 text-cta text-xs font-bold rounded-full border border-blue-100">${news.category || '科技情報'}</span>
+                    <button id="btn-like-${index}" ${clickEvent} class="flex items-center gap-2 ${btnClass} px-3 py-1.5 rounded-full hover:bg-red-50 transition" title="推薦這則新聞">
+                        <i class="${iconClass} text-xl"></i>
+                        <span id="like-count-${index}" class="font-bold text-sm ${hasLiked ? 'text-red-500' : 'text-gray-500'}">${likeCount > 0 ? likeCount : '推薦'}</span>
+                    </button>
+                </div>
+                <h3 class="text-xl font-bold text-primary mb-4 leading-snug group-hover:text-cta transition">${news.title}</h3>
+                <p class="text-textSub mb-6 text-sm leading-relaxed flex-grow">
+                    ${safeSummary}
+                </p>
+                <div class="mt-auto flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg border border-gray-100">
+                    <span class="text-xs text-gray-400 font-medium"><i class="fa-regular fa-clock"></i> 今日最新</span>
+                    <a href="${news.url}" target="_blank" class="text-cta hover:text-blue-800 font-bold text-sm inline-flex items-center gap-2"><i class="fa-solid fa-arrow-up-right-from-square"></i> 閱讀原文</a>
+                </div>
+            </div>`;
+        });
+        finalHtml += '</div>';
+        container.innerHTML = finalHtml;
+    };
+
+    // 全網按讚寫入邏輯 (免登入、無痕寫入)
+    window.likeNews = async (index) => {
+        const news = window.currentNewsData[index];
+        if (!news) return;
+
+        let likedUrls = JSON.parse(localStorage.getItem('tony_liked_news') || '[]');
+        if (likedUrls.includes(news.url)) return showToast("您已經推薦過這則新聞囉！", "info");
+
+        const btn = document.getElementById(`btn-like-${index}`);
+        const countSpan = document.getElementById(`like-count-${index}`);
+        
+        if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-500"></i>';
+
+        try {
+            // 利用 Base64 將 URL 轉成安全的 Document ID
+            const docId = btoa(news.url).replace(/[/+=]/g, '_');
+            const docRef = window.FS.doc(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes', docId);
+
+            const docSnap = await window.FS.getDoc(docRef);
+            let newCount = 1;
+            
+            if (docSnap.exists()) {
+                newCount = (docSnap.data().count || 0) + 1;
+                await window.FS.updateDoc(docRef, { count: newCount, lastUpdated: window.FS.serverTimestamp() });
+            } else {
+                await window.FS.setDoc(docRef, {
+                    url: news.url,
+                    title: news.title,
+                    count: 1,
+                    lastUpdated: window.FS.serverTimestamp()
+                });
+            }
+
+            // 記錄於本地，防止重複洗讚
+            likedUrls.push(news.url);
+            localStorage.setItem('tony_liked_news', JSON.stringify(likedUrls));
+
+            if(countSpan) countSpan.innerText = newCount;
+            if(btn) {
+                btn.innerHTML = `<i class="fa-solid fa-heart text-red-500 text-xl"></i> <span class="font-bold text-sm text-red-500">${newCount}</span>`;
+                btn.className = "flex items-center gap-2 text-red-500 cursor-default px-3 py-1.5 rounded-full bg-red-50";
+                btn.onclick = null;
+            }
+            showToast("推薦成功！全網熱門指標已更新", "success");
+
+        } catch (e) {
+            console.error("按讚失敗", e);
+            showToast("系統繁忙，請稍後再試", "error");
+            if(btn) btn.innerHTML = `<i class="fa-regular fa-heart text-gray-400 text-xl"></i> <span class="font-bold text-sm text-gray-500">推薦</span>`;
+        }
+    };
+
+    window.renderMemberDashboard = () => {
+        const user = window.AppState.user;
+        if(user) {
+            document.getElementById('member-name').innerText = user.displayName || user.email.split('@')[0];
+            document.getElementById('member-email').innerText = user.email;
+            document.getElementById('member-avatar').src = user.photoURL || 'https://placehold.co/100x100?text=' + user.email.charAt(0).toUpperCase();
+            window.loadUserBookmarks();
+        }
+    };
+
+    window.loadUserBookmarks = async () => {
+        const container = document.getElementById('member-bookmarks-list');
+        if (!container) return;
+        try {
+            const { db, user } = window.AppState;
+            const q = window.FS.query(window.FS.collection(db, "bookmarks"), window.FS.where("userId", "==", user.uid));
+            const snap = await window.FS.getDocs(q);
+            
+            if (snap.empty) {
+                container.innerHTML = '<div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><p>您目前還沒有收藏任何專欄文章。</p></div>';
+                window.userBookmarksCache = [];
+                return;
+            }
+            
+            let bookmarks = [];
+            snap.forEach(doc => bookmarks.push({ id: doc.id, ...doc.data() }));
+            bookmarks.sort((a, b) => (b.savedAt?.seconds || 0) - (a.savedAt?.seconds || 0));
+            window.userBookmarksCache = bookmarks;
+            window.renderBookmarks(bookmarks);
+        } catch(e) {
+            container.innerHTML = '<div class="col-span-full text-center text-red-500">載入失敗，請稍後再試。</div>';
+        }
+    };
+
+    window.renderBookmarks = (bookmarks) => {
+        const container = document.getElementById('member-bookmarks-list');
+        if (!container) return;
+        if (bookmarks.length === 0) {
+            container.innerHTML = '<div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><p>找不到符合條件的收藏。</p></div>';
+            return;
+        }
+        let html = '';
+        bookmarks.forEach(data => {
+            html += `
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+                    <div class="h-40 bg-gray-200 relative cursor-pointer" onclick="window.location.hash='#/article/${data.articleId}'">
+                        <img src="${data.coverImage}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow">
+                        <h3 class="text-lg font-bold text-textMain mb-3 cursor-pointer hover:text-cta line-clamp-2" onclick="window.location.hash='#/article/${data.articleId}'">${data.title}</h3>
+                        <div class="mt-auto flex justify-between items-center pt-3 border-t border-gray-50">
+                            <span class="text-xs text-gray-400">${data.savedAt ? new Date(data.savedAt.seconds*1000).toLocaleDateString() : ''}</span>
+                            <button onclick="window.removeBookmark('${data.id}')" class="text-red-500 hover:text-red-700 text-sm font-medium transition"><i class="fa-solid fa-trash-can mr-1"></i>移除</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    };
+
+    window.searchBookmarks = (e) => {
+        const keyword = e.target.value.toLowerCase();
+        const filtered = window.userBookmarksCache.filter(b => b.title.toLowerCase().includes(keyword));
+        window.renderBookmarks(filtered);
+    };
+
+    window.removeBookmark = async (bookmarkId) => {
+        try {
+            const { db } = window.AppState;
+            await window.FS.deleteDoc(window.FS.doc(db, "bookmarks", bookmarkId));
+            showToast("已移除收藏", "success");
+            window.loadUserBookmarks();
+        } catch(e) { showToast("移除失敗", "error"); }
+    };
+
+    window.toggleBookmark = async (articleId, title, coverImage) => {
+        const { user, db } = window.AppState;
+        if (!user) { showToast("請先登入會員，即可收藏文章！", "warning"); window.location.hash = '#/login'; return; }
+        const btn = document.getElementById('btn-bookmark-icon');
+        const textSpan = document.getElementById('btn-bookmark-text');
+        const btnParent = btn.parentElement;
+        try {
+            const q = window.FS.query(window.FS.collection(db, "bookmarks"), window.FS.where("userId", "==", user.uid), window.FS.where("articleId", "==", articleId));
+            const snap = await window.FS.getDocs(q);
+            if (!snap.empty) {
+                await window.FS.deleteDoc(window.FS.doc(db, "bookmarks", snap.docs[0].id));
+                btn.className = "fa-regular fa-bookmark text-white mr-2";
+                if(textSpan) textSpan.innerText = "收藏文章";
+                btnParent.className = "px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20";
+                showToast("已取消收藏", "info");
+            } else {
+                await window.FS.addDoc(window.FS.collection(db, "bookmarks"), { userId: user.uid, articleId: articleId, title: title, coverImage: coverImage, savedAt: window.FS.serverTimestamp() });
+                btn.className = "fa-solid fa-bookmark text-accent mr-2";
+                if(textSpan) textSpan.innerText = "已收藏";
+                btnParent.className = "px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/20 border-accent text-accent";
+                showToast("成功加入收藏！", "success");
+            }
+        } catch(e) { showToast("操作失敗", "error"); }
+    };
 
     window.authMode = 'login';
-    
     window.toggleAuthMode = (mode) => {
         window.authMode = mode;
         const loginBtn = document.getElementById('tab-login');
@@ -826,22 +1262,17 @@
         const password = document.getElementById('password').value;
         const submitBtn = document.getElementById('submit-btn');
         const originalText = submitBtn.innerText;
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 處理中...';
-        
+        submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 處理中...';
         try {
-            const { auth } = window.AppState;
-            const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = window.AuthAPI;
-            
             if (window.authMode === 'login') {
-                await signInWithEmailAndPassword(auth, email, password);
+                await window.AuthAPI.signInWithEmailAndPassword(window.AppState.auth, email, password);
                 showToast('登入成功！', 'success');
             } else {
-                await createUserWithEmailAndPassword(auth, email, password);
+                await window.AuthAPI.createUserWithEmailAndPassword(window.AppState.auth, email, password);
                 showToast('註冊成功！', 'success');
             }
-            window.location.hash = '#/member';
+            window.history.back();
+            setTimeout(() => { if (window.location.hash === '#/login') window.location.hash = '#/member'; }, 500);
         } catch (error) {
             let msg = '發生錯誤';
             if (error.code === 'auth/email-already-in-use') msg = '此 Email 已被註冊';
@@ -849,80 +1280,35 @@
             else if (error.code === 'auth/user-not-found') msg = '找不到此帳號，請先註冊';
             else if (error.code === 'auth/weak-password') msg = '密碼太弱，請至少輸入 6 個字元';
             showToast(msg, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = originalText;
-        }
+        } finally { submitBtn.disabled = false; submitBtn.innerText = originalText; }
     };
 
     const router = () => {
         const root = document.getElementById('app-root');
         let path = window.location.hash.slice(1) || '/';
-        
         root.classList.remove('page-enter');
         void root.offsetWidth;
-        
         const isEmailAdmin = window.AppState.user && window.AppState.user.email === 'mindnodeai@gmail.com';
         
-        if (path === '/' || path === '') {
-            root.innerHTML = Views.home;
-            setTimeout(window.loadHomeData, 100);
-        } else if (path === '/articles') {
-            root.innerHTML = Views.articles;
-            setTimeout(async () => {
-                await window.loadCategories('articles-category-filters', 'filters');
-                window.fetchPublicArticles();
-            }, 100);
-        } else if (path.startsWith('/article/')) {
-            const articleId = path.split('/')[2];
-            root.innerHTML = Views.articleDetail;
-            setTimeout(() => window.fetchArticleDetail(articleId), 100);
-            window.scrollTo(0,0);
-        } else if (path === '/ask-tony') {
-            if (!window.AppState.user) {
-                showToast("請先登入以使用 Ask TONY", "warning");
-                window.location.hash = '#/login';
-                return;
-            }
-            root.innerHTML = Views.askTony;
-            window.scrollTo(0,0);
-        } else if (path === '/series') {
-            root.innerHTML = Views.series;
-            setTimeout(window.loadSeriesData, 100);
-            window.scrollTo(0,0);
-        } else if (path === '/services' || path === '/courses') {
-            root.innerHTML = Views.services;
-            window.scrollTo(0,0);
-        } else if (path === '/contact') {
-            root.innerHTML = Views.contact;
-            window.scrollTo(0,0);
-        } else if (path === '/member') {
-            if (!window.AppState.user) return window.location.hash = '#/login';
-            root.innerHTML = Views.member;
-            setTimeout(window.renderMemberDashboard, 100);
-        } else if (path.startsWith('/admin')) {
-            if (!window.AppState.user || (!['super_admin', 'admin'].includes(window.AppState.role) && !isEmailAdmin)) {
-                return window.location.hash = '#/';
-            }
+        if (path === '/' || path === '') { root.innerHTML = Views.home; setTimeout(window.loadHomeData, 100); }
+        else if (path === '/articles') { root.innerHTML = Views.articles; setTimeout(async () => { await window.loadCategories('articles-category-filters', 'filters'); window.fetchPublicArticles(); }, 100); }
+        else if (path === '/daily-news') { root.innerHTML = Views.dailyNews; setTimeout(window.restoreDailyNews, 50); window.scrollTo(0,0); }
+        else if (path.startsWith('/article/')) { const articleId = path.split('/')[2]; root.innerHTML = Views.articleDetail; setTimeout(() => window.fetchArticleDetail(articleId), 100); window.scrollTo(0,0); }
+        else if (path === '/ask-tony') { root.innerHTML = Views.askTony; window.scrollTo(0,0); }
+        else if (path === '/series') { root.innerHTML = Views.series; setTimeout(window.loadSeriesData, 100); window.scrollTo(0,0); }
+        else if (path === '/services' || path === '/courses') { root.innerHTML = Views.services; window.scrollTo(0,0); }
+        else if (path === '/contact') { root.innerHTML = Views.contact; window.scrollTo(0,0); }
+        else if (path === '/member') { if (!window.AppState.user) return window.location.hash = '#/login'; root.innerHTML = Views.member; setTimeout(window.renderMemberDashboard, 100); window.scrollTo(0,0); }
+        else if (path.startsWith('/admin')) {
+            if (!window.AppState.user || (!['super_admin', 'admin'].includes(window.AppState.role) && !isEmailAdmin)) return window.location.hash = '#/';
             if (path === '/admin') { root.innerHTML = Views.admin; setTimeout(window.loadAdminDashboard, 100); }
             else if (path === '/admin/articles') { root.innerHTML = Views.adminArticles; setTimeout(window.loadAdminArticles, 100); }
             else if (path === '/admin/articles/new') { root.innerHTML = Views.adminArticleEdit; setTimeout(() => window.initArticleEditor(null), 100); }
-            else if (path.startsWith('/admin/articles/edit/')) { 
-                const articleId = path.split('/')[4]; 
-                root.innerHTML = Views.adminArticleEdit; 
-                setTimeout(() => window.initArticleEditor(articleId), 100); 
-            }
+            else if (path.startsWith('/admin/articles/edit/')) { const articleId = path.split('/')[4]; root.innerHTML = Views.adminArticleEdit; setTimeout(() => window.initArticleEditor(articleId), 100); }
             else if (path === '/admin/leads') { root.innerHTML = Views.adminLeads; setTimeout(window.loadAdminLeads, 100); }
-            else if (path === '/admin/settings') { 
-                root.innerHTML = Views.adminSettings; 
-                setTimeout(() => { window.loadSiteSettings(); window.loadCategories('settings-categories-list', 'admin'); }, 100); 
-            }
-        } else if (path === '/login') {
-            if (window.AppState.user) return window.location.hash = '#/member';
-            root.innerHTML = Views.login;
-        } else {
-            root.innerHTML = `<div class="py-20 text-center"><h2 class="text-2xl font-bold">頁面不存在</h2></div>`;
-        }
+            else if (path === '/admin/settings') { root.innerHTML = Views.adminSettings; setTimeout(() => { window.loadSiteSettings(); window.loadCategories('settings-categories-list', 'admin'); }, 100); }
+        } else if (path === '/login') { if (window.AppState.user) return window.location.hash = '#/member'; root.innerHTML = Views.login; }
+        else { root.innerHTML = `<div class="py-20 text-center"><h2 class="text-2xl font-bold">頁面不存在</h2></div>`; }
 
         root.classList.add('page-enter');
         if(!path.startsWith('/article/')) window.scrollTo(0,0);
@@ -931,16 +1317,13 @@
     window.loadHomeData = async () => {
         try {
             const { db } = window.AppState;
-            const { doc, getDoc, collection, getDocs, query, where, orderBy, limit } = window.FS;
-            const docSnap = await getDoc(doc(db, "settings", "global"));
-            
+            const docSnap = await window.FS.getDoc(window.FS.doc(db, "settings", "global"));
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 if (data.heroTitle) document.getElementById('home-hero-title').innerHTML = data.heroTitle;
                 if (data.heroBio) document.getElementById('home-hero-bio').innerHTML = data.heroBio;
                 if (data.profileImageUrl) document.getElementById('home-profile-img').src = data.profileImageUrl;
                 
-                // 動態產生社群連結
                 const socialContainer = document.getElementById('home-social-links');
                 if (socialContainer) {
                     let socialHtml = '';
@@ -955,8 +1338,6 @@
                     if (socialHtml) {
                         socialContainer.innerHTML = socialHtml;
                         socialContainer.classList.remove('hidden');
-                    } else {
-                        socialContainer.classList.add('hidden');
                     }
                 }
 
@@ -985,12 +1366,10 @@
                             </div>
                         `;
                     };
-                    
                     ipHtml += renderBlock('核心專長', 'fa-solid fa-star', data.skills);
                     ipHtml += renderBlock('重要經歷', 'fa-solid fa-briefcase', data.experience);
                     ipHtml += renderBlock('企業輔導 / 人才認證', 'fa-solid fa-certificate', data.certifications);
                     ipHtml += renderBlock('專案主持與政府產業專案紀錄', 'fa-solid fa-book', data.books);
-                    
                     ipHtml += '</div></div>';
                     ipContainer.innerHTML = ipHtml;
                 }
@@ -998,8 +1377,8 @@
             
             const featuredContainer = document.getElementById('home-featured-articles');
             if (featuredContainer) {
-                const q = query(collection(db, "articles"), where("status", "==", "published"), where("visibility", "==", "public"), orderBy("createdAt", "desc"), limit(3));
-                const snap = await getDocs(q);
+                const q = window.FS.query(window.FS.collection(db, "articles"), window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public"), window.FS.orderBy("createdAt", "desc"), window.FS.limit(3));
+                const snap = await window.FS.getDocs(q);
                 if (snap.empty) {
                     featuredContainer.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前尚無文章。</div>';
                 } else {
@@ -1026,9 +1405,7 @@
                     featuredContainer.innerHTML = html;
                 }
             }
-        } catch (error) { 
-            console.warn("載入首頁失敗:", error); 
-        }
+        } catch (error) { console.warn("載入首頁失敗:", error); }
     };
 
     window.loadSeriesData = async () => {
@@ -1036,15 +1413,13 @@
         if (!container) return;
         try {
             const { db } = window.AppState;
-            const { collection, getDocs, query, where, orderBy } = window.FS;
-            const catSnap = await getDocs(query(collection(db, "categories"), orderBy("order", "asc")));
-            
+            const catSnap = await window.FS.getDocs(window.FS.query(window.FS.collection(db, "categories"), window.FS.orderBy("order", "asc")));
             if (catSnap.empty) { container.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前無分類。</div>'; return; }
             let html = '';
             for (const doc of catSnap.docs) {
                 const cat = doc.data();
                 try {
-                    const artSnap = await getDocs(query(collection(db, "articles"), where("category", "==", cat.name), where("status", "==", "published"), where("visibility", "==", "public"), orderBy("createdAt", "desc")));
+                    const artSnap = await window.FS.getDocs(window.FS.query(window.FS.collection(db, "articles"), window.FS.where("category", "==", cat.name), window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public"), window.FS.orderBy("createdAt", "desc")));
                     if (artSnap.size > 0) {
                         const coverUrl = artSnap.docs[0].data().coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=' + encodeURIComponent(cat.name);
                         html += `
@@ -1070,27 +1445,18 @@
         } catch (error) { container.innerHTML = '<div class="col-span-full text-center text-red-500">載入失敗。</div>'; }
     };
 
-    window.renderMemberDashboard = () => {
-        const user = window.AppState.user;
-        if(user) {
-            document.getElementById('member-name').innerText = user.displayName || user.email.split('@')[0];
-            document.getElementById('member-email').innerText = user.email;
-            document.getElementById('member-avatar').src = user.photoURL || 'https://placehold.co/100x100?text=' + user.email.charAt(0).toUpperCase();
-        }
-    };
-
     window.fetchPublicArticles = async () => {
         const container = document.getElementById('articles-list-container');
         if (!container) return;
         try {
             const currentCat = window.AppState.currentCategory || '全部';
-            const { db } = window.AppState; const { collection, getDocs, query, where, orderBy } = window.FS;
-            let constraints = [where("status", "==", "published"), where("visibility", "==", "public")];
-            if (currentCat !== '全部') constraints.push(where("category", "==", currentCat));
-            constraints.push(orderBy("createdAt", "desc"));
+            const { db } = window.AppState;
+            let constraints = [window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public")];
+            if (currentCat !== '全部') constraints.push(window.FS.where("category", "==", currentCat));
+            constraints.push(window.FS.orderBy("createdAt", "desc"));
             
-            const q = query(collection(db, "articles"), ...constraints);
-            const snap = await getDocs(q);
+            const q = window.FS.query(window.FS.collection(db, "articles"), ...constraints);
+            const snap = await window.FS.getDocs(q);
             if (snap.empty) { container.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前無文章。</div>'; return; }
             let html = '';
             snap.forEach((doc) => {
@@ -1108,8 +1474,8 @@
 
     window.fetchArticleDetail = async (id) => {
         try {
-            const { db } = window.AppState; const { doc, getDoc } = window.FS;
-            const docSnap = await getDoc(doc(db, "articles", id));
+            const { db, user } = window.AppState;
+            const docSnap = await window.FS.getDoc(window.FS.doc(db, "articles", id));
             if (docSnap.exists()) {
                 const article = docSnap.data();
                 document.getElementById('detail-title').innerText = article.title;
@@ -1117,6 +1483,19 @@
                 document.getElementById('detail-cover').src = article.coverImage || 'https://placehold.co/800x400';
                 document.getElementById('detail-content').innerHTML = article.content || '';
                 window.updateSEO(article.title, article.excerpt, article.coverImage);
+
+                const bookmarkContainer = document.getElementById('bookmark-container');
+                let isBookmarked = false;
+                if (user) {
+                    const q = window.FS.query(window.FS.collection(db, "bookmarks"), window.FS.where("userId", "==", user.uid), window.FS.where("articleId", "==", id));
+                    const snap = await window.FS.getDocs(q);
+                    isBookmarked = !snap.empty;
+                }
+                const iconClass = isBookmarked ? "fa-solid fa-bookmark text-accent" : "fa-regular fa-bookmark text-white";
+                const btnText = isBookmarked ? "已收藏" : "收藏文章";
+                const btnClass = isBookmarked ? "bg-white/20 border-accent text-accent" : "bg-white/10 border-white/20 text-white hover:bg-white/20";
+                
+                bookmarkContainer.innerHTML = `<button onclick="window.toggleBookmark('${id}', '${article.title.replace(/'/g, "\\'")}', '${article.coverImage}')" class="px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm ${btnClass}" title="收藏文章"><i id="btn-bookmark-icon" class="${iconClass} mr-2"></i><span id="btn-bookmark-text" class="font-bold text-sm">${btnText}</span></button>`;
             }
         } catch(e) { document.getElementById('detail-content').innerHTML = '讀取失敗'; }
     };
@@ -1129,13 +1508,9 @@
 
         const btn = e.target.querySelector('button');
         const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
-            const { db } = window.AppState;
-            const { collection, addDoc, serverTimestamp } = window.FS;
-            await addDoc(collection(db, "subscribers"), { email: email, timestamp: serverTimestamp() });
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "subscribers"), { email: email, timestamp: window.FS.serverTimestamp() });
             showToast('訂閱成功！感謝您的支持', 'success');
             emailInput.value = '';
         } catch(error) { showToast('訂閱失敗，請稍後再試', 'error'); } 
@@ -1147,13 +1522,12 @@
         const btn = document.getElementById('lead-submit-btn');
         btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
         try {
-            const { db } = window.AppState; const { collection, addDoc, serverTimestamp } = window.FS;
-            await addDoc(collection(db, "leads"), {
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "leads"), {
                 name: document.getElementById('lead-name').value.trim(),
                 email: document.getElementById('lead-email').value.trim(),
                 company: document.getElementById('lead-company').value.trim(),
                 message: document.getElementById('lead-message').value.trim(),
-                createdAt: serverTimestamp()
+                createdAt: window.FS.serverTimestamp()
             });
             showToast('預約成功！我們將盡快與您聯絡', 'success');
             setTimeout(() => { window.location.hash = '#/'; }, 1500);
@@ -1163,8 +1537,7 @@
 
     window.loadAdminDashboard = async () => {
         try {
-            const { db } = window.AppState; const { collection, getDocs, query, orderBy, limit } = window.FS;
-            const snap = await getDocs(query(collection(db, "subscribers"), orderBy("timestamp", "desc"), limit(10)));
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "subscribers"), window.FS.orderBy("timestamp", "desc"), window.FS.limit(10)));
             const container = document.getElementById('admin-subscribers-list');
             if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-4">無訂閱者</td></tr>'; return; }
             let html = '';
@@ -1178,8 +1551,7 @@
 
     window.loadAdminLeads = async () => {
         try {
-            const { db } = window.AppState; const { collection, getDocs, query, orderBy, limit } = window.FS;
-            const snap = await getDocs(query(collection(db, "leads"), orderBy("createdAt", "desc"), limit(20)));
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "leads"), window.FS.orderBy("createdAt", "desc"), window.FS.limit(20)));
             const container = document.getElementById('admin-leads-list');
             if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">目前尚無商機或預約資料</td></tr>'; return; }
             let html = '';
@@ -1203,8 +1575,7 @@
     window.loadAdminArticles = async () => {
         const container = document.getElementById('admin-articles-list');
         try {
-            const { db } = window.AppState; const { collection, getDocs, query, orderBy } = window.FS;
-            const snap = await getDocs(query(collection(db, "articles"), orderBy("createdAt", "desc")));
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "articles"), window.FS.orderBy("createdAt", "desc")));
             if (snap.empty) { container.innerHTML = '<tr><td colspan="4" class="text-center py-4">無文章</td></tr>'; return; }
             let html = '';
             snap.forEach(d => {
@@ -1230,7 +1601,6 @@
         document.getElementById('editor-title').innerHTML = id ? '編輯文章' : '新增文章';
         if (window.quillEditor) window.quillEditor = null;
         
-        // 使用專業版旗艦編輯器工具列
         const toolbarOptions = [
             ['bold', 'italic', 'underline', 'strike'], ['blockquote', 'code-block'],
             [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
@@ -1243,8 +1613,7 @@
         await window.loadCategories('article-category-input', 'select');
 
         if (id) {
-            const { db } = window.AppState; const { doc, getDoc } = window.FS;
-            const docSnap = await getDoc(doc(db, "articles", id));
+            const docSnap = await window.FS.getDoc(window.FS.doc(window.AppState.db, "articles", id));
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 document.getElementById('article-title-input').value = data.title || '';
@@ -1269,12 +1638,11 @@
         
         if(!title) return showToast("請輸入標題", "warning");
 
-        const { db } = window.AppState; const { collection, doc, addDoc, updateDoc, serverTimestamp } = window.FS;
-        const data = { title, excerpt, content, status, category, coverImage, visibility: 'public', updatedAt: serverTimestamp() };
+        const data = { title, excerpt, content, status, category, coverImage, visibility: 'public', updatedAt: window.FS.serverTimestamp() };
         
         try {
-            if (id) { await updateDoc(doc(db, "articles", id), data); showToast("更新成功", "success"); } 
-            else { data.createdAt = serverTimestamp(); await addDoc(collection(db, "articles"), data); showToast("新增成功", "success"); }
+            if (id) { await window.FS.updateDoc(window.FS.doc(window.AppState.db, "articles", id), data); showToast("更新成功", "success"); } 
+            else { data.createdAt = window.FS.serverTimestamp(); await window.FS.addDoc(window.FS.collection(window.AppState.db, "articles"), data); showToast("新增成功", "success"); }
             setTimeout(() => window.location.hash = '#/admin/articles', 1000);
         } catch(err) { showToast("儲存失敗", "error"); }
     };
@@ -1282,8 +1650,7 @@
     window.deleteArticle = (id) => {
         window.showModal('刪除文章', '確定要刪除這篇文章嗎？此動作無法復原。', async () => {
             try {
-                const { db } = window.AppState; const { doc, deleteDoc } = window.FS;
-                await deleteDoc(doc(db, "articles", id));
+                await window.FS.deleteDoc(window.FS.doc(window.AppState.db, "articles", id));
                 showToast("文章已刪除", "success");
                 window.loadAdminArticles();
             } catch(e) { showToast("刪除失敗", "error"); }
@@ -1308,7 +1675,6 @@
         try {
             const systemPrompt = `你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。語氣要專業、友善，像是一位經驗豐富的全端工程師。`;
             const resultText = await window.callGeminiAPI(systemPrompt, question);
-            
             document.getElementById(loadingId).innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div>
                 <div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[80%] prose prose-sm leading-relaxed">${resultText.replace(/\n/g, '<br>')}</div>
@@ -1316,7 +1682,7 @@
         } catch (error) {
             document.getElementById(loadingId).innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold shadow-sm flex-shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="bg-red-50 px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[80%]">${error.message}</div>
+                <div class="bg-red-50 px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[80%]">${error.message.includes("MISSING_API_KEY") ? "請在彈出的視窗輸入金鑰後，重新發問。" : error.message}</div>
             `;
         } finally {
             btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
@@ -1328,92 +1694,69 @@
         if (!prompt) return showToast("請輸入寫作主題", "warning");
         try {
             showToast("AI 撰寫中...", "info");
-            const systemPrompt = `你是一個專業的部落格寫作專家。請以專業技術風格撰寫文章。輸出為乾淨的 HTML 格式 (支援 <h2>, <h3>, <p>, <ul>, <li>, <strong>)。絕對不要包含 \`\`\`html 這類標記。`;
-            const resultText = await window.callGeminiAPI(systemPrompt, `主題大綱：${prompt}`);
-            
+            const resultText = await window.callGeminiAPI("你是一個部落格寫作專家。輸出純 HTML，不要包含 ```html。", `主題大綱：${prompt}`);
             window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), resultText.replace(/```html/g, '').replace(/```/g, ''));
             showToast("生成完成", "success");
-        } catch(e) { showToast(`生成失敗: ${e.message}`, "error"); }
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); }
     };
 
     window.generateCoverPrompt = async () => {
         if (!window.quillEditor) return;
         const content = window.quillEditor.getText().trim();
-        if (content.length < 50) return showToast("正文內容過少，請先撰寫文章再產生封面 Prompt", "warning");
+        if (content.length < 50) return showToast("正文內容過少", "warning");
 
         const btn = document.querySelector('button[onclick="window.generateCoverPrompt()"]');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在閱讀正文並設計...';
-        btn.disabled = true;
+        const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 設計中...'; btn.disabled = true;
 
         try {
-            const systemPrompt = `你是一位頂級視覺藝術總監，專門為 Midjourney v6 撰寫具備高度視覺衝擊力的英文 Prompt。
-任務：請閱讀提供的文章內容，擷取核心概念並轉化為隱喻的實體場景，擺脫廉價科技套版。
-格式要求：[主體與核心隱喻場景] + [具體的材質與細節] + [光影與環境] + [攝影視角] + --no text, fonts, letters, words --ar 16:9 --v 6.0 --style raw。絕對全英文純文字輸出，不要 Markdown 標記。`;
-            
-            // 擷取前 3000 字避免超過 Token 限制
-            const resultText = await window.callGeminiAPI(systemPrompt, `文章內容：${content.substring(0, 3000)}`);
-            
+            const resultText = await window.callGeminiAPI("你是一位視覺藝術總監，專為 Midjourney v6 寫 Prompt。輸出全英文純文字。", `文章內容：${content.substring(0, 3000)}`);
             document.getElementById('ai-prompt-result-container').classList.remove('hidden');
             document.getElementById('ai-prompt-result-container').classList.add('flex');
             document.getElementById('ai-cover-prompt-result').value = resultText.replace(/```/g, '').trim();
             showToast("Prompt 已生成", "success");
-        } catch(e) { 
-            showToast(`生成失敗: ${e.message}`, "error"); 
-        } finally {
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-        }
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); } 
+        finally { btn.innerHTML = originalHtml; btn.disabled = false; }
     };
 
     window.copyPrompt = () => {
         const copyText = document.getElementById("ai-cover-prompt-result");
         copyText.select(); copyText.setSelectionRange(0, 99999);
-        document.execCommand("copy"); showToast("已複製提示詞！", "success");
+        document.execCommand("copy"); showToast("已複製！", "success");
     };
 
     window.generateAIExcerpt = async () => {
         if (!window.quillEditor) return;
         const content = window.quillEditor.getText().trim();
-        if (content.length < 50) return showToast("正文內容過少，請先豐富正文再產生摘要", "warning");
+        if (content.length < 50) return showToast("正文內容過少", "warning");
 
         const btn = document.querySelector('button[onclick="window.generateAIExcerpt()"]');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在閱讀分析...'; btn.disabled = true;
+        const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 分析中...'; btn.disabled = true;
 
         try {
-            const systemPrompt = `你是一位專業編輯。請為提供的文章正文，撰寫「大約 80 到 100 字」的吸睛摘要。直接輸出摘要純文字，不要任何引言或標籤。`;
-            const resultText = await window.callGeminiAPI(systemPrompt, content.substring(0, 3000));
+            const resultText = await window.callGeminiAPI("請撰寫大約 250 到 300 字的摘要。純文字輸出。", content.substring(0, 3000));
             document.getElementById('article-excerpt-input').value = resultText.trim();
             showToast("摘要產生成功！", "success");
-        } catch(e) { showToast(`摘要失敗：${e.message}`, "error"); } 
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`摘要失敗：${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
     };
 
     window.formatContentWithAI = async () => {
         if (!window.quillEditor) return;
         const htmlContent = window.quillEditor.root.innerHTML;
-        const textContent = window.quillEditor.getText().trim();
-        if (!textContent) return showToast("編輯器內無內容", "warning");
+        if (!window.quillEditor.getText().trim()) return showToast("編輯器內無內容", "warning");
 
         const btn = document.querySelector('button[onclick="window.formatContentWithAI()"]');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 排版與畫重點...'; btn.disabled = true;
+        const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 排版中...'; btn.disabled = true;
 
         try {
-            showToast("請稍候幾秒...", "info");
-            const systemPrompt = `你是一位專業的網頁視覺編輯。請針對傳入的 HTML 進行排版與畫重點：
-1. 找出「核心概念、重要結論」，使用 <strong> 加粗。
-2. 若無明顯標題，可適當加入 <h2> 或 <h3>。
-3. 嚴禁改變語意或刪減文字。直接輸出乾淨 HTML 碼，嚴禁包含 \`\`\`html 標記。`;
-            
-            const resultText = await window.callGeminiAPI(systemPrompt, htmlContent);
+            showToast("請稍候...", "info");
+            const resultText = await window.callGeminiAPI("幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 ```html 標記。", htmlContent);
             window.quillEditor.clipboard.dangerouslyPasteHTML(resultText.replace(/```html/g, '').replace(/```/g, ''));
             showToast("排版完成！", "success");
-        } catch(e) { showToast(`排版失敗：${e.message}`, "error"); } 
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`排版失敗：${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
     };
-    
+
     window.previewImage = async (event, previewId) => {
         const file = event.target.files[0];
         if (file) {
@@ -1422,23 +1765,21 @@
             reader.readAsDataURL(file);
             try {
                 showToast("上傳圖片中...", "info");
-                const { storage } = window.AppState; const { ref, uploadBytes, getDownloadURL } = window.StorageAPI;
-                const storageRef = ref(storage, `site/${Date.now()}_${file.name}`);
-                await uploadBytes(storageRef, file);
-                const url = await getDownloadURL(storageRef);
+                const storageRef = window.StorageAPI.ref(window.AppState.storage, `site/${Date.now()}_${file.name}`);
+                await window.StorageAPI.uploadBytes(storageRef, file);
+                const url = await window.StorageAPI.getDownloadURL(storageRef);
                 
-                if (previewId === 'settings-logo-preview') { document.getElementById('hidden-site-logo').value = url; } 
-                else if (previewId === 'settings-preview-img') { document.getElementById('hidden-profile-img').value = url; }
-                else if (previewId === 'cover-preview-img') { document.getElementById('article-cover-input').value = url; }
-                showToast("圖片上傳雲端成功", "success");
+                if (previewId === 'settings-logo-preview') document.getElementById('hidden-site-logo').value = url;
+                else if (previewId === 'settings-preview-img') document.getElementById('hidden-profile-img').value = url;
+                else if (previewId === 'cover-preview-img') document.getElementById('article-cover-input').value = url;
+                showToast("圖片上傳成功", "success");
             } catch (err) { showToast("上傳失敗", "error"); }
         }
     };
 
     window.loadSiteSettings = async () => {
         try {
-            const { db } = window.AppState; const { doc, getDoc } = window.FS;
-            const docSnap = await getDoc(doc(db, "settings", "global"));
+            const docSnap = await window.FS.getDoc(window.FS.doc(window.AppState.db, "settings", "global"));
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 if (data.heroTitle) document.getElementById('settings-hero-title').value = data.heroTitle;
@@ -1447,7 +1788,6 @@
                 if (data.experience) document.getElementById('settings-experience').value = data.experience;
                 if (data.certifications) document.getElementById('settings-certifications').value = data.certifications;
                 if (data.books) document.getElementById('settings-books').value = data.books;
-                
                 if (data.socialFb) document.getElementById('settings-social-fb').value = data.socialFb;
                 if (data.socialLinkedin) document.getElementById('settings-social-linkedin').value = data.socialLinkedin;
                 if (data.socialYt) document.getElementById('settings-social-yt').value = data.socialYt;
@@ -1461,27 +1801,19 @@
                     document.getElementById('hidden-profile-img').value = data.profileImageUrl;
                 }
             }
-            
             const currentKey = window.getApiKey();
-            if (currentKey) {
-                document.getElementById('settings-api-key').value = currentKey;
-            }
+            if (currentKey) document.getElementById('settings-api-key').value = currentKey;
         } catch(e) { }
     };
 
     window.saveSettingsApiKey = () => {
         const key = document.getElementById('settings-api-key').value;
-        if (key) {
-            window.saveApiKey(key);
-        } else {
-            showToast("請輸入金鑰", "warning");
-        }
+        if (key) window.saveApiKey(key); else showToast("請輸入金鑰", "warning");
     };
 
     window.saveSiteSettings = async (e) => {
         e.preventDefault();
         try {
-            const { db } = window.AppState; const { doc, setDoc, serverTimestamp } = window.FS;
             const data = {
                 heroTitle: document.getElementById('settings-hero-title').value,
                 heroBio: document.getElementById('settings-hero-bio').value,
@@ -1494,11 +1826,10 @@
                 socialYt: document.getElementById('settings-social-yt').value || '',
                 siteLogoUrl: document.getElementById('hidden-site-logo').value || '',
                 profileImageUrl: document.getElementById('hidden-profile-img').value || '',
-                updatedAt: serverTimestamp()
+                updatedAt: window.FS.serverTimestamp()
             };
-            await setDoc(doc(db, "settings", "global"), data, { merge: true });
+            await window.FS.setDoc(window.FS.doc(window.AppState.db, "settings", "global"), data, { merge: true });
             showToast("全域設定已儲存！", "success");
-            
             if (data.siteLogoUrl) {
                 const navLogo = document.getElementById('nav-logo-container');
                 if (navLogo) navLogo.innerHTML = `<img src="${data.siteLogoUrl}" alt="Logo" class="h-8 w-auto">`;
@@ -1512,9 +1843,7 @@
         const container = document.getElementById(containerId);
         if(!container) return;
         try {
-            const { db } = window.AppState; const { collection, getDocs, query, orderBy } = window.FS;
-            const snap = await getDocs(query(collection(db, "categories"), orderBy("order", "asc")));
-            
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "categories"), window.FS.orderBy("order", "asc")));
             if (mode === 'admin') {
                 let html = '';
                 snap.forEach(doc => { html += `<div class="bg-gray-50 px-4 py-3 rounded border font-medium flex justify-between items-center">${doc.data().name} <button onclick="window.deleteCategory('${doc.id}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button></div>`; });
@@ -1535,8 +1864,7 @@
         const name = document.getElementById('new-category-input').value.trim();
         if(!name) return;
         try {
-            const { db } = window.AppState; const { collection, addDoc, serverTimestamp } = window.FS;
-            await addDoc(collection(db, "categories"), { name: name, order: Date.now(), createdAt: serverTimestamp() });
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "categories"), { name: name, order: Date.now(), createdAt: window.FS.serverTimestamp() });
             showToast("新增分類成功", "success");
             document.getElementById('new-category-input').value = '';
             window.loadCategories('settings-categories-list', 'admin');
@@ -1546,8 +1874,7 @@
     window.deleteCategory = (id) => {
         window.showModal('刪除分類', '確定要刪除這個分類嗎？', async () => {
             try {
-                const { db } = window.AppState; const { doc, deleteDoc } = window.FS;
-                await deleteDoc(doc(db, "categories", id));
+                await window.FS.deleteDoc(window.FS.doc(window.AppState.db, "categories", id));
                 showToast("分類已刪除", "success");
                 window.loadCategories('settings-categories-list', 'admin');
             } catch(e) { showToast("刪除失敗", "error"); }
