@@ -159,7 +159,7 @@
             throw new Error("MISSING_API_KEY");
         }
         
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
         
         const payload = {
             contents: [{ role: "user", parts: [{ text: userPrompt }] }],
