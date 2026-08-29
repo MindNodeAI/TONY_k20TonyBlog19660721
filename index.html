@@ -610,7 +610,10 @@
                         <h1 id="detail-title" class="text-3xl md:text-5xl font-bold leading-tight mb-8">文章載入中...</h1>
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-4"><img src="https://placehold.co/100x100/163A63/FFF?text=T" class="w-12 h-12 rounded-full border-2 border-accent" alt="TONY"><div><p class="text-base font-bold">TONY 老師</p></div></div>
-                            <div id="bookmark-container"></div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="window.shareArticle()" class="px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20" title="複製文章連結"><i class="fa-solid fa-link mr-2"></i><span class="font-bold text-sm">分享文章</span></button>
+                                <div id="bookmark-container"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1293,6 +1296,33 @@
                 showToast("成功加入收藏！", "success");
             }
         } catch(e) { showToast("操作失敗", "error"); }
+    };
+
+    window.shareArticle = () => {
+        const url = window.location.href;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('文章連結已複製到剪貼簿！', 'success');
+            }).catch(() => {
+                fallbackCopy(url);
+            });
+        } else {
+            fallbackCopy(url);
+        }
+
+        function fallbackCopy(text) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            try {
+                document.execCommand('copy');
+                showToast('文章連結已複製到剪貼簿！', 'success');
+            } catch (err) {
+                showToast('複製失敗，請手動複製網址', 'error');
+            }
+            document.body.removeChild(input);
+        }
     };
 
     window.authMode = 'login';
