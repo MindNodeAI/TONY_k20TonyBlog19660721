@@ -50,6 +50,10 @@
         .ql-editor td { border: 1px solid #d1d5db; padding: 10px; min-width: 50px; position: relative; word-break: break-word; }
         .ql-editor td.selected { background-color: #eff6ff; outline: 2px solid #2563EB; outline-offset: -2px; }
         
+        /* 針對手機版表格與圖片的響應式優化 */
+        .ql-editor { overflow-x: auto; max-width: 100%; }
+        .ql-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -334,7 +338,7 @@
 
 <main id="app-root" class="flex-grow flex flex-col page-enter"></main>
 
-<div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+<div id="toast-container" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-[110] flex flex-col gap-2 pointer-events-none"></div>
 <script>
     function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
@@ -344,7 +348,7 @@
         else if (type === 'error') { bgColor = 'bg-red-600'; icon = 'fa-exclamation-circle'; }
         else if (type === 'warning') { bgColor = 'bg-accent'; icon = 'fa-exclamation-triangle'; }
 
-        toast.className = `flex items-center gap-3 px-4 py-3 rounded shadow-lg text-white ${bgColor} transform transition-all duration-300 translate-y-10 opacity-0`;
+        toast.className = `flex items-center gap-3 px-4 py-3 rounded shadow-lg text-white ${bgColor} transform transition-all duration-300 translate-y-10 opacity-0 pointer-events-auto`;
         toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span class="text-sm font-medium">${message}</span>`;
         container.appendChild(toast);
         setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
@@ -408,13 +412,13 @@
                         
                         <div id="home-social-links" class="flex flex-wrap gap-4 mb-8 hidden"></div>
 
-                        <div class="flex flex-wrap gap-4">
-                            <a href="#/articles" class="bg-cta hover:bg-blue-600 text-white px-8 py-3.5 rounded-lg font-bold transition shadow-lg flex items-center gap-2">探索專業觀點 <i class="fa-solid fa-arrow-right"></i></a>
-                            <a href="#/ask-tony" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3.5 rounded-lg font-bold transition flex items-center gap-2"><i class="fa-solid fa-sparkles text-accent"></i> 與 AI TONY 對話</a>
+                        <div class="flex flex-col sm:flex-row flex-wrap gap-4">
+                            <a href="#/articles" class="w-full sm:w-auto justify-center bg-cta hover:bg-blue-600 text-white px-8 py-3.5 rounded-lg font-bold transition shadow-lg flex items-center gap-2">探索專業觀點 <i class="fa-solid fa-arrow-right"></i></a>
+                            <a href="#/ask-tony" class="w-full sm:w-auto justify-center bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3.5 rounded-lg font-bold transition flex items-center gap-2"><i class="fa-solid fa-sparkles text-accent"></i> 與 AI TONY 對話</a>
                         </div>
                     </div>
                     <div class="lg:w-2/5 flex flex-col items-center justify-center">
-                        <div class="w-72 h-72 md:w-96 md:h-96 rounded-full border-4 border-accent/30 p-2 relative shadow-2xl mb-8">
+                        <div class="w-64 h-64 sm:w-72 sm:h-72 md:w-96 md:h-96 rounded-full border-4 border-accent/30 p-2 relative shadow-2xl mb-8">
                             <div class="absolute inset-0 rounded-full border-2 border-dashed border-accent animate-[spin_60s_linear_infinite]"></div>
                             <img id="home-profile-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY" class="w-full h-full object-cover rounded-full shadow-2xl">
                         </div>
@@ -534,11 +538,11 @@
                     <p class="text-gray-300 max-w-2xl mx-auto px-4 text-lg">專屬您的 AI 技術與商業顧問。根據 TONY 老師的知識庫為您提供專業解答。</p>
                 </div>
                 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
-                    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col h-[600px]">
-                        <div id="ask-tony-chatbox" class="flex-grow p-6 overflow-y-auto bg-gray-50 space-y-6 flex flex-col">
-                            <div class="flex gap-4">
-                                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div>
-                                <div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[80%] leading-relaxed">
+                    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col h-[calc(100vh-220px)] md:h-[600px] min-h-[450px]">
+                        <div id="ask-tony-chatbox" class="flex-grow p-4 md:p-6 overflow-y-auto bg-gray-50 space-y-6 flex flex-col">
+                            <div class="flex gap-3 md:gap-4">
+                                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div>
+                                <div class="bg-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[85%] md:max-w-[80%] leading-relaxed text-sm md:text-base">
                                     您好！我是基於 TONY STUDIO 知識庫訓練的 AI 顧問。請問今天想探討什麼關於技術架構、AI 應用或產品開發的問題呢？
                                 </div>
                             </div>
@@ -608,11 +612,11 @@
                     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div class="flex items-center gap-3 mb-6"><span id="detail-category" class="px-3 py-1 bg-secondary text-accent text-xs font-bold rounded-full">載入中...</span><span id="detail-date" class="text-gray-300 text-sm"><i class="fa-regular fa-calendar mr-1"></i> --</span></div>
                         <h1 id="detail-title" class="text-3xl md:text-5xl font-bold leading-tight mb-8">文章載入中...</h1>
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                             <div class="flex items-center gap-4"><img src="https://placehold.co/100x100/163A63/FFF?text=T" class="w-12 h-12 rounded-full border-2 border-accent" alt="TONY"><div><p class="text-base font-bold">TONY 老師</p></div></div>
-                            <div class="flex items-center gap-3">
-                                <button onclick="window.shareArticle()" class="px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20" title="複製文章連結"><i class="fa-solid fa-link mr-2"></i><span class="font-bold text-sm">分享文章</span></button>
-                                <div id="bookmark-container"></div>
+                            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                <button onclick="window.shareArticle()" class="px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20 flex-1 sm:flex-none" title="複製文章連結"><i class="fa-solid fa-link mr-2"></i><span class="font-bold text-sm">分享文章</span></button>
+                                <div id="bookmark-container" class="flex-1 sm:flex-none"></div>
                             </div>
                         </div>
                     </div>
@@ -620,7 +624,7 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 flex flex-col lg:flex-row gap-12">
                     <div class="lg:w-2/3">
                         <img id="detail-cover" src="https://placehold.co/800x400/E2E8F0/64748B?text=Loading..." class="w-full h-auto rounded-2xl shadow-xl mb-10 object-cover aspect-video border-4 border-white">
-                        <div class="prose prose-lg md:prose-xl max-w-none text-textMain leading-loose bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100" id="detail-content">
+                        <div class="prose prose-base md:prose-lg lg:prose-xl max-w-none text-textMain leading-loose bg-white p-5 sm:p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100" id="detail-content">
                             <div class="flex justify-center py-20"><i class="fa-solid fa-spinner fa-spin text-4xl text-cta"></i></div>
                         </div>
                     </div>
@@ -1896,24 +1900,24 @@
         const question = input.value.trim();
         if (!question) return;
 
-        chatbox.innerHTML += `<div class="flex gap-4 justify-end"><div class="bg-cta text-white px-5 py-3 rounded-2xl rounded-tr-sm shadow-sm max-w-[80%]">${question.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div></div>`;
+        chatbox.innerHTML += `<div class="flex gap-3 md:gap-4 justify-end"><div class="bg-cta text-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tr-sm shadow-sm max-w-[85%] md:max-w-[80%] text-sm md:text-base">${question.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div></div>`;
         input.value = ''; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
 
         const loadingId = 'ai-msg-' + Date.now();
-        chatbox.innerHTML += `<div class="flex gap-4" id="${loadingId}"><div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div><div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textSub max-w-[80%]"><i class="fa-solid fa-ellipsis fa-fade"></i> AI 顧問思考中...</div></div>`;
+        chatbox.innerHTML += `<div class="flex gap-3 md:gap-4" id="${loadingId}"><div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div><div class="bg-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textSub max-w-[85%] md:max-w-[80%] text-sm md:text-base"><i class="fa-solid fa-ellipsis fa-fade"></i> AI 顧問思考中...</div></div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
             const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。語氣要專業、友善，像是一位經驗豐富的全端工程師。";
             const resultText = await window.callGeminiAPI(systemPrompt, question);
             document.getElementById(loadingId).innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0">T</div>
-                <div class="bg-white px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[80%] prose prose-sm leading-relaxed">${resultText.replace(/\n/g, '<br>')}</div>
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div>
+                <div class="bg-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[85%] md:max-w-[80%] prose prose-sm leading-relaxed">${resultText.replace(/\n/g, '<br>')}</div>
             `;
         } catch (error) {
             document.getElementById(loadingId).innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold shadow-sm flex-shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="bg-red-50 px-5 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[80%]">${error.message.includes("MISSING_API_KEY") ? "請在彈出的視窗輸入金鑰後，重新發問。" : error.message}</div>
+                <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold shadow-sm flex-shrink-0 text-sm md:text-base"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="bg-red-50 px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[85%] md:max-w-[80%] text-sm md:text-base">${error.message.includes("MISSING_API_KEY") ? "請在彈出的視窗輸入金鑰後，重新發問。" : error.message}</div>
             `;
         } finally {
             btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
