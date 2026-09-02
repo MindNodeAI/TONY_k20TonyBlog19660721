@@ -42,7 +42,6 @@
         .page-enter { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* 編輯器與原生表格樣式強化 (已解除 table-layout 鎖定，允許調整欄寬) */
         .ql-container { font-family: 'Inter', 'Noto Sans TC', sans-serif !important; font-size: 1rem !important; background-color: #ffffff; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
         .ql-toolbar { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; background-color: #f8fafc; }
         .ql-editor { min-height: 400px; }
@@ -50,7 +49,6 @@
         .ql-editor td { border: 1px solid #d1d5db; padding: 10px; min-width: 50px; position: relative; word-break: break-word; }
         .ql-editor td.selected { background-color: #eff6ff; outline: 2px solid #2563EB; outline-offset: -2px; }
         
-        /* 針對手機版表格與圖片的響應式優化 */
         .ql-editor { overflow-x: auto; max-width: 100%; }
         .ql-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; }
 
@@ -94,14 +92,13 @@
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } catch(e) {
-                    console.warn("環境憑證驗證失敗，自動切換至訪客匿名模式", e);
                     await signInAnonymously(auth);
                 }
             } else {
                 await signInAnonymously(auth);
             }
         } catch (error) {
-            console.error("Auth 初始嚴重錯誤", error);
+            console.error("Auth error", error);
         }
     };
     initAuth();
@@ -256,6 +253,13 @@
             window.AppState.user = null; window.AppState.role = null;
         }
         updateNavbarAuthUI(window.AppState.user, window.AppState.role);
+        
+        // 若在文章頁面登入/登出，重新渲染留言表單
+        const path = window.location.hash.slice(1);
+        if (path.startsWith('/article/')) {
+            const articleId = path.split('/')[2];
+            if (window.renderCommentForm) window.renderCommentForm(articleId);
+        }
     });
 
     function updateNavbarAuthUI(user, role) {
@@ -394,7 +398,6 @@
     </div>
 </footer>
 
-<!-- 載入官方 Quill 2.0.2 -->
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
 <script>
@@ -624,8 +627,19 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 flex flex-col lg:flex-row gap-12">
                     <div class="lg:w-2/3">
                         <img id="detail-cover" src="https://placehold.co/800x400/E2E8F0/64748B?text=Loading..." class="w-full h-auto rounded-2xl shadow-xl mb-10 object-cover aspect-video border-4 border-white">
-                        <div class="prose prose-base md:prose-lg lg:prose-xl max-w-none text-textMain leading-loose bg-white p-5 sm:p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100" id="detail-content">
+                        <div class="prose prose-base md:prose-lg lg:prose-xl max-w-none text-textMain leading-loose bg-white p-5 sm:p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100 mb-10" id="detail-content">
                             <div class="flex justify-center py-20"><i class="fa-solid fa-spinner fa-spin text-4xl text-cta"></i></div>
+                        </div>
+                        
+                        <!-- 留言區塊 -->
+                        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 mt-8">
+                            <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2"><i class="fa-regular fa-comments text-accent"></i> 讀者留言</h3>
+                            <div id="comment-form-container" class="mb-8">
+                                <!-- 動態載入留言表單 -->
+                            </div>
+                            <div id="comments-list" class="space-y-6">
+                                <div class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin mb-2 text-xl text-cta"></i><br>載入留言中...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -870,6 +884,8 @@
                                 <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-facebook text-blue-600"></i> Facebook 網址</label><input type="url" id="settings-social-fb" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-sm"></div>
                                 <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-linkedin text-blue-700"></i> LinkedIn 網址</label><input type="url" id="settings-social-linkedin" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-sm"></div>
                                 <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-youtube text-red-600"></i> YouTube 網址</label><input type="url" id="settings-social-yt" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-sm"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-instagram text-pink-600"></i> Instagram 網址</label><input type="url" id="settings-social-ig" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-sm"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-tiktok text-black"></i> TikTok 網址</label><input type="url" id="settings-social-tiktok" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-sm"></div>
                             </div>
 
                             <hr class="border-gray-100 mt-8 mb-8">
@@ -1290,13 +1306,13 @@
                 await window.FS.deleteDoc(window.FS.doc(db, "bookmarks", snap.docs[0].id));
                 btn.className = "fa-regular fa-bookmark text-white mr-2";
                 if(textSpan) textSpan.innerText = "收藏文章";
-                btnParent.className = "px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20";
+                btnParent.className = "px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20 flex-1 sm:flex-none";
                 showToast("已取消收藏", "info");
             } else {
                 await window.FS.addDoc(window.FS.collection(db, "bookmarks"), { userId: user.uid, articleId: articleId, title: title, coverImage: coverImage, savedAt: window.FS.serverTimestamp() });
                 btn.className = "fa-solid fa-bookmark text-accent mr-2";
                 if(textSpan) textSpan.innerText = "已收藏";
-                btnParent.className = "px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/20 border-accent text-accent";
+                btnParent.className = "px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/20 border-accent text-accent flex-1 sm:flex-none";
                 showToast("成功加入收藏！", "success");
             }
         } catch(e) { showToast("操作失敗", "error"); }
@@ -1326,6 +1342,123 @@
                 showToast('複製失敗，請手動複製網址', 'error');
             }
             document.body.removeChild(input);
+        }
+    };
+
+    window.renderCommentForm = (articleId) => {
+        const formContainer = document.getElementById('comment-form-container');
+        if (!formContainer) return;
+        const user = window.AppState.user;
+        if (user && !user.isAnonymous) {
+            const avatarUrl = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + (user.displayName || user.email || 'U').charAt(0).toUpperCase());
+            formContainer.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
+                    <img src="${avatarUrl}" class="w-10 h-10 rounded-full border border-gray-200 hidden sm:block object-cover">
+                    <form class="flex-grow" onsubmit="window.submitComment(event, '${articleId}')">
+                        <textarea id="comment-input" rows="3" required placeholder="分享您的想法..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-cta focus:bg-white transition text-sm resize-none"></textarea>
+                        <div class="flex justify-end mt-3">
+                            <button type="submit" id="btn-submit-comment" class="bg-primary hover:bg-secondary text-white px-6 py-2 rounded-lg font-bold shadow-sm transition text-sm flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> 送出留言</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        } else {
+            formContainer.innerHTML = `
+                <div class="text-center py-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <i class="fa-regular fa-comment-dots text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-500 mb-4 text-sm font-medium">登入會員後即可參與討論與留言</p>
+                    <button type="button" onclick="window.location.hash='#/login'" class="bg-cta hover:bg-blue-700 text-white px-8 py-2.5 rounded-full font-bold shadow-sm transition text-sm">立即登入 / 註冊</button>
+                </div>
+            `;
+        }
+    };
+
+    window.submitComment = async (e, articleId) => {
+        e.preventDefault();
+        const user = window.AppState.user;
+        if (!user || user.isAnonymous) return showToast('請先登入會員', 'warning');
+        
+        const input = document.getElementById('comment-input');
+        const content = input.value.trim();
+        if (!content) return;
+        
+        const btn = document.getElementById('btn-submit-comment');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
+        
+        try {
+            const displayName = user.displayName || user.email?.split('@')[0] || '會員讀者';
+            const avatarUrl = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + displayName.charAt(0).toUpperCase());
+            
+            const commentsRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'comments');
+            await window.FS.addDoc(commentsRef, {
+                articleId: articleId,
+                userId: user.uid,
+                userName: displayName,
+                userAvatar: avatarUrl,
+                content: content.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                createdAt: window.FS.serverTimestamp()
+            });
+            
+            showToast('留言發布成功！', 'success');
+            input.value = '';
+            window.fetchComments(articleId);
+        } catch(err) {
+            console.error("Submit comment error:", err);
+            showToast('留言失敗，請稍後再試', 'error');
+        } finally {
+            btn.disabled = false; btn.innerHTML = originalText;
+        }
+    };
+
+    window.fetchComments = async (articleId) => {
+        const container = document.getElementById('comments-list');
+        const countSpan = document.getElementById('comment-count');
+        if (!container) return;
+        try {
+            const commentsRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'comments');
+            const q = window.FS.query(commentsRef, window.FS.where("articleId", "==", articleId));
+            const snap = await window.FS.getDocs(q);
+            
+            if (countSpan) countSpan.innerText = snap.size;
+            
+            if (snap.empty) {
+                container.innerHTML = '<div class="text-center py-10 text-gray-400"><p>目前還沒有人留言，來搶頭香吧！</p></div>';
+                return;
+            }
+            
+            let commentsData = [];
+            snap.forEach(doc => {
+                commentsData.push({ id: doc.id, ...doc.data() });
+            });
+            
+            commentsData.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.seconds : 0;
+                const timeB = b.createdAt ? b.createdAt.seconds : 0;
+                return timeB - timeA;
+            });
+            
+            let html = '';
+            commentsData.forEach(data => {
+                const date = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleString('zh-TW', { hour12: false }) : '剛剛';
+                const safeContent = (data.content || '').replace(/\n/g, "<br>");
+                html += `
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex gap-4 animate-[fadeIn_0.3s_ease-out]">
+                        <img src="${data.userAvatar}" class="w-10 h-10 rounded-full border border-gray-200 flex-shrink-0 object-cover">
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-baseline mb-2">
+                                <h4 class="font-bold text-sm text-primary">${data.userName}</h4>
+                                <span class="text-xs text-gray-400">${date}</span>
+                            </div>
+                            <p class="text-sm text-gray-700 leading-relaxed">${safeContent}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            console.error("Fetch comments error:", e);
+            container.innerHTML = '<div class="text-center py-10 text-red-400"><p>留言載入失敗</p></div>';
         }
     };
 
@@ -1438,6 +1571,8 @@
                     socialHtml += renderSocialIcon(data.socialFb, 'fa-brands fa-facebook-f');
                     socialHtml += renderSocialIcon(data.socialLinkedin, 'fa-brands fa-linkedin-in');
                     socialHtml += renderSocialIcon(data.socialYt, 'fa-brands fa-youtube');
+                    socialHtml += renderSocialIcon(data.socialIg, 'fa-brands fa-instagram');
+                    socialHtml += renderSocialIcon(data.socialTiktok, 'fa-brands fa-tiktok');
                     
                     if (socialHtml) {
                         socialContainer.innerHTML = socialHtml;
@@ -1525,10 +1660,10 @@
                 try {
                     const artSnap = await window.FS.getDocs(window.FS.query(window.FS.collection(db, "articles"), window.FS.where("category", "==", cat.name), window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public"), window.FS.orderBy("createdAt", "desc")));
                     if (artSnap.size > 0) {
-                        const coverUrl = artSnap.docs[0].data().coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=' + encodeURIComponent(cat.name);
+                        const coverUrl = artSnap.docs[0].data().coverImage || 'https://placehold.co/800x450/E2E8F0/64748B?text=' + encodeURIComponent(cat.name);
                         html += `
                             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group flex flex-col">
-                                <div class="h-48 bg-gray-200 relative overflow-hidden cursor-pointer" onclick="window.filterArticles('${cat.name}'); window.location.hash='#/articles';">
+                                <div class="aspect-video w-full bg-gray-200 relative overflow-hidden cursor-pointer" onclick="window.filterArticles('${cat.name}'); window.location.hash='#/articles';">
                                     <img src="${coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                     <div class="absolute top-4 left-4 bg-accent text-primary text-xs font-bold px-3 py-1 rounded">專題</div>
                                 </div>
@@ -1601,7 +1736,10 @@
                 const btnText = isBookmarked ? "已收藏" : "收藏文章";
                 const btnClass = isBookmarked ? "bg-white/20 border-accent text-accent" : "bg-white/10 border-white/20 text-white hover:bg-white/20";
                 
-                bookmarkContainer.innerHTML = `<button onclick="window.toggleBookmark('${id}', '${article.title.replace(/'/g, "\\'")}', '${article.coverImage}')" class="px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm ${btnClass}" title="收藏文章"><i id="btn-bookmark-icon" class="${iconClass} mr-2"></i><span id="btn-bookmark-text" class="font-bold text-sm">${btnText}</span></button>`;
+                bookmarkContainer.innerHTML = `<button onclick="window.toggleBookmark('${id}', '${article.title.replace(/'/g, "\\'")}', '${article.coverImage}')" class="px-5 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm ${btnClass} flex-1 sm:flex-none" title="收藏文章"><i id="btn-bookmark-icon" class="${iconClass} mr-2"></i><span id="btn-bookmark-text" class="font-bold text-sm">${btnText}</span></button>`;
+                
+                if (window.renderCommentForm) window.renderCommentForm(id);
+                if (window.fetchComments) window.fetchComments(id);
             }
         } catch(e) { document.getElementById('detail-content').innerHTML = '讀取失敗'; }
     };
@@ -1908,11 +2046,16 @@
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
-            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。語氣要專業、友善，像是一位經驗豐富的全端工程師。";
+            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：\n1. 絕對不可以使用 Markdown 的程式碼區塊語法。\n2. 必須直接輸出純 HTML 格式。\n3. 使用 <h3> 標示大段落標題 (例如：<h3 class='text-lg font-bold text-primary mb-3 mt-4'>標題</h3>)。\n4. 使用 <strong> 標示重要關鍵字 (例如：<strong class='text-cta'>關鍵字</strong>)。\n5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4'> 與 <li> 標籤。\n6. 段落之間請用 <p class='mb-4 leading-relaxed'> 包覆。";
             const resultText = await window.callGeminiAPI(systemPrompt, question);
+            
+            const cleanHTML = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '').trim();
+            
             document.getElementById(loadingId).innerHTML = `
                 <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div>
-                <div class="bg-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[85%] md:max-w-[80%] prose prose-sm leading-relaxed">${resultText.replace(/\n/g, '<br>')}</div>
+                <div class="bg-white px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[90%] md:max-w-[85%] text-sm md:text-base overflow-x-auto">
+                    <div class="prose prose-sm md:prose-base max-w-none text-textMain leading-loose">${cleanHTML}</div>
+                </div>
             `;
         } catch (error) {
             document.getElementById(loadingId).innerHTML = `
@@ -1929,9 +2072,10 @@
         if (!prompt) return showToast("請輸入寫作主題", "warning");
         try {
             showToast("AI 撰寫中...", "info");
-            const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，不要包含 \x60\x60\x60html。";
+            const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，不要包含 markdown 標記。";
             const resultText = await window.callGeminiAPI(safePromptText, `主題大綱：${prompt}`);
-            window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), resultText.replace(/\x60\x60\x60html/g, '').replace(/\x60\x60\x60/g, ''));
+            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), cleanText);
             showToast("生成完成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); }
     };
@@ -1948,7 +2092,7 @@
             const resultText = await window.callGeminiAPI("你是一位視覺藝術總監，專為 Midjourney v6 寫 Prompt。輸出全英文純文字。", `文章內容：${content.substring(0, 3000)}`);
             document.getElementById('ai-prompt-result-container').classList.remove('hidden');
             document.getElementById('ai-prompt-result-container').classList.add('flex');
-            document.getElementById('ai-cover-prompt-result').value = resultText.replace(/\x60\x60\x60/g, '').trim();
+            document.getElementById('ai-cover-prompt-result').value = resultText.replace(new RegExp('\\x60\\x60\\x60', 'g'), '').trim();
             showToast("Prompt 已生成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -1986,9 +2130,10 @@
 
         try {
             showToast("請稍候...", "info");
-            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 \x60\x60\x60html 標記。";
+            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 markdown 標記。";
             const resultText = await window.callGeminiAPI(safePromptText, htmlContent);
-            window.quillEditor.clipboard.dangerouslyPasteHTML(resultText.replace(/\x60\x60\x60html/g, '').replace(/\x60\x60\x60/g, ''));
+            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            window.quillEditor.clipboard.dangerouslyPasteHTML(cleanText);
             showToast("排版完成！", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`排版失敗：${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -2028,6 +2173,8 @@
                 if (data.socialFb) document.getElementById('settings-social-fb').value = data.socialFb;
                 if (data.socialLinkedin) document.getElementById('settings-social-linkedin').value = data.socialLinkedin;
                 if (data.socialYt) document.getElementById('settings-social-yt').value = data.socialYt;
+                if (data.socialIg) document.getElementById('settings-social-ig').value = data.socialIg;
+                if (data.socialTiktok) document.getElementById('settings-social-tiktok').value = data.socialTiktok;
                 
                 if (data.siteLogoUrl) {
                     document.getElementById('settings-logo-preview').src = data.siteLogoUrl;
@@ -2061,6 +2208,8 @@
                 socialFb: document.getElementById('settings-social-fb').value || '',
                 socialLinkedin: document.getElementById('settings-social-linkedin').value || '',
                 socialYt: document.getElementById('settings-social-yt').value || '',
+                socialIg: document.getElementById('settings-social-ig').value || '',
+                socialTiktok: document.getElementById('settings-social-tiktok').value || '',
                 siteLogoUrl: document.getElementById('hidden-site-logo').value || '',
                 profileImageUrl: document.getElementById('hidden-profile-img').value || '',
                 updatedAt: window.FS.serverTimestamp()
