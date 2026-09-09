@@ -2117,10 +2117,9 @@
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
-            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：\n1. 絕對不可以使用 Markdown 的語法 (如 ** 或 #)。\n2. 必須直接輸出純 HTML 格式。\n3. 使用 <h3> 標示大段落標題 (例如：<h3 class='text-lg font-bold text-primary mb-3 mt-4'>標題</h3>)。\n4. 使用 <strong> 標示重要關鍵字 (例如：<strong class='text-cta'>關鍵字</strong>)。\n5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4'> 與 <li> 標籤。\n6. 段落之間請用 <p class='mb-4 leading-relaxed'> 包覆。";
+            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：\n1. 絕對不可以使用 Markdown 的程式碼區塊標記 (如 ```)。\n2. 必須直接輸出純 HTML 格式。\n3. 使用 <h3> 標示大段落標題 (套用 class='text-lg font-bold text-primary border-b border-gray-100 pb-2 mb-3 mt-5')。\n4. 使用 <strong> 標示重要關鍵字 (套用 class='text-cta bg-blue-50 px-1 py-0.5 rounded')。\n5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4 text-gray-700'> 與 <li> 標籤。\n6. 段落之間請用 <p class='mb-4 leading-relaxed text-gray-700'> 包覆。";
             const resultText = await window.callGeminiAPI(systemPrompt, question);
             
-            // 安全處理，確保不會打斷 script (避開連續三個反引號)
             let cleanHTML = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
             
             const loadEl = document.getElementById(loadingId);
@@ -2128,7 +2127,7 @@
                 loadEl.innerHTML = `
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div>
                     <div class="bg-white px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[90%] md:max-w-[85%] text-sm md:text-base overflow-x-auto">
-                        <div class="prose prose-sm md:prose-base max-w-none text-textMain leading-loose">${cleanHTML.trim()}</div>
+                        <div class="max-w-none text-textMain leading-loose">${cleanHTML.trim()}</div>
                     </div>
                 `;
             }
