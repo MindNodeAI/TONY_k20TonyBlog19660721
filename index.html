@@ -34,13 +34,18 @@
     </script>
 
     <style>
-        /* 修復手機版漂移問題 */
-        html, body { overflow-x: hidden; width: 100%; max-width: 100%; }
+        /* 修復手機版漂移問題與 iOS 縮放問題 */
+        html, body { overflow-x: hidden; width: 100%; max-width: 100%; position: relative; }
         body { background-color: theme('colors.bg'); color: theme('colors.textMain'); font-family: 'Inter', 'Noto Sans TC', sans-serif; line-height: 1.7; }
+        
+        /* 強制手機版 input 為 16px，防止 iOS 點擊自動放大 */
+        input, textarea, select { font-size: 16px !important; }
+
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: theme('colors.bg'); }
         ::-webkit-scrollbar-thumb { background: theme('colors.secondary'); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: theme('colors.primary'); }
+        
         .page-enter { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
@@ -255,7 +260,6 @@
         }
         updateNavbarAuthUI(window.AppState.user, window.AppState.role);
         
-        // 若在文章頁面登入/登出，重新渲染留言表單
         const path = window.location.hash.slice(1);
         if (path.startsWith('/article/')) {
             const articleId = path.split('/')[2];
@@ -462,7 +466,7 @@
                             <button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-5 py-2 bg-primary text-white shadow-md text-sm font-medium rounded-full whitespace-nowrap transition">全部</button>
                         </div>
                         <div class="relative w-full md:w-72">
-                            <input type="text" oninput="window.searchArticles(event)" placeholder="搜尋文章標題..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-base md:text-sm bg-gray-50 focus:bg-white transition">
+                            <input type="text" id="articles-search-input" oninput="window.searchArticles(event)" placeholder="搜尋文章標題..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-base md:text-sm bg-gray-50 focus:bg-white transition">
                             <i class="fa-solid fa-search absolute left-4 top-3.5 text-gray-400"></i>
                         </div>
                     </div>
@@ -1723,7 +1727,6 @@
             let html = '';
             snap.forEach((doc) => {
                 const article = doc.data();
-                // 本地端搜尋標題過濾
                 if (searchQuery && !article.title.toLowerCase().includes(searchQuery.toLowerCase())) return;
 
                 const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
@@ -2117,10 +2120,8 @@
             const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：\n1. 絕對不可以使用 Markdown 的語法 (如 ** 或 #)。\n2. 必須直接輸出純 HTML 格式。\n3. 使用 <h3> 標示大段落標題 (例如：<h3 class='text-lg font-bold text-primary mb-3 mt-4'>標題</h3>)。\n4. 使用 <strong> 標示重要關鍵字 (例如：<strong class='text-cta'>關鍵字</strong>)。\n5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4'> 與 <li> 標籤。\n6. 段落之間請用 <p class='mb-4 leading-relaxed'> 包覆。";
             const resultText = await window.callGeminiAPI(systemPrompt, question);
             
-            // 安全處理，確保不會打斷 script
-            let cleanHTML = resultText;
-            cleanHTML = cleanHTML.replace(/```html/gi, '');
-            cleanHTML = cleanHTML.replace(/```/g, '');
+            // 安全處理，確保不會打斷 script (避開連續三個反引號)
+            let cleanHTML = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
             
             const loadEl = document.getElementById(loadingId);
             if(loadEl) {
@@ -2153,8 +2154,7 @@
             showToast("AI 撰寫中...", "info");
             const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，不要包含 markdown 標記。";
             const resultText = await window.callGeminiAPI(safePromptText, `主題大綱：${prompt}`);
-            let cleanText = resultText.replace(/```html/gi, '');
-            cleanText = cleanText.replace(/```/g, '');
+            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
             if(window.quillEditor) window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), cleanText);
             showToast("生成完成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); }
@@ -2174,7 +2174,7 @@
             const container = document.getElementById('ai-prompt-result-container');
             const resultInput = document.getElementById('ai-cover-prompt-result');
             if(container) { container.classList.remove('hidden'); container.classList.add('flex'); }
-            if(resultInput) resultInput.value = resultText.replace(/```/g, '').trim();
+            if(resultInput) resultInput.value = resultText.replace(new RegExp('\\x60\\x60\\x60', 'g'), '').trim();
             showToast("Prompt 已生成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -2218,8 +2218,7 @@
             showToast("請稍候...", "info");
             const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 markdown 標記。";
             const resultText = await window.callGeminiAPI(safePromptText, htmlContent);
-            let cleanText = resultText.replace(/```html/gi, '');
-            cleanText = cleanText.replace(/```/g, '');
+            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
             window.quillEditor.clipboard.dangerouslyPasteHTML(cleanText);
             showToast("排版完成！", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`排版失敗：${e.message}`, "error"); } 
