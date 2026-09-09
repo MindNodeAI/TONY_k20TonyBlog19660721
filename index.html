@@ -35,7 +35,7 @@
 
     <style>
         /* 修復手機版漂移問題 */
-        html, body { overflow-x: hidden; max-width: 100vw; }
+        html, body { overflow-x: hidden; width: 100%; max-width: 100%; }
         body { background-color: theme('colors.bg'); color: theme('colors.textMain'); font-family: 'Inter', 'Noto Sans TC', sans-serif; line-height: 1.7; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: theme('colors.bg'); }
@@ -1711,6 +1711,7 @@
         if (!container) return;
         try {
             const currentCat = window.AppState.currentCategory || '全部';
+            const searchQuery = window.AppState.searchQuery || '';
             const { db } = window.AppState;
             let constraints = [window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public")];
             if (currentCat !== '全部') constraints.push(window.FS.where("category", "==", currentCat));
@@ -1722,15 +1723,34 @@
             let html = '';
             snap.forEach((doc) => {
                 const article = doc.data();
+                // 本地端搜尋標題過濾
+                if (searchQuery && !article.title.toLowerCase().includes(searchQuery.toLowerCase())) return;
+
+                const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
+                const cover = article.coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=TONY+STUDIO';
                 html += `
-                    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-lg transition flex flex-col cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'">
-                        <img src="${article.coverImage || 'https://placehold.co/800x400'}" class="aspect-video w-full object-cover">
-                        <div class="p-6"><h3 class="text-xl font-bold mb-2">${article.title}</h3><p class="text-sm text-gray-600 line-clamp-2">${article.excerpt}</p></div>
+                    <div class="group bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                        <div class="aspect-video w-full bg-gray-200 relative cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'">
+                            <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded shadow">${article.category || '未分類'}</div>
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <p class="text-xs text-gray-400 mb-2"><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</p>
+                            <h3 class="text-xl font-bold text-textMain mb-3 cursor-pointer group-hover:text-cta transition line-clamp-2" onclick="window.location.hash='#/article/${doc.id}'">${article.title}</h3>
+                            <p class="text-sm text-textSub line-clamp-5 mb-6 flex-grow">${article.excerpt}</p>
+                            <a href="#/article/${doc.id}" class="text-cta text-sm font-bold flex items-center gap-1 mt-auto hover:text-blue-800">閱讀更多 <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        </div>
                     </div>
                 `;
             });
+            if (html === '') html = '<div class="col-span-full py-12 text-center text-textSub">找不到符合條件的文章。</div>';
             container.innerHTML = html;
         } catch(e) { container.innerHTML = '<div class="col-span-full text-center text-red-500">讀取失敗</div>'; }
+    };
+
+    window.searchArticles = (e) => {
+        window.AppState.searchQuery = e.target.value.trim();
+        window.fetchPublicArticles();
     };
 
     window.fetchArticleDetail = async (id) => {
