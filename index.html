@@ -13,7 +13,6 @@
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -49,13 +48,26 @@
         .page-enter { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        /* Quill 編輯器與前台顯示的共用樣式 (強制覆蓋 Tailwind 預設歸零) */
         .ql-container { font-family: 'Inter', 'Noto Sans TC', sans-serif !important; font-size: 1rem !important; background-color: #ffffff; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
         .ql-toolbar { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; background-color: #f8fafc; }
-        .ql-editor { min-height: 400px; overflow-x: auto; max-width: 100%; }
-        .ql-editor table { width: 100%; border-collapse: collapse; }
+        .ql-editor { min-height: 400px; overflow-x: auto; max-width: 100%; line-height: 1.8; }
+        
+        /* 強制所見即所得的排版防護 */
+        .ql-editor h1 { font-size: 2em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
+        .ql-editor h2 { font-size: 1.5em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
+        .ql-editor h3 { font-size: 1.17em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
+        .ql-editor p { margin-bottom: 1em !important; }
+        .ql-editor strong { font-weight: 700 !important; }
+        .ql-editor ul { list-style-type: disc !important; padding-left: 1.5em !important; margin-bottom: 1em !important; }
+        .ql-editor ol { list-style-type: decimal !important; padding-left: 1.5em !important; margin-bottom: 1em !important; }
+        .ql-editor li { margin-bottom: 0.5em !important; }
+        .ql-editor blockquote { border-left: 4px solid #C9A24B !important; padding-left: 1rem !important; color: #667085 !important; font-style: italic !important; margin-bottom: 1em !important; background-color: #f8fafc !important; padding-top: 0.5rem !important; padding-bottom: 0.5rem !important;}
+
+        .ql-editor table { width: 100%; border-collapse: collapse; margin-bottom: 1em !important;}
         .ql-editor td { border: 1px solid #d1d5db; padding: 10px; min-width: 50px; position: relative; word-break: break-word; }
         .ql-editor td.selected { background-color: #eff6ff; outline: 2px solid #2563EB; outline-offset: -2px; }
-        .ql-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+        .ql-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 1em; margin-bottom: 1em; }
 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -165,8 +177,7 @@
             throw new Error("MISSING_API_KEY");
         }
         
-        // 升級：使用 gemini-3.7-flash 模型
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
         
         const payload = {
             contents: [{ role: "user", parts: [{ text: userPrompt }] }],
@@ -459,18 +470,18 @@
                 <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">專欄文章</h1>
                 <p class="text-gray-300 max-w-2xl mx-auto px-4">所有關於技術架構、AI 應用與產品開發的深度解析與實戰經驗。</p>
             </div>
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 pb-24">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 pb-24 w-full">
                 <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 md:p-10 min-h-[500px]">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-gray-100 pb-8">
-                        <div id="articles-category-filters" class="flex gap-3 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-                            <button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-5 py-2 bg-primary text-white shadow-md text-sm font-medium rounded-full whitespace-nowrap transition">全部</button>
+                        <div id="articles-category-filters" class="flex flex-wrap gap-3 w-full md:w-auto pb-2 md:pb-0">
+                            <button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-5 py-2 bg-primary text-white shadow-md text-sm font-medium rounded-full transition">全部</button>
                         </div>
-                        <div class="relative w-full md:w-72">
+                        <div class="relative w-full md:w-72 flex-shrink-0">
                             <input type="text" id="articles-search-input" oninput="window.searchArticles(event)" placeholder="搜尋文章標題..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-base md:text-sm bg-gray-50 focus:bg-white transition">
                             <i class="fa-solid fa-search absolute left-4 top-3.5 text-gray-400"></i>
                         </div>
                     </div>
-                    <div id="articles-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div id="articles-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="col-span-full py-16 text-center text-textSub"><i class="fa-solid fa-spinner fa-spin text-4xl text-cta mb-4"></i><p class="font-medium">載入文章中...</p></div>
                     </div>
                 </div>
@@ -543,7 +554,7 @@
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-primary text-white pt-16 pb-20 text-center">
                     <h1 class="text-3xl md:text-5xl font-bold mb-4 flex justify-center items-center gap-3"><i class="fa-solid fa-sparkles text-accent"></i> Ask TONY</h1>
-                    <p class="text-gray-300 max-w-2xl mx-auto px-4 text-lg">專屬您的 AI 技術與商業顧問。根據 TONY 老師的知識庫為您提供專業解答。</p>
+                    <p class="text-gray-300 max-w-2xl mx-auto px-4 text-lg">專屬您的 AI 技術與商業顧問。根據 TONY STUDIO 知識庫為您提供專業解答。</p>
                 </div>
                 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
                     <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col h-[calc(100vh-220px)] md:h-[600px] min-h-[450px]">
@@ -617,7 +628,7 @@
         articleDetail: `
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-primary text-white pt-16 pb-24">
-                    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                         <div class="flex items-center gap-3 mb-6"><span id="detail-category" class="px-3 py-1 bg-secondary text-accent text-xs font-bold rounded-full">載入中...</span><span id="detail-date" class="text-gray-300 text-sm"><i class="fa-regular fa-calendar mr-1"></i> --</span></div>
                         <h1 id="detail-title" class="text-3xl md:text-5xl font-bold leading-tight mb-8">文章載入中...</h1>
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -630,10 +641,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 flex flex-col lg:flex-row gap-12">
-                    <div class="lg:w-2/3">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 w-full">
+                    <div class="w-full">
                         <img id="detail-cover" src="https://placehold.co/800x400/E2E8F0/64748B?text=Loading..." class="w-full h-auto rounded-2xl shadow-xl mb-10 object-cover aspect-video border-4 border-white">
-                        <div class="prose prose-base md:prose-lg lg:prose-xl max-w-none text-textMain leading-loose bg-white p-5 sm:p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100 mb-10" id="detail-content">
+                        <div class="max-w-none text-textMain bg-white p-5 sm:p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100 mb-10" id="detail-content">
                             <div class="flex justify-center py-20"><i class="fa-solid fa-spinner fa-spin text-4xl text-cta"></i></div>
                         </div>
                         
@@ -710,6 +721,7 @@
                         <a href="#/admin" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-bold"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#/admin/leads" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/newsletter" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-paper-plane w-5 text-center"></i> 發送電子報</a>
                         <a href="#/admin/settings" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
@@ -737,6 +749,7 @@
                         <a href="#/admin" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-bold"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#/admin/leads" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/newsletter" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-paper-plane w-5 text-center"></i> 發送電子報</a>
                         <a href="#/admin/settings" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
@@ -759,12 +772,12 @@
         adminArticleEdit: `
             <div class="bg-gray-50 min-h-screen">
                 <div class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-                    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+                    <div class="w-full max-w-full px-4 md:px-8 py-4 flex items-center justify-between">
                         <div class="flex items-center gap-4"><a href="#/admin/articles" class="text-textSub hover:text-primary transition font-bold"><i class="fa-solid fa-arrow-left"></i> 返回</a><h1 class="text-lg md:text-xl font-bold text-primary border-l-2 border-gray-200 pl-4" id="editor-title">新增文章</h1></div>
                         <button id="btn-save-article" onclick="window.saveArticle(event)" class="bg-cta hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-bold transition shadow-md flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存文章</button>
                     </div>
                 </div>
-                <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+                <div class="w-full max-w-full px-4 md:px-8 py-6 md:py-10">
                     <form id="article-form" class="space-y-8">
                         <input type="hidden" id="article-id">
                         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
@@ -808,7 +821,7 @@
                         </div>
 
                         <!-- 編輯器區塊 -->
-                        <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-gray-200 relative">
+                        <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-gray-200 relative" id="editor-wrapper">
                             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                                 <label class="block text-sm font-bold text-gray-700">文章正文 * <span class="text-xs text-gray-400 font-normal ml-2 hidden md:inline">提示：在表格內按右鍵可增減行列與調整寬度</span></label>
                                 <button type="button" onclick="window.formatContentWithAI()" class="w-full md:w-auto text-sm font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-highlighter"></i> AI 智能排版與畫重點</button>
@@ -817,22 +830,22 @@
                             <div id="editor-container"></div>
                             
                             <!-- 專屬手刻的原生右鍵表格選單與寬度控制 -->
-                            <div id="table-context-menu" class="hidden absolute z-[100] bg-white border border-gray-200 shadow-2xl rounded-xl py-2 w-56 text-sm transform transition-all">
-                                <button type="button" onclick="window.handleTableAction('insertRowAbove')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-up mr-3 text-gray-400 w-4"></i>向上插入一列</button>
-                                <button type="button" onclick="window.handleTableAction('insertRowBelow')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-down mr-3 text-gray-400 w-4"></i>向下插入一列</button>
-                                <button type="button" onclick="window.handleTableAction('insertColumnLeft')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-left mr-3 text-gray-400 w-4"></i>向左插入一欄</button>
-                                <button type="button" onclick="window.handleTableAction('insertColumnRight')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-right mr-3 text-gray-400 w-4"></i>向右插入一欄</button>
+                            <div id="table-context-menu" class="hidden absolute z-[110] bg-white border border-gray-200 shadow-2xl rounded-xl py-2 w-56 text-sm transform transition-all">
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowAbove')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-up mr-3 text-gray-400 w-4"></i>向上插入一列</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowBelow')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-down mr-3 text-gray-400 w-4"></i>向下插入一列</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnLeft')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-left mr-3 text-gray-400 w-4"></i>向左插入一欄</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnRight')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-right mr-3 text-gray-400 w-4"></i>向右插入一欄</button>
                                 
                                 <div class="my-1 border-t border-gray-100"></div>
                                 <div class="px-5 py-1 text-gray-400 text-[10px] font-bold bg-gray-50 uppercase tracking-widest">欄位寬度調整</div>
-                                <button type="button" onclick="window.handleTableAction('increaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-expand mr-3 text-cta w-4"></i>加寬此欄位 (+40px)</button>
-                                <button type="button" onclick="window.handleTableAction('decreaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-compress mr-3 text-cta w-4"></i>縮窄此欄位 (-40px)</button>
-                                <button type="button" onclick="window.handleTableAction('autoWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-wand-magic-sparkles mr-3 text-accent w-4"></i>自動適應內容寬度</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'increaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-expand mr-3 text-cta w-4"></i>加寬此欄位 (+40px)</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'decreaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-compress mr-3 text-cta w-4"></i>縮窄此欄位 (-40px)</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'autoWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-wand-magic-sparkles mr-3 text-accent w-4"></i>自動適應內容寬度</button>
 
                                 <div class="my-1 border-t border-gray-100"></div>
-                                <button type="button" onclick="window.handleTableAction('deleteRow')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這列</button>
-                                <button type="button" onclick="window.handleTableAction('deleteColumn')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這欄</button>
-                                <button type="button" onclick="window.handleTableAction('deleteTable')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-bold transition flex items-center"><i class="fa-solid fa-trash-can mr-3 w-4"></i>刪除整個表格</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteRow')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這列</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteColumn')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這欄</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteTable')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-bold transition flex items-center"><i class="fa-solid fa-trash-can mr-3 w-4"></i>刪除整個表格</button>
                             </div>
                         </div>
                     </form>
@@ -847,17 +860,74 @@
                         <a href="#/admin" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#/admin/leads" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-bold"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/newsletter" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-paper-plane w-5 text-center"></i> 發送電子報</a>
                         <a href="#/admin/settings" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
                 <div class="flex-grow p-4 md:p-10 relative">
                     <h1 class="text-2xl md:text-3xl font-bold text-primary mb-8">商機與預約名單</h1>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead><tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold whitespace-nowrap">送出時間</th><th class="px-6 py-4 font-bold">預約細節</th></tr></thead>
-                            <tbody id="admin-leads-list" class="divide-y divide-gray-200"><tr><td colspan="2" class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr></tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold whitespace-nowrap">送出時間</th><th class="px-6 py-4 font-bold">預約細節</th></tr></thead>
+                                <tbody id="admin-leads-list" class="divide-y divide-gray-200"><tr><td colspan="2" class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
+                </div>
+            </div>
+        `,
+        adminNewsletter: `
+            <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
+                <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
+                    <div class="p-6 border-b border-gray-700"><h2 class="text-xl font-bold flex items-center gap-2 text-accent"><i class="fa-solid fa-sliders"></i> TONY CMS</h2></div>
+                    <nav class="flex-grow p-4 space-y-2 flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible">
+                        <a href="#/admin" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
+                        <a href="#/admin/articles" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
+                        <a href="#/admin/leads" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/newsletter" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-bold"><i class="fa-solid fa-paper-plane w-5 text-center"></i> 發送電子報</a>
+                        <a href="#/admin/settings" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
+                    </nav>
+                </div>
+                <div class="flex-grow p-4 md:p-8 lg:p-10 relative w-full overflow-hidden">
+                    <h1 class="text-2xl md:text-3xl font-bold text-primary mb-8">撰寫與發送電子報</h1>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <div class="lg:col-span-3 space-y-6">
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 w-full">
+                                <form onsubmit="window.sendNewsletter(event)" class="space-y-6">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">電子報主旨 *</label>
+                                        <input type="text" id="newsletter-subject" required placeholder="例如：【TONY STUDIO】本週 AI 科技與行銷洞察" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-bold text-base">
+                                    </div>
+                                    <div class="w-full max-w-full overflow-x-auto">
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">電子報內容 *</label>
+                                        <div id="newsletter-editor-container" class="bg-white w-full"></div>
+                                    </div>
+                                    <div class="pt-4 border-t border-gray-100 flex justify-end">
+                                        <button type="submit" id="btn-send-newsletter" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md transition flex items-center gap-2">
+                                            <i class="fa-solid fa-paper-plane"></i> 確認並發送給所有訂閱者
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-1 space-y-4">
+                            <div class="bg-blue-50 border border-blue-100 p-5 rounded-xl sticky top-24">
+                                <h3 class="font-bold text-primary mb-2 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-cta"></i> 快速套用模板</h3>
+                                <p class="text-sm text-gray-600 mb-4">點擊下方模板可快速載入預設排版，請注意這會覆蓋編輯器中現有的內容。</p>
+                                <div class="space-y-3">
+                                    <button type="button" onclick="window.applyNewsletterTemplate('weekly')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-newspaper text-cta w-4"></i> 📰 每週精選彙整</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('new_post')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-solid fa-bullhorn text-cta w-4"></i> 🚀 最新文章發布</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('event')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-calendar-check text-cta w-4"></i> 🎉 活動與課程宣傳</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('insight')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-lightbulb text-cta w-4"></i> 💡 專業洞察與心法</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('update')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-hand text-cta w-4"></i> 👋 近況更新與問候</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         `,
@@ -869,6 +939,7 @@
                         <a href="#/admin" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
                         <a href="#/admin/leads" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-envelope w-5 text-center"></i> 商機與聯絡</a>
+                        <a href="#/admin/newsletter" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-paper-plane w-5 text-center"></i> 發送電子報</a>
                         <a href="#/admin/settings" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-bold"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
@@ -1569,6 +1640,7 @@
             else if (path === '/admin/articles/new') { root.innerHTML = Views.adminArticleEdit; setTimeout(() => window.initArticleEditor(null), 100); }
             else if (path.startsWith('/admin/articles/edit/')) { const articleId = path.split('/')[4]; root.innerHTML = Views.adminArticleEdit; setTimeout(() => window.initArticleEditor(articleId), 100); }
             else if (path === '/admin/leads') { root.innerHTML = Views.adminLeads; setTimeout(window.loadAdminLeads, 100); }
+            else if (path === '/admin/newsletter') { root.innerHTML = Views.adminNewsletter; setTimeout(() => window.initNewsletterEditor(), 100); window.scrollTo(0,0); }
             else if (path === '/admin/settings') { root.innerHTML = Views.adminSettings; setTimeout(() => { window.loadSiteSettings(); window.loadCategories('settings-categories-list', 'admin'); }, 100); }
         } else if (path === '/login') { if (window.AppState.user) return window.location.hash = '#/member'; root.innerHTML = Views.login; }
         else { root.innerHTML = `<div class="py-20 text-center"><h2 class="text-2xl font-bold">頁面不存在</h2></div>`; }
@@ -1770,7 +1842,7 @@
                 if(coverEl) coverEl.src = article.coverImage || 'https://placehold.co/800x400';
                 
                 const contentEl = document.getElementById('detail-content');
-                if(contentEl) contentEl.innerHTML = `<div class="ql-editor" style="padding:0; overflow:visible;">${article.content || ''}</div>`;
+                if(contentEl) contentEl.innerHTML = `<div class="ql-editor" style="padding:0; overflow:visible; border:none; border-radius:0;">${article.content || ''}</div>`;
                 
                 window.updateSEO(article.title, article.excerpt, article.coverImage);
 
@@ -1814,9 +1886,11 @@
                 await window.StorageAPI.uploadBytes(storageRef, file);
                 const url = await window.StorageAPI.getDownloadURL(storageRef);
                 
-                const range = window.quillEditor.getSelection(true);
-                window.quillEditor.insertEmbed(range.index, type, url);
-                window.quillEditor.setSelection(range.index + 1);
+                const range = window.quillEditor ? window.quillEditor.getSelection(true) : window.newsletterEditor.getSelection(true);
+                const targetEditor = window.quillEditor || window.newsletterEditor;
+                
+                targetEditor.insertEmbed(range.index, type, url);
+                targetEditor.setSelection(range.index + 1);
                 showToast('媒體上傳成功！', 'success');
             } catch (error) {
                 console.error("Upload error:", error);
@@ -1825,12 +1899,28 @@
         };
     };
 
-    window.handleTableAction = (action) => {
+    window.tableResizeState = { isResizing: false, startX: 0, startWidth: 0, resizeTd: null };
+
+    window.handleTableAction = (e, action) => {
+        if(e) e.preventDefault();
+        
         if (!window.quillEditor) return;
+        
+        window.quillEditor.focus();
+        
         const tableModule = window.quillEditor.getModule('table');
         if (!tableModule) return;
         const activeTd = document.querySelector('#editor-container td.selected');
         let keepMenuOpen = false;
+
+        if (activeTd) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(activeTd);
+            range.collapse(false); 
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
 
         if (action === 'increaseWidth' && activeTd) {
             const currentWidth = activeTd.offsetWidth;
@@ -1908,15 +1998,23 @@
 
         const quillRoot = window.quillEditor.root;
         const editorNode = document.getElementById('editor-container');
+        const wrapperNode = document.getElementById('editor-wrapper');
 
         quillRoot.oncontextmenu = (e) => {
             const td = e.target.closest('td');
             if (td) {
                 e.preventDefault();
                 const menu = document.getElementById('table-context-menu');
-                if(menu) {
-                    menu.style.top = e.clientY + 'px';
-                    menu.style.left = e.clientX + 'px';
+                if(menu && wrapperNode) {
+                    const wrapperRect = wrapperNode.getBoundingClientRect();
+                    let leftPos = e.clientX - wrapperRect.left;
+                    const topPos = e.clientY - wrapperRect.top;
+                    if (leftPos + 224 > wrapperRect.width) {
+                        leftPos = wrapperRect.width - 224 - 10;
+                    }
+
+                    menu.style.top = topPos + 'px';
+                    menu.style.left = leftPos + 'px';
                     menu.classList.remove('hidden');
                 }
                 if(editorNode) {
@@ -1926,11 +2024,8 @@
             }
         };
 
-        let isResizing = false;
-        let startX, startWidth, resizeTd;
-
         quillRoot.addEventListener('mousemove', (e) => {
-            if (isResizing) return;
+            if (window.tableResizeState.isResizing) return;
             const td = e.target.closest('td');
             if (td) {
                 const rect = td.getBoundingClientRect();
@@ -1947,10 +2042,10 @@
             if (td) {
                 const rect = td.getBoundingClientRect();
                 if (rect.right - e.clientX < 10 && rect.right - e.clientX >= 0) {
-                    isResizing = true;
-                    resizeTd = td;
-                    startX = e.clientX;
-                    startWidth = td.offsetWidth;
+                    window.tableResizeState.isResizing = true;
+                    window.tableResizeState.resizeTd = td;
+                    window.tableResizeState.startX = e.clientX;
+                    window.tableResizeState.startWidth = td.offsetWidth;
                     e.preventDefault(); 
                 }
             }
@@ -1958,19 +2053,19 @@
 
         if(!window.isTableResizerBound) {
             document.addEventListener('mousemove', (e) => {
-                if (isResizing && resizeTd) {
-                    const diff = e.clientX - startX;
-                    const newWidth = Math.max(40, startWidth + diff);
-                    resizeTd.style.width = newWidth + 'px';
-                    resizeTd.style.minWidth = newWidth + 'px';
+                if (window.tableResizeState.isResizing && window.tableResizeState.resizeTd) {
+                    const diff = e.clientX - window.tableResizeState.startX;
+                    const newWidth = Math.max(40, window.tableResizeState.startWidth + diff);
+                    window.tableResizeState.resizeTd.style.width = newWidth + 'px';
+                    window.tableResizeState.resizeTd.style.minWidth = newWidth + 'px';
                 }
             });
 
             document.addEventListener('mouseup', () => { 
-                if (isResizing) {
-                    isResizing = false; 
-                    if (resizeTd) resizeTd.style.cursor = 'text';
-                    resizeTd = null; 
+                if (window.tableResizeState.isResizing) {
+                    window.tableResizeState.isResizing = false; 
+                    if (window.tableResizeState.resizeTd) window.tableResizeState.resizeTd.style.cursor = 'text';
+                    window.tableResizeState.resizeTd = null; 
                 }
             });
             window.isTableResizerBound = true;
@@ -2097,6 +2192,99 @@
             container.innerHTML = html;
         } catch(e) {
             container.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
+    };
+
+    window.initNewsletterEditor = () => {
+        if (window.newsletterEditor) window.newsletterEditor = null;
+        
+        const toolbarOptions = [
+            ['bold', 'italic', 'underline', 'strike'], ['blockquote'],
+            [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], ['link', 'image', 'clean']
+        ];
+        
+        window.newsletterEditor = new Quill('#newsletter-editor-container', { 
+            theme: 'snow', 
+            modules: { 
+                toolbar: {
+                    container: toolbarOptions,
+                    handlers: {
+                        image: () => window.quillUploadHandler('image')
+                    }
+                }
+            } 
+        });
+    };
+
+    window.applyNewsletterTemplate = (type) => {
+        if(!window.newsletterEditor) return;
+        
+        const templates = {
+            'weekly': `<h2>📰 本週精選彙整</h2><p>親愛的讀者，您好：</p><p>本週我們為您挑選了以下幾篇重點文章，希望能為您帶來新的啟發：</p><ul><li><strong><a href="#" target="_blank">重點文章標題一</a></strong>：這裡寫上一小段摘要說明。</li><li><strong><a href="#" target="_blank">重點文章標題二</a></strong>：這裡寫上一小段摘要說明。</li></ul><p><br></p><p>祝 週末愉快！</p>`,
+            'new_post': `<h2>🚀 最新文章上線：[請填寫文章標題]</h2><p>親愛的讀者，您好：</p><p>我們剛剛發布了一篇全新的深度解析文章。在這篇文章中，我們探討了：</p><ul><li>核心重點一</li><li>核心重點二</li></ul><p><a href="#" target="_blank">👉 點擊這裡立即閱讀完整文章</a></p>`,
+            'event': `<h2>🎉 [請填寫活動/課程名稱] 開放報名囉！</h2><p>親愛的讀者，您好：</p><p>我們即將舉辦一場精彩的活動，誠摯地邀請您一同參與！</p><ul><li><strong>時間</strong>：[日期與時間]</li><li><strong>地點 / 形式</strong>：[實體地點或線上會議連結]</li><li><strong>活動亮點</strong>：[寫下 1-2 個吸引人的特點]</li></ul><p><a href="#" target="_blank">👉 名額有限，點擊這裡立即報名</a></p>`,
+            'insight': `<h2>💡 TONY 的專業洞察：[請填寫本期主題]</h2><p>親愛的讀者，您好：</p><p>這週在協助企業導入 AI 或是產品開發時，我觀察到一個有趣的現象...</p><blockquote>這裡可以寫入一段名言，或是您本週最核心的一句觀點。</blockquote><p>（請在此接續您的深度見解與故事分享）</p><p>您對這個主題有什麼看法呢？歡迎直接回信與我交流！</p>`,
+            'update': `<h2>👋 近況更新：[請填寫近期的大事]</h2><p>嗨！好久不見：</p><p>最近 TONY STUDIO 發生了一些令人興奮的新變化，想第一時間與您分享！</p><p>（在此寫下您的近況、接下來的計畫或是專案進度）</p><p>感謝您一直以來的關注與支持，期待很快能帶來更多好消息！</p>`
+        };
+
+        if (templates[type]) {
+            window.showModal('套用模板', '確定要套用此模板嗎？這將會覆蓋您目前編輯器中的內容。', () => {
+                window.newsletterEditor.clipboard.dangerouslyPasteHTML(templates[type]);
+                showToast('模板已套用', 'success');
+            }, '確定套用');
+        }
+    };
+
+    window.sendNewsletter = async (e) => {
+        e.preventDefault();
+        const subject = document.getElementById('newsletter-subject').value.trim();
+        
+        if(!window.newsletterEditor) return;
+        const content = window.newsletterEditor.root.innerHTML;
+        const textContent = window.newsletterEditor.getText().trim();
+
+        if (!subject || !textContent) {
+            showToast("主旨與內容不能為空", "warning");
+            return; 
+        }
+
+        const btn = document.getElementById('btn-send-newsletter');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true; 
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 撈取名單並發送中...';
+
+        try {
+            const snap = await window.FS.getDocs(window.FS.collection(window.AppState.db, "subscribers"));
+            let bccList = [];
+            snap.forEach(doc => {
+                const email = doc.data().email;
+                if(email && !bccList.includes(email)) bccList.push(email);
+            });
+
+            if (bccList.length === 0) {
+                showToast("目前沒有任何訂閱者可以發送", "warning");
+                return;
+            }
+
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "mail"), {
+                to: "mindnodeai@gmail.com",
+                bcc: bccList,
+                message: {
+                    subject: subject,
+                    html: content
+                }
+            });
+
+            showToast(`成功觸發發信機制！將寄送給 ${bccList.length} 位訂閱者。`, "success");
+            document.getElementById('newsletter-subject').value = '';
+            window.newsletterEditor.root.innerHTML = '';
+        } catch (error) {
+            console.error("發送失敗", error);
+            showToast("發送失敗，請檢查資料庫權限", "error");
+        } finally {
+            btn.disabled = false; 
+            btn.innerHTML = originalHtml;
         }
     };
 
@@ -2385,7 +2573,7 @@
                 container.innerHTML = html;
             } else if (mode === 'filters') {
                 let html = `<button onclick="window.filterArticles('全部')" class="cat-btn px-5 py-2 bg-primary text-white rounded-full text-sm">全部</button>`;
-                snap.forEach(doc => { html += `<button onclick="window.filterArticles('${doc.data().name}')" class="cat-btn px-5 py-2 bg-white border rounded-full text-sm">${doc.data().name}</button>`; });
+                snap.forEach(doc => { html += `<button onclick="window.filterArticles('${doc.data().name}')" class="cat-btn px-5 py-2 bg-white border border-gray-200 text-textSub hover:border-cta hover:text-cta text-sm rounded-full transition">${doc.data().name}</button>`; });
                 container.innerHTML = html;
             }
         } catch(e) {}
