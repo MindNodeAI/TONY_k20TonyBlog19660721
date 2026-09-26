@@ -10,10 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Quill WYSIWYG Editor -->
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,21 +26,18 @@
                         textMain: '#172033',
                         textSub: '#667085'
                     },
-                    fontFamily: {
-                        sans: ['Inter', 'Noto Sans TC', 'sans-serif']
-                    }
+                    fontFamily: { sans: ['Inter', 'Noto Sans TC', 'sans-serif'] }
                 }
             }
         }
     </script>
 
     <style>
-        /* 修復手機版漂移與縮放問題 */
         html, body { overflow-x: hidden; width: 100%; max-width: 100%; position: relative; }
         body { background-color: theme('colors.bg'); color: theme('colors.textMain'); font-family: 'Inter', 'Noto Sans TC', sans-serif; line-height: 1.7; }
+        
         input, textarea, select { font-size: 16px !important; }
 
-        /* 自訂捲軸 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: theme('colors.bg'); }
         ::-webkit-scrollbar-thumb { background: theme('colors.secondary'); border-radius: 4px; }
@@ -51,12 +46,10 @@
         .page-enter { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Quill 編輯器與前台顯示共用樣式 */
         .ql-container { font-family: 'Inter', 'Noto Sans TC', sans-serif !important; font-size: 1rem !important; background-color: #ffffff; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
         .ql-toolbar { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; background-color: #f8fafc; }
         .ql-editor { min-height: 400px; overflow-x: auto; max-width: 100%; line-height: 1.8; }
         
-        /* 排版防護 */
         .ql-editor h1 { font-size: 2em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
         .ql-editor h2 { font-size: 1.5em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
         .ql-editor h3 { font-size: 1.17em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
@@ -71,6 +64,9 @@
         .ql-editor td { border: 1px solid #d1d5db; padding: 10px; min-width: 50px; position: relative; word-break: break-word; }
         .ql-editor td.selected { background-color: #eff6ff; outline: 2px solid #2563EB; outline-offset: -2px; }
         .ql-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 1em; margin-bottom: 1em; }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -108,23 +104,30 @@
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token);
-                } catch(e) { await signInAnonymously(auth); }
-            } else { await signInAnonymously(auth); }
+                } catch(e) {
+                    await signInAnonymously(auth);
+                }
+            } else {
+                await signInAnonymously(auth);
+            }
         } catch (error) { console.error("Auth error", error); }
     };
     initAuth();
 
-    // AI API Keys setup
     window.getApiKey = () => {
         const key = localStorage.getItem('tony_gemini_api_key');
         return (key && key.trim() !== '') ? key.trim() : null;
     };
+    
     window.saveApiKey = (key) => {
         if(key && key.trim() !== '') {
             localStorage.setItem('tony_gemini_api_key', key.trim());
             showToast('API 金鑰已儲存於本機', 'success');
-        } else { showToast('請提供有效的 API 金鑰', 'warning'); }
+        } else {
+            showToast('請提供有效的 API 金鑰', 'warning');
+        }
     };
+
     window.showApiKeyModal = () => {
         const existing = document.getElementById('apikey-modal');
         if (existing) existing.remove();
@@ -138,7 +141,12 @@
                     </div>
                     <div class="p-6 text-textMain text-sm leading-relaxed">
                         <p class="mb-4 text-gray-700 font-medium">為啟用智能新聞抓取與 AI 顧問功能，請輸入您的 Google Gemini API 金鑰。</p>
+                        <div class="mb-5 p-4 bg-blue-50/50 border border-blue-100 rounded-xl text-sm text-blue-800 shadow-inner">
+                            <p class="font-bold mb-1 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-accent"></i> 還沒有金鑰？</p>
+                            <p>請前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-cta font-bold hover:underline inline-flex items-center gap-1">Google AI Studio <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a> 免費申請一組金鑰。</p>
+                        </div>
                         <input type="password" id="modal-apikey-input" placeholder="輸入 AIza... 開頭的 39 碼金鑰" value="${currentKey}" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:border-cta focus:ring-1 focus:ring-cta font-mono text-base transition">
+                        <p class="mt-3 text-xs text-gray-400"><i class="fa-solid fa-shield-halved mr-1"></i>金鑰將安全地儲存於您的瀏覽器本地端，不會外流。</p>
                     </div>
                     <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
                         <button onclick="document.getElementById('apikey-modal').remove()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm font-bold">取消</button>
@@ -156,9 +164,11 @@
 
     window.callGeminiAPI = async (systemPrompt, userPrompt, useSearch = false, extraOptions = {}) => {
         const apiKey = window.getApiKey();
-        if (!apiKey) { window.showApiKeyModal(); throw new Error("MISSING_API_KEY"); }
+        if (!apiKey) {
+            window.showApiKeyModal();
+            throw new Error("MISSING_API_KEY");
+        }
         
-        // 使用最新的 3.8-flash 模型
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
         
         const payload = {
@@ -166,6 +176,7 @@
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: { maxOutputTokens: 8192, ...(extraOptions.generationConfig || {}) }
         };
+
         if (useSearch) payload.tools = [{ "google_search": {} }];
 
         try {
@@ -176,7 +187,7 @@
         } catch (error) { throw error; }
     };
 
-    window.updateSEO = (title) => {
+    window.updateSEO = (title, description = '', imageUrl = '') => {
         const baseTitle = 'TONY STUDIO';
         document.title = title === '個人品牌官網與專業內容中心' ? `${baseTitle} | ${title}` : (title ? `${title} | ${baseTitle}` : `${baseTitle} | 個人品牌官網與專業內容中心`);
     };
@@ -213,8 +224,7 @@
             window.AppState.role = null; 
             showToast("已成功登出", "success"); 
             window.location.hash = '#/'; 
-        } 
-        catch (error) { console.error("Logout failed", error); }
+        } catch (error) { console.error("Logout failed", error); }
     };
 
     window.toggleMobileMenu = () => {
@@ -242,14 +252,23 @@
                 window.AppState.role = (user.email === 'mindnodeai@gmail.com') ? 'super_admin' : 'member';
             }
             window.AppState.user = user;
-        } else { window.AppState.user = null; window.AppState.role = null; }
+        } else {
+            window.AppState.user = null; window.AppState.role = null;
+        }
         updateNavbarAuthUI(window.AppState.user, window.AppState.role);
+        
+        const path = window.location.hash.slice(1);
+        if (path.startsWith('/article/')) {
+            const articleId = path.split('/')[2];
+            if (window.renderCommentForm) window.renderCommentForm(articleId);
+        }
     });
 
     function updateNavbarAuthUI(user, role) {
         const authContainer = document.getElementById('nav-auth-container');
         const mobileAuthContainer = document.getElementById('mobile-auth-container');
         if (!authContainer) return;
+
         if (user) {
             const displayName = user.displayName || user.email?.split('@')[0] || '會員';
             const avatarUrl = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + displayName.charAt(0).toUpperCase());
@@ -269,8 +288,10 @@
             if (mobileAuthContainer) mobileAuthContainer.innerHTML = `
                 <div class="flex items-center space-x-3 px-3 py-3 bg-gray-50 rounded-lg mb-2">
                     <img src="${avatarUrl}" alt="Avatar" class="w-10 h-10 rounded-full border border-gray-200 shadow-sm">
-                    <div><p class="text-sm font-bold text-textMain">${displayName}</p>
-                    ${(role === 'super_admin' || role === 'admin') ? `<a href="#/admin" onclick="window.toggleMobileMenu()" class="text-xs font-bold text-accent"><i class="fa-solid fa-gauge"></i> 進入管理後台</a>` : ''}</div>
+                    <div>
+                        <p class="text-sm font-bold text-textMain">${displayName}</p>
+                        ${(role === 'super_admin' || role === 'admin') ? `<a href="#/admin" onclick="window.toggleMobileMenu()" class="text-xs font-bold text-accent"><i class="fa-solid fa-gauge"></i> 進入管理後台</a>` : ''}
+                    </div>
                 </div>
                 <a href="#/member" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-md text-base font-medium text-textMain hover:bg-gray-50 transition border border-gray-100 mb-2 text-center bg-blue-50 text-cta">進入會員專區</a>
                 <button onclick="window.toggleMobileMenu(); window.handleLogout();" class="w-full text-center block px-3 py-3 rounded-md text-base font-medium text-red-600 bg-red-50 hover:bg-red-100 transition shadow-sm">登出帳號</button>
@@ -287,11 +308,12 @@
         <div class="flex justify-between items-center h-16">
             <div class="flex-shrink-0 flex items-center">
                 <a href="#/" id="nav-logo-container" class="flex items-center space-x-2">
-                    <img id="nav-logo-img" src="" class="h-8 w-auto hidden" alt="Logo">
+                    <img id="nav-logo-img" src="" alt="Logo" class="h-8 w-auto hidden object-contain">
                     <div id="nav-logo-text" class="w-8 h-8 bg-primary text-accent flex items-center justify-center rounded font-bold text-xl">T</div>
                     <span class="font-bold text-xl text-primary tracking-tight">TONY STUDIO</span>
                 </a>
             </div>
+            
             <nav class="hidden md:flex space-x-8">
                 <a href="#/articles" class="text-textMain hover:text-cta font-medium transition">專欄文章</a>
                 <a href="#/series" class="text-textMain hover:text-cta font-medium transition">主題專題</a>
@@ -299,6 +321,7 @@
                 <a href="#/ask-tony" class="text-textMain hover:text-cta font-medium transition flex items-center gap-1"><i class="fa-solid fa-sparkles text-accent text-sm"></i> Ask TONY</a>
                 <a href="#/services" class="text-textMain hover:text-cta font-medium transition">服務與課程</a>
             </nav>
+
             <div class="flex items-center space-x-4">
                 <div id="nav-auth-container" class="hidden sm:block"></div>
                 <button onclick="window.toggleMobileMenu()" class="md:hidden text-textSub hover:text-primary focus:outline-none transition">
@@ -307,6 +330,7 @@
             </div>
         </div>
     </div>
+
     <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 shadow-xl absolute w-full left-0 z-40 transition-all duration-300">
         <div class="px-4 pt-2 pb-6 space-y-2">
             <a href="#/articles" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100">專欄文章</a>
@@ -335,7 +359,10 @@
         toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span class="text-sm font-medium">${message}</span>`;
         container.appendChild(toast);
         setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
-        setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3500);
+        setTimeout(() => {
+            toast.classList.add('opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
     }
 </script>
 
@@ -343,8 +370,8 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div class="md:col-span-1">
             <a href="#/" id="footer-logo-container" class="flex items-center space-x-2 mb-4">
-                <img id="footer-logo-img" src="" class="h-10 w-auto hidden" alt="Logo">
-                <div id="footer-logo-text" class="w-10 h-10 bg-white text-primary flex items-center justify-center rounded font-bold text-xl">T</div>
+                <img id="footer-logo-img" src="" alt="Logo" class="h-10 w-auto hidden object-contain">
+                <div id="footer-logo-text" class="w-10 h-10 bg-white text-primary flex items-center justify-center rounded font-bold text-2xl">T</div>
                 <span class="font-bold text-xl text-white tracking-tight">TONY STUDIO</span>
             </a>
             <p class="text-sm text-gray-300 mb-4 leading-relaxed">個人品牌官網 × 專業內容中樞 × AI 知識庫。致力於提供最優質的技術洞察與商業策略。</p>
@@ -383,12 +410,15 @@
             <section class="bg-primary text-white py-20 relative overflow-hidden">
                 <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-secondary opacity-50 blur-3xl"></div>
                 <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-cta opacity-30 blur-3xl"></div>
+                
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col lg:flex-row items-center gap-12">
                     <div class="lg:w-3/5 text-left mb-12 lg:mb-0">
                         <span class="inline-block py-1 px-3 rounded-full bg-secondary text-accent text-xs font-bold tracking-wider mb-6">VIBE CODING EXPERT</span>
                         <h1 id="home-hero-title" class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">載入中...</h1>
                         <p id="home-hero-bio" class="text-lg text-gray-300 mb-8 max-w-2xl leading-relaxed">...</p>
+                        
                         <div id="home-social-links" class="flex flex-wrap gap-4 mb-8 hidden"></div>
+
                         <div class="flex flex-col sm:flex-row flex-wrap gap-4">
                             <a href="#/articles" class="w-full sm:w-auto justify-center bg-cta hover:bg-blue-600 text-white px-8 py-3.5 rounded-lg font-bold transition shadow-lg flex items-center gap-2">探索專業觀點 <i class="fa-solid fa-arrow-right"></i></a>
                             <a href="#/ask-tony" class="w-full sm:w-auto justify-center bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3.5 rounded-lg font-bold transition flex items-center gap-2"><i class="fa-solid fa-sparkles text-accent"></i> 與 AI TONY 對話</a>
@@ -403,14 +433,22 @@
                 </div>
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10" id="home-ip-info-container"></div>
             </section>
+
             <section class="py-16 bg-white">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-end mb-10">
-                        <div><h2 class="text-3xl font-bold text-primary mb-2">精選觀點</h2><p class="text-textSub">最新發布的技術洞察與產業分析</p></div>
+                        <div>
+                            <h2 class="text-3xl font-bold text-primary mb-2">精選觀點</h2>
+                            <p class="text-textSub">最新發布的技術洞察與產業分析</p>
+                        </div>
                         <a href="#/articles" class="text-cta hover:text-blue-800 font-medium transition hidden sm:block">查看所有文章 <i class="fa-solid fa-angle-right ml-1"></i></a>
                     </div>
+                    
                     <div id="home-featured-articles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div class="col-span-full py-12 text-center text-textSub"><i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i><p>載入最新文章中...</p></div>
+                        <div class="col-span-full py-12 text-center text-textSub">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i>
+                            <p>載入最新文章中...</p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -423,7 +461,9 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 pb-24 w-full">
                 <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 md:p-10 min-h-[500px]">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-gray-100 pb-8">
-                        <div id="articles-category-filters" class="flex flex-wrap gap-3 w-full md:w-auto pb-2 md:pb-0"></div>
+                        <div id="articles-category-filters" class="flex flex-wrap gap-3 w-full md:w-auto pb-2 md:pb-0">
+                            <button onclick="window.filterArticles('全部')" data-cat="全部" class="cat-btn px-5 py-2 bg-primary text-white shadow-md text-sm font-medium rounded-full transition">全部</button>
+                        </div>
                         <div class="relative w-full md:w-72 flex-shrink-0">
                             <input type="text" id="articles-search-input" oninput="window.searchArticles(event)" placeholder="搜尋文章標題..." class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg text-base md:text-sm bg-gray-50 focus:bg-white transition">
                             <i class="fa-solid fa-search absolute left-4 top-3.5 text-gray-400"></i>
@@ -440,8 +480,12 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 class="text-3xl md:text-4xl font-bold text-primary mb-4">主題專題</h1>
                     <p class="text-textSub max-w-2xl mx-auto mb-12">系統化的學習路徑與深度探討，幫助您建立完整的知識體系。</p>
+                    
                     <div id="series-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-                        <div class="col-span-full py-12 text-center text-textSub"><i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i><p>載入專題中...</p></div>
+                        <div class="col-span-full py-12 text-center text-textSub">
+                            <i class="fa-solid fa-spinner fa-spin text-3xl text-cta mb-4"></i>
+                            <p>載入專題中...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -451,10 +495,20 @@
                 <div class="bg-primary text-white pt-12 pb-24 text-center relative overflow-hidden">
                     <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                     <div class="relative z-10">
-                        <h1 class="text-3xl md:text-5xl font-bold mb-4 flex justify-center items-center gap-3"><i class="fa-solid fa-globe text-accent"></i> 每日 AI 報</h1>
-                        <p class="text-gray-300 max-w-2xl mx-auto px-4 text-lg mb-4">免登入！全網共同熱門推薦指標。掌握最新全球與台灣科技脈動。</p>
-                        <div id="daily-news-date" class="inline-block px-5 py-2 bg-white/20 rounded-full text-sm font-bold text-white mb-6 backdrop-blur-md border border-white/30 shadow-sm transition-all"><i class="fa-regular fa-calendar mr-1"></i> 今日日期：載入中...</div>
-                        <button id="btn-fetch-news" onclick="window.fetchDailyNews()" class="mt-2 bg-cta hover:bg-blue-600 text-white px-8 py-3.5 rounded-full font-bold shadow-xl transition transform hover:scale-105 flex items-center gap-2 mx-auto"><i class="fa-solid fa-rotate"></i> 立即更新最新情報</button>
+                        <h1 class="text-3xl md:text-5xl font-bold mb-4 flex justify-center items-center gap-3">
+                            <i class="fa-solid fa-globe text-accent"></i> 每日 AI 報
+                        </h1>
+                        <p class="text-gray-300 max-w-2xl mx-auto px-4 text-lg mb-4">
+                            免登入！全網共同熱門推薦指標。掌握最新全球與台灣科技脈動。
+                        </p>
+                        
+                        <div id="daily-news-date" class="inline-block px-5 py-2 bg-white/20 rounded-full text-sm font-bold text-white mb-6 backdrop-blur-md border border-white/30 shadow-sm transition-all">
+                            <i class="fa-regular fa-calendar mr-1"></i> 今日日期：載入中...
+                        </div>
+                        
+                        <button id="btn-fetch-news" onclick="window.fetchDailyNews()" class="mt-2 bg-cta hover:bg-blue-600 text-white px-8 py-3.5 rounded-full font-bold shadow-xl transition transform hover:scale-105 flex items-center gap-2 mx-auto">
+                            <i class="fa-solid fa-rotate"></i> 立即更新最新情報
+                        </button>
                     </div>
                 </div>
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
@@ -464,15 +518,22 @@
                             <span class="px-3 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full border border-red-100">任何人皆可按讚推薦</span>
                         </div>
                         <div id="daily-news-container">
-                            <div class="py-24 text-center text-textSub"><i class="fa-solid fa-satellite-dish text-5xl text-gray-300 mb-6"></i><p class="text-xl font-bold text-gray-400 mb-2">情報站待命中</p><p class="text-sm text-gray-500">點擊上方按鈕，讓 AI 為您彙整最新新聞</p></div>
+                            <div class="py-24 text-center text-textSub">
+                                <i class="fa-solid fa-satellite-dish text-5xl text-gray-300 mb-6"></i>
+                                <p class="text-xl font-bold text-gray-400 mb-2">情報站待命中</p>
+                                <p class="text-sm text-gray-500">點擊上方按鈕，讓 AI 為您彙整最新新聞</p>
+                            </div>
                         </div>
                     </div>
+
                     <div class="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl shadow-md border border-orange-100 p-8">
                         <div class="flex items-center gap-3 mb-6 border-b border-orange-100 pb-4">
                             <h2 class="text-2xl font-bold text-primary flex items-center gap-2"><i class="fa-solid fa-trophy text-accent"></i> 🔥 歷史熱門總榜單</h2>
                             <span class="px-3 py-1 bg-white text-gray-500 text-xs font-bold rounded-full border border-gray-200">史上最多人推薦</span>
                         </div>
-                        <div id="all-time-trending-container" class="min-h-[150px] flex flex-col justify-center"><p class="text-textSub text-center"><i class="fa-solid fa-spinner fa-spin text-xl text-accent mb-2"></i><br>載入熱門榜單中...</p></div>
+                        <div id="all-time-trending-container" class="min-h-[150px] flex flex-col justify-center">
+                            <p class="text-textSub text-center"><i class="fa-solid fa-spinner fa-spin text-xl text-accent mb-2"></i><br>載入熱門榜單中...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -508,20 +569,27 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 class="text-3xl md:text-5xl font-bold text-primary mb-6">服務與課程</h1>
                     <p class="text-textSub max-w-2xl mx-auto mb-16 text-lg">提供企業內訓、顧問諮詢與線上課程，助您掌握 AI 時代的關鍵能力。</p>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
                         <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all group">
                             <div class="w-16 h-16 bg-blue-50 text-cta rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-building"></i></div>
                             <h3 class="text-2xl font-bold text-primary mb-4">企業培訓與顧問</h3>
-                            <p class="text-textSub mb-6 leading-relaxed">針對企業需求量身打造 AI 導入、數位轉型、行銷科技等內訓課程與顧問服務。</p>
+                            <p class="text-textSub mb-6 leading-relaxed">針對企業需求量身打造 AI 導入、數位轉型、行銷科技等內訓課程與顧問服務。協助團隊建立實戰能力，解決真實商業問題。</p>
+                            <ul class="space-y-3 mb-8 text-sm text-gray-700 font-medium">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> 生成式 AI 企業導入策略</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> OMO 數位行銷與品牌整合</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> 專屬技術架構顧問諮詢</li>
+                            </ul>
                             <a href="#/contact" class="inline-block w-full text-center bg-primary hover:bg-secondary text-white px-6 py-3 rounded-xl font-bold transition shadow-md">預約企業諮詢</a>
                         </div>
                         <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all group">
                             <div class="w-16 h-16 bg-amber-50 text-accent rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-graduation-cap"></i></div>
                             <h3 class="text-2xl font-bold text-primary mb-4">線上精選課程</h3>
-                            <p class="text-textSub mb-6 leading-relaxed">將多年的實戰經驗濃縮成系統化的線上課程，無論是想轉職、升級技能都能找到適合的路徑。</p>
+                            <p class="text-textSub mb-6 leading-relaxed">將多年的實戰經驗濃縮成系統化的線上課程，無論是想轉職、升級技能，都能在這裡找到適合您的學習路徑。</p>
                             <div class="bg-gray-50 rounded-xl p-6 text-center border border-dashed border-gray-300 mt-8">
                                 <i class="fa-solid fa-rocket text-4xl text-gray-400 mb-3"></i>
                                 <p class="text-textSub font-bold">全新系列課程籌備中</p>
+                                <p class="text-xs text-gray-400 mt-2">敬請期待</p>
                             </div>
                         </div>
                     </div>
@@ -535,9 +603,10 @@
                         <h1 class="text-3xl font-bold text-primary mb-2 text-center">預約企業諮詢</h1>
                         <p class="text-textSub text-center mb-8">請填寫下方表單，我們將盡快與您聯繫</p>
                         <form id="contact-form" onsubmit="window.submitLeadForm(event)" class="space-y-6">
-                            <div><label class="block text-sm font-bold text-gray-700 mb-2">您的姓名 *</label><input type="text" id="lead-name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta"></div>
-                            <div><label class="block text-sm font-bold text-gray-700 mb-2">聯絡 Email *</label><input type="email" id="lead-email" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta"></div>
-                            <div><label class="block text-sm font-bold text-gray-700 mb-2">需求說明 *</label><textarea id="lead-message" rows="4" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta"></textarea></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">您的姓名 *</label><input type="text" id="lead-name" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">聯絡 Email *</label><input type="email" id="lead-email" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">公司名稱</label><input type="text" id="lead-company" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm" placeholder="選填"></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">需求說明 *</label><textarea id="lead-message" rows="4" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm" placeholder="請描述您的企業培訓或顧問需求..."></textarea></div>
                             <button type="submit" id="lead-submit-btn" class="w-full bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md transition">送出預約</button>
                         </form>
                     </div>
@@ -554,6 +623,7 @@
                             <div class="flex items-center gap-4"><img src="https://placehold.co/100x100/163A63/FFF?text=T" class="w-12 h-12 rounded-full border-2 border-accent" alt="TONY"><div><p class="text-base font-bold">TONY 老師</p></div></div>
                             <div class="flex items-center gap-3 flex-wrap w-full sm:w-auto justify-between sm:justify-end mt-4 sm:mt-0">
                                 <button onclick="window.shareArticle('copy')" class="px-4 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20 text-sm font-bold flex-1 sm:flex-none"><i class="fa-solid fa-link mr-2"></i>複製連結</button>
+                                <button onclick="window.shareArticle('fb')" class="px-4 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-[#1877F2]/90 border-[#1877F2] text-white hover:bg-[#1877F2] text-sm font-bold flex-1 sm:flex-none"><i class="fa-brands fa-facebook-f mr-2"></i>分享</button>
                                 <div id="bookmark-container" class="flex-1 sm:flex-none"></div>
                             </div>
                         </div>
@@ -568,7 +638,9 @@
                         <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 mt-8">
                             <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2"><i class="fa-regular fa-comments text-accent"></i> 讀者留言 (<span id="comment-count">0</span>)</h3>
                             <div id="comment-form-container" class="mb-8"></div>
-                            <div id="comments-list" class="space-y-4"><div class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin mb-2 text-xl text-cta"></i><br>載入留言中...</div></div>
+                            <div id="comments-list" class="space-y-4">
+                                <div class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin mb-2 text-xl text-cta"></i><br>載入留言中...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -578,7 +650,7 @@
             <div class="bg-bg min-h-screen pb-20">
                 <div class="bg-white border-b border-gray-200 pt-16 pb-12 shadow-sm">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center gap-8">
-                        <img id="member-avatar" src="" alt="Avatar" class="w-32 h-32 rounded-full border-4 border-white shadow-lg">
+                        <img id="member-avatar" src="" alt="Avatar" class="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover">
                         <div class="text-center md:text-left">
                             <h1 id="member-name" class="text-3xl font-bold text-primary mb-2">載入中...</h1>
                             <p id="member-email" class="text-textSub text-base mb-4">---</p>
@@ -588,8 +660,16 @@
                 </div>
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12">
-                        <h2 class="text-2xl font-bold text-primary flex items-center gap-3 border-b border-gray-100 pb-6 mb-8"><i class="fa-solid fa-bookmark text-accent"></i> 我的文章收藏</h2>
-                        <div id="member-bookmarks-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-gray-100 pb-6">
+                            <h2 class="text-2xl font-bold text-primary flex items-center gap-3"><i class="fa-solid fa-bookmark text-accent"></i> 我的文章收藏</h2>
+                            <div class="relative w-full md:w-72">
+                                <input type="text" id="bookmark-search-input" oninput="window.searchBookmarks(event)" placeholder="搜尋文章標題..." class="w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg text-base md:text-sm bg-gray-50 focus:bg-white focus:border-cta transition shadow-inner">
+                                <i class="fa-solid fa-search absolute left-4 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div id="member-bookmarks-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><i class="fa-solid fa-spinner fa-spin text-2xl text-cta mb-3"></i><p>載入文章收藏中...</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -600,6 +680,7 @@
                     <div>
                         <div class="mx-auto h-16 w-16 bg-primary text-accent flex items-center justify-center rounded-2xl font-bold text-3xl shadow-sm">T</div>
                         <h2 class="mt-8 text-center text-3xl font-extrabold text-primary">會員身分驗證</h2>
+                        <p class="mt-3 text-center text-sm text-textSub">請使用 Email 登入或註冊 TONY STUDIO</p>
                     </div>
                     <div class="mt-8 space-y-6">
                         <div class="flex rounded-lg shadow-sm p-1 bg-gray-100" role="group">
@@ -607,12 +688,12 @@
                           <button type="button" id="tab-register" onclick="window.toggleAuthMode('register')" class="flex-1 px-4 py-2.5 text-sm font-bold bg-transparent text-textSub hover:text-primary rounded-md transition">註冊</button>
                         </div>
                         <form id="auth-form" class="space-y-5" onsubmit="window.handleEmailLogin(event)">
-                            <div><input id="email" type="email" required class="appearance-none rounded-lg block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-1 focus:ring-cta focus:border-cta" placeholder="電子郵件地址"></div>
+                            <div><input id="email" name="email" type="email" required class="appearance-none rounded-lg block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-1 focus:ring-cta focus:border-cta text-base md:text-sm bg-gray-50 focus:bg-white transition" placeholder="電子郵件地址"></div>
                             <div class="relative">
-                                <input id="password" type="password" required class="appearance-none rounded-lg block w-full px-4 py-3 pr-10 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-1 focus:ring-cta focus:border-cta" placeholder="密碼">
-                                <button type="button" onclick="window.togglePassword('password', 'toggle-password-icon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary"><i id="toggle-password-icon" class="fa-regular fa-eye text-lg"></i></button>
+                                <input id="password" name="password" type="password" required class="appearance-none rounded-lg block w-full px-4 py-3 pr-10 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-1 focus:ring-cta focus:border-cta text-base md:text-sm bg-gray-50 focus:bg-white transition" placeholder="密碼 (至少 6 個字元)">
+                                <button type="button" onclick="window.togglePassword('password', 'toggle-password-icon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary transition"><i id="toggle-password-icon" class="fa-regular fa-eye text-lg"></i></button>
                             </div>
-                            <button type="submit" id="submit-btn" class="w-full py-3 border border-transparent text-base font-bold rounded-lg text-white bg-cta hover:bg-blue-700 transition shadow-md">Email 登入</button>
+                            <button type="submit" id="submit-btn" class="w-full flex justify-center py-3 px-4 border border-transparent text-base font-bold rounded-lg text-white bg-cta hover:bg-blue-700 transition shadow-md">Email 登入</button>
                         </form>
                     </div>
                 </div>
@@ -621,7 +702,7 @@
         admin: `
             <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
                 <div class="w-full md:w-64 bg-primary text-white flex-shrink-0 flex flex-col h-auto md:min-h-screen">
-                    <div class="p-6 border-b border-gray-700"><h2 class="text-xl font-bold flex items-center gap-2 text-accent"><i class="fa-solid fa-sliders"></i> TONY CMS</h2></div>
+                    <div class="p-6 border-b border-gray-700"><h2 class="text-xl font-bold flex items-center gap-2 text-accent"><i class="fa-solid fa-sliders"></i> TONY CMS</h2><p class="text-xs text-gray-400 mt-2">超級管理員控制面板</p></div>
                     <nav class="flex-grow p-4 space-y-2 flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible">
                         <a href="#/admin" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 bg-secondary text-white rounded-lg transition font-bold"><i class="fa-solid fa-house w-5 text-center"></i> 營運總覽</a>
                         <a href="#/admin/articles" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-pen-nib w-5 text-center"></i> 內容管理 (CMS)</a>
@@ -633,8 +714,15 @@
                 <div class="flex-grow p-4 md:p-10">
                     <h1 class="text-2xl md:text-3xl font-bold text-primary mb-8">營運總覽</h1>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center"><h3 class="text-lg font-bold text-primary">最新電子報訂閱名單</h3></div>
-                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse"><tbody id="admin-subscribers-list"></tbody></table></div>
+                        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-primary">最新電子報訂閱名單</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-gray-100 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold whitespace-nowrap">訂閱時間</th><th class="px-6 py-4 font-bold whitespace-nowrap">Email 信箱</th></tr></thead>
+                                <tbody id="admin-subscribers-list" class="divide-y divide-gray-200"><tr><td colspan="2" class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -657,7 +745,12 @@
                         <a href="#/admin/articles/new" class="bg-cta hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-md flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增文章</a>
                     </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse"><tbody id="admin-articles-list"></tbody></table></div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold whitespace-nowrap">標題與分類</th><th class="px-6 py-4 font-bold whitespace-nowrap">狀態</th><th class="px-6 py-4 font-bold whitespace-nowrap">建立時間</th><th class="px-6 py-4 font-bold text-right whitespace-nowrap">操作</th></tr></thead>
+                                <tbody id="admin-articles-list" class="divide-y divide-gray-200"><tr><td colspan="4" class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -666,59 +759,79 @@
             <div class="bg-gray-50 min-h-screen">
                 <div class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
                     <div class="w-full max-w-full px-4 md:px-8 py-4 flex items-center justify-between">
-                        <div class="flex items-center gap-4"><a href="#/admin/articles" class="text-textSub hover:text-primary font-bold"><i class="fa-solid fa-arrow-left"></i> 返回</a><h1 class="text-lg font-bold text-primary pl-4 border-l-2 border-gray-200" id="editor-title">新增文章</h1></div>
-                        <button onclick="window.saveArticle(event)" class="bg-cta hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-md"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存文章</button>
+                        <div class="flex items-center gap-4"><a href="#/admin/articles" class="text-textSub hover:text-primary transition font-bold"><i class="fa-solid fa-arrow-left"></i> 返回</a><h1 class="text-lg md:text-xl font-bold text-primary border-l-2 border-gray-200 pl-4" id="editor-title">新增文章</h1></div>
+                        <button id="btn-save-article" onclick="window.saveArticle(event)" class="bg-cta hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-bold transition shadow-md flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存文章</button>
                     </div>
                 </div>
-                <div class="w-full max-w-full px-4 md:px-8 py-6">
-                    <form id="article-form" class="space-y-6">
+                <div class="w-full max-w-full px-4 md:px-8 py-6 md:py-10">
+                    <form id="article-form" class="space-y-8">
                         <input type="hidden" id="article-id">
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="md:col-span-2 space-y-6">
-                                <div><label class="block text-sm font-bold text-gray-700 mb-2">文章標題 *</label><input type="text" id="article-title-input" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-bold text-lg"></div>
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">封面圖片</label>
-                                    <div class="flex items-center gap-6">
-                                        <img id="cover-preview-img" src="https://placehold.co/800x400/E2E8F0/64748B?text=Cover" class="w-40 h-24 object-cover rounded-lg shadow-sm border border-gray-200">
-                                        <input type="file" id="article-cover-file" accept="image/*" onchange="window.previewImage(event, 'cover-preview-img')" class="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div class="md:col-span-2 space-y-6">
+                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">文章標題 *</label><input type="text" id="article-title-input" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-bold text-base md:text-lg"></div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">封面圖片</label>
+                                        <div class="flex items-center gap-6">
+                                            <img id="cover-preview-img" src="https://placehold.co/800x400/E2E8F0/64748B?text=Cover" class="w-40 h-24 object-cover rounded-lg shadow-sm border border-gray-200">
+                                            <input type="file" id="article-cover-file" accept="image/*" onchange="window.previewImage(event, 'cover-preview-img')" class="text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition w-full">
+                                        </div>
+                                        <input type="hidden" id="article-cover-input">
                                     </div>
-                                    <input type="hidden" id="article-cover-input">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-2">
+                                            <label class="block text-sm font-bold text-gray-700">文章摘要 *</label>
+                                            <button type="button" onclick="window.generateAIExcerpt()" class="text-xs font-bold text-accent bg-secondary hover:bg-primary px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 依正文產出長篇摘要</button>
+                                        </div>
+                                        <textarea id="article-excerpt-input" required rows="5" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div class="flex justify-between items-center mb-2">
-                                        <label class="block text-sm font-bold text-gray-700">文章摘要 *</label>
-                                        <button type="button" onclick="window.generateAIExcerpt()" class="text-xs font-bold text-accent bg-secondary hover:bg-primary px-3 py-1 rounded transition"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 產出摘要</button>
-                                    </div>
-                                    <textarea id="article-excerpt-input" required rows="4" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea>
+                                <div class="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">發布狀態 *</label><select id="article-status-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm bg-white shadow-sm"><option value="draft">草稿 (隱藏)</option><option value="published">已發布 (公開)</option></select></div>
+                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">分類 *</label><select id="article-category-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm bg-white shadow-sm"></select></div>
                                 </div>
                             </div>
-                            <div class="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                                <div><label class="block text-sm font-bold text-gray-700 mb-2">發布狀態 *</label><select id="article-status-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg"><option value="draft">草稿</option><option value="published">已發布</option></select></div>
-                                <div><label class="block text-sm font-bold text-gray-700 mb-2">分類 *</label><select id="article-category-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg"></select></div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 md:p-8 rounded-2xl shadow-sm border border-blue-100">
+                            <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-wand-magic-sparkles text-accent"></i> AI 寫作助手</h3>
+                            <div class="mb-6"><label class="block text-sm font-bold text-gray-700 mb-2">請描述寫作主題 *</label><textarea id="ai-prompt" rows="3" placeholder="幫我寫一篇關於..." class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base bg-white"></textarea></div>
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <button type="button" onclick="window.generateCoverPrompt()" class="bg-white border border-gray-300 px-6 py-2.5 rounded-lg font-bold shadow-sm"><i class="fa-solid fa-image"></i> 依正文產生封面 Prompt</button>
+                                <button type="button" onclick="window.generateAIContent()" class="bg-primary text-accent px-6 py-2.5 rounded-lg font-bold shadow-md"><i class="fa-solid fa-pen-nib"></i> AI 生成內文</button>
+                            </div>
+                            <div id="ai-prompt-result-container" class="mt-4 hidden flex-col md:flex-row gap-3">
+                                <input type="text" id="ai-cover-prompt-result" readonly class="flex-grow px-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-700 font-mono text-base md:text-sm">
+                                <button type="button" onclick="window.copyPrompt()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold shadow-sm transition whitespace-nowrap"><i class="fa-solid fa-copy text-cta"></i> 複製</button>
                             </div>
                         </div>
 
                         <!-- 編輯器區塊 -->
                         <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-gray-200 relative" id="editor-wrapper">
-                            <div class="flex justify-between items-center mb-4">
-                                <label class="block text-sm font-bold text-gray-700">文章正文 * <span class="text-xs text-gray-400 font-normal ml-2">提示：在表格內按右鍵可調整</span></label>
-                                <button type="button" onclick="window.formatContentWithAI()" class="text-sm font-bold bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg"><i class="fa-solid fa-highlighter"></i> AI 智能排版</button>
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                                <label class="block text-sm font-bold text-gray-700">文章正文 * <span class="text-xs text-gray-400 font-normal ml-2 hidden md:inline">提示：在表格內按右鍵可增減行列與調整寬度</span></label>
+                                <button type="button" onclick="window.formatContentWithAI()" class="w-full md:w-auto text-sm font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-highlighter"></i> AI 智能排版與畫重點</button>
                             </div>
+                            
                             <div id="editor-container"></div>
                             
-                            <!-- 表格右鍵選單 -->
-                            <div id="table-context-menu" class="hidden absolute z-[110] bg-white border border-gray-200 shadow-2xl rounded-xl py-2 w-56 text-sm">
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowAbove')" class="w-full text-left px-5 py-2 hover:bg-blue-50 text-gray-700 flex items-center"><i class="fa-solid fa-arrow-up mr-3 w-4"></i>向上插入一列</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowBelow')" class="w-full text-left px-5 py-2 hover:bg-blue-50 text-gray-700 flex items-center"><i class="fa-solid fa-arrow-down mr-3 w-4"></i>向下插入一列</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnLeft')" class="w-full text-left px-5 py-2 hover:bg-blue-50 text-gray-700 flex items-center"><i class="fa-solid fa-arrow-left mr-3 w-4"></i>向左插入一欄</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnRight')" class="w-full text-left px-5 py-2 hover:bg-blue-50 text-gray-700 flex items-center"><i class="fa-solid fa-arrow-right mr-3 w-4"></i>向右插入一欄</button>
+                            <!-- 專屬手刻的原生右鍵表格選單與寬度控制 -->
+                            <div id="table-context-menu" class="hidden absolute z-[110] bg-white border border-gray-200 shadow-2xl rounded-xl py-2 w-56 text-sm transform transition-all">
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowAbove')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-up mr-3 text-gray-400 w-4"></i>向上插入一列</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowBelow')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-down mr-3 text-gray-400 w-4"></i>向下插入一列</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnLeft')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-left mr-3 text-gray-400 w-4"></i>向左插入一欄</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnRight')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-right mr-3 text-gray-400 w-4"></i>向右插入一欄</button>
+                                
                                 <div class="my-1 border-t border-gray-100"></div>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'increaseWidth')" class="w-full text-left px-5 py-2 hover:bg-blue-50 text-gray-700 flex items-center"><i class="fa-solid fa-expand mr-3 text-cta w-4"></i>加寬此欄位</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'decreaseWidth')" class="w-full text-left px-5 py-2 hover:bg-blue-50 text-gray-700 flex items-center"><i class="fa-solid fa-compress mr-3 text-cta w-4"></i>縮窄此欄位</button>
+                                <div class="px-5 py-1 text-gray-400 text-[10px] font-bold bg-gray-50 uppercase tracking-widest">欄位寬度調整</div>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'increaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-expand mr-3 text-cta w-4"></i>加寬此欄位 (+40px)</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'decreaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-compress mr-3 text-cta w-4"></i>縮窄此欄位 (-40px)</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'autoWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-wand-magic-sparkles mr-3 text-accent w-4"></i>自動適應內容寬度</button>
+
                                 <div class="my-1 border-t border-gray-100"></div>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteRow')" class="w-full text-left px-5 py-2 hover:bg-red-50 text-red-600 flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這列</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteColumn')" class="w-full text-left px-5 py-2 hover:bg-red-50 text-red-600 flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這欄</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteTable')" class="w-full text-left px-5 py-2 hover:bg-red-50 text-red-600 font-bold flex items-center"><i class="fa-solid fa-trash-can mr-3 w-4"></i>刪除整個表格</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteRow')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這列</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteColumn')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這欄</button>
+                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteTable')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-bold transition flex items-center"><i class="fa-solid fa-trash-can mr-3 w-4"></i>刪除整個表格</button>
                             </div>
                         </div>
                     </form>
@@ -740,7 +853,12 @@
                 <div class="flex-grow p-4 md:p-10 relative">
                     <h1 class="text-2xl md:text-3xl font-bold text-primary mb-8">商機與預約名單</h1>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse"><tbody id="admin-leads-list"></tbody></table></div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-gray-50 border-b border-gray-200 text-textSub text-sm"><th class="px-6 py-4 font-bold whitespace-nowrap">送出時間</th><th class="px-6 py-4 font-bold">預約細節</th></tr></thead>
+                                <tbody id="admin-leads-list" class="divide-y divide-gray-200"><tr><td colspan="2" class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-cta text-2xl"></i></td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -757,36 +875,40 @@
                         <a href="#/admin/settings" class="whitespace-nowrap flex items-center gap-3 px-4 py-3 text-gray-300 hover:bg-secondary hover:text-white rounded-lg transition"><i class="fa-solid fa-gear w-5 text-center"></i> 全域網站設定</a>
                     </nav>
                 </div>
-                <div class="flex-grow p-4 md:p-10 relative w-full overflow-hidden">
+                <div class="flex-grow p-4 md:p-8 lg:p-10 relative w-full overflow-hidden">
                     <h1 class="text-2xl md:text-3xl font-bold text-primary mb-8">撰寫與發送電子報</h1>
+                    
                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                         <div class="lg:col-span-3 space-y-6">
                             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 w-full">
                                 <form onsubmit="window.sendNewsletter(event)" class="space-y-6">
                                     <div>
                                         <label class="block text-sm font-bold text-gray-700 mb-2">電子報主旨 *</label>
-                                        <input type="text" id="newsletter-subject" required class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-bold">
+                                        <input type="text" id="newsletter-subject" required placeholder="例如：【TONY STUDIO】本週 AI 科技與行銷洞察" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-bold text-base">
                                     </div>
                                     <div class="w-full max-w-full overflow-x-auto">
                                         <label class="block text-sm font-bold text-gray-700 mb-2">電子報內容 *</label>
                                         <div id="newsletter-editor-container" class="bg-white w-full"></div>
                                     </div>
                                     <div class="pt-4 border-t border-gray-100 flex justify-end">
-                                        <button type="submit" id="btn-send-newsletter" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md transition"><i class="fa-solid fa-paper-plane mr-2"></i>確認並發送</button>
+                                        <button type="submit" id="btn-send-newsletter" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md transition flex items-center gap-2">
+                                            <i class="fa-solid fa-paper-plane"></i> 確認並發送給所有訂閱者
+                                        </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
+                        
                         <div class="lg:col-span-1 space-y-4">
                             <div class="bg-blue-50 border border-blue-100 p-5 rounded-xl sticky top-24">
                                 <h3 class="font-bold text-primary mb-2 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-cta"></i> 快速套用模板</h3>
-                                <p class="text-sm text-gray-600 mb-4">點擊下方模板可快速載入預設排版，這會覆蓋現有內容。</p>
+                                <p class="text-sm text-gray-600 mb-4">點擊下方模板可快速載入預設排版，請注意這會覆蓋編輯器中現有的內容。</p>
                                 <div class="space-y-3">
-                                    <button type="button" onclick="window.applyNewsletterTemplate('weekly')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm text-primary transition"><i class="fa-regular fa-newspaper text-cta w-4"></i> 每週精選彙整</button>
-                                    <button type="button" onclick="window.applyNewsletterTemplate('new_post')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm text-primary transition"><i class="fa-solid fa-bullhorn text-cta w-4"></i> 最新文章發布</button>
-                                    <button type="button" onclick="window.applyNewsletterTemplate('event')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm text-primary transition"><i class="fa-regular fa-calendar-check text-cta w-4"></i> 活動與課程宣傳</button>
-                                    <button type="button" onclick="window.applyNewsletterTemplate('insight')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm text-primary transition"><i class="fa-regular fa-lightbulb text-cta w-4"></i> 專業洞察與心法</button>
-                                    <button type="button" onclick="window.applyNewsletterTemplate('update')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm text-primary transition"><i class="fa-regular fa-hand text-cta w-4"></i> 近況更新與問候</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('weekly')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-newspaper text-cta w-4"></i> 📰 每週精選彙整</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('new_post')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-solid fa-bullhorn text-cta w-4"></i> 🚀 最新文章發布</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('event')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-calendar-check text-cta w-4"></i> 🎉 活動與課程宣傳</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('insight')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-lightbulb text-cta w-4"></i> 💡 專業洞察與心法</button>
+                                    <button type="button" onclick="window.applyNewsletterTemplate('update')" class="w-full text-left px-4 py-3 bg-white hover:bg-blue-100 border border-blue-200 rounded-lg transition shadow-sm font-bold text-sm text-primary flex items-center gap-3"><i class="fa-regular fa-hand text-cta w-4"></i> 👋 近況更新與問候</button>
                                 </div>
                             </div>
                         </div>
@@ -810,65 +932,383 @@
                     <h1 class="text-2xl md:text-3xl font-bold text-primary mb-8">全域網站設定</h1>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 max-w-5xl">
                         <form onsubmit="window.saveSiteSettings(event)" class="space-y-8">
-                            <!-- 3 欄式 Logo / Profile 圖片上傳 -->
+                            
+                            <!-- 三欄式 Logo 與頭像設定 -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 border-b border-gray-100 pb-8">
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">網站品牌 LOGO (上方)</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-3">導覽列 LOGO (上方)</label>
                                     <div class="flex flex-col gap-3">
-                                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center justify-center h-20">
-                                            <img id="settings-header-logo-preview" src="https://placehold.co/300x100/163A63/FFF?text=Header" class="h-12 w-auto object-contain">
+                                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex justify-center items-center min-h-[80px]">
+                                            <img id="settings-header-logo-preview" src="https://placehold.co/300x100/163A63/FFF?text=Header+LOGO" class="h-12 w-auto object-contain">
                                         </div>
-                                        <input type="file" id="settings-header-logo" accept="image/*" onchange="window.previewImage(event, 'settings-header-logo-preview')" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                        <input type="file" id="settings-header-logo" accept="image/*" onchange="window.previewImage(event, 'settings-header-logo-preview')" class="text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 w-full transition">
                                         <input type="hidden" id="hidden-header-logo">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">網站品牌 LOGO (下方)</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-3">頁尾 LOGO (下方黑底)</label>
                                     <div class="flex flex-col gap-3">
-                                        <div class="bg-gray-800 border border-gray-700 rounded-lg p-2 flex items-center justify-center h-20">
-                                            <img id="settings-footer-logo-preview" src="https://placehold.co/300x100/0B1F3A/FFF?text=Footer" class="h-12 w-auto object-contain">
+                                        <div class="bg-primary p-3 rounded-lg border border-gray-200 flex justify-center items-center min-h-[80px]">
+                                            <img id="settings-footer-logo-preview" src="https://placehold.co/300x100/0B1F3A/FFF?text=Footer+LOGO" class="h-12 w-auto object-contain">
                                         </div>
-                                        <input type="file" id="settings-footer-logo" accept="image/*" onchange="window.previewImage(event, 'settings-footer-logo-preview')" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                        <input type="file" id="settings-footer-logo" accept="image/*" onchange="window.previewImage(event, 'settings-footer-logo-preview')" class="text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 w-full transition">
                                         <input type="hidden" id="hidden-footer-logo">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">首頁大頭貼 (Profile)</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-3">首頁大頭貼</label>
                                     <div class="flex flex-col gap-3">
-                                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center justify-center h-20">
-                                            <img id="settings-preview-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY" class="w-16 h-16 rounded-full object-cover shadow-sm">
+                                        <div class="flex justify-center items-center min-h-[80px]">
+                                            <img id="settings-preview-img" src="https://placehold.co/400x400/163A63/C9A24B?text=TONY" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200 shadow-sm">
                                         </div>
-                                        <input type="file" id="settings-profile-img" accept="image/*" onchange="window.previewImage(event, 'settings-preview-img')" class="text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition">
+                                        <input type="file" id="settings-profile-img" accept="image/*" onchange="window.previewImage(event, 'settings-preview-img')" class="text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded file:border-0 file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 w-full transition">
                                         <input type="hidden" id="hidden-profile-img">
                                     </div>
                                 </div>
                             </div>
+
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">首頁大標題 (支援 HTML)</label><textarea id="settings-hero-title" rows="2" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-mono text-base md:text-sm"></textarea></div>
+                            <div><label class="block text-sm font-bold text-gray-700 mb-2">首頁個人簡介</label><textarea id="settings-hero-bio" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea></div>
                             
-                            <div><label class="block text-sm font-bold text-gray-700 mb-2">首頁大標題 (支援 HTML)</label><textarea id="settings-hero-title" rows="2" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"></textarea></div>
-                            <div><label class="block text-sm font-bold text-gray-700 mb-2">首頁個人簡介</label><textarea id="settings-hero-bio" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"></textarea></div>
-                            
-                            <h3 class="text-xl font-bold text-primary mb-4 mt-8"><i class="fa-solid fa-link text-accent mr-2"></i>社群連結設定</h3>
+                            <h3 class="text-xl font-bold text-primary mb-4 mt-8 flex items-center gap-2"><i class="fa-solid fa-link text-accent"></i> 社群連結設定</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-facebook text-blue-600 mr-1"></i>Facebook</label><input type="url" id="settings-social-fb" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"></div>
-                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-linkedin text-blue-700 mr-1"></i>LinkedIn</label><input type="url" id="settings-social-linkedin" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"></div>
-                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-youtube text-red-600 mr-1"></i>YouTube</label><input type="url" id="settings-social-yt" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-facebook text-blue-600"></i> Facebook 網址</label><input type="url" id="settings-social-fb" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-linkedin text-blue-700"></i> LinkedIn 網址</label><input type="url" id="settings-social-linkedin" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-youtube text-red-600"></i> YouTube 網址</label><input type="url" id="settings-social-yt" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-instagram text-pink-600"></i> Instagram 網址</label><input type="url" id="settings-social-ig" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2"><i class="fa-brands fa-tiktok text-black"></i> TikTok 網址</label><input type="url" id="settings-social-tiktok" placeholder="https://..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm"></div>
+                            </div>
+
+                            <hr class="border-gray-100 mt-8 mb-8">
+                            <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-2"><i class="fa-solid fa-address-card text-accent"></i> 專業背景與里程碑</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2">核心專長</label><textarea id="settings-skills" rows="4" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-base md:text-sm"></textarea></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2">重要經歷</label><textarea id="settings-experience" rows="4" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-base md:text-sm"></textarea></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2">企業輔導 / 人才認證</label><textarea id="settings-certifications" rows="4" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-base md:text-sm"></textarea></div>
+                                <div><label class="block text-sm font-bold text-gray-700 mb-2">專案主持與政府產業專案紀錄</label><textarea id="settings-books" rows="4" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-base md:text-sm"></textarea></div>
+                            </div>
+
+                            <h3 class="text-xl font-bold text-primary mb-4 mt-8 flex items-center gap-2"><i class="fa-solid fa-robot text-accent"></i> AI 系統與金鑰設定</h3>
+                            <div class="bg-blue-50 border border-blue-100 p-6 rounded-xl">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Gemini API 金鑰 (存於本地端)</label>
+                                <div class="flex flex-col md:flex-row gap-4">
+                                    <input type="password" id="settings-api-key" placeholder="輸入您的 AIza... 金鑰" class="flex-grow px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-mono text-base md:text-sm shadow-inner">
+                                    <button type="button" onclick="window.saveSettingsApiKey()" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-bold shadow-sm transition whitespace-nowrap">儲存金鑰</button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2"><i class="fa-solid fa-circle-info mr-1"></i> 此金鑰僅儲存於您的瀏覽器 (LocalStorage) 中，絕不會上傳至任何資料庫，請安心使用。</p>
                             </div>
 
                             <div class="pt-8 border-t border-gray-100 mt-8">
-                                <button type="submit" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md w-full md:w-auto"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>儲存全域設定</button>
+                                <button type="submit" id="btn-save-settings" class="bg-cta hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md w-full md:w-auto"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存全域設定</button>
                             </div>
                         </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 max-w-5xl mt-10">
+                        <h2 class="text-2xl font-bold text-primary mb-6 flex items-center gap-2"><i class="fa-solid fa-tags text-accent"></i> 文章分類管理</h2>
+                        <div class="flex gap-4 mb-6">
+                            <input type="text" id="new-category-input" placeholder="輸入新分類名稱..." class="flex-grow px-5 py-3 border border-gray-300 rounded-lg text-base md:text-sm">
+                            <button id="btn-add-category" onclick="window.createCategory()" class="bg-secondary hover:bg-primary text-white px-6 py-3 rounded-lg font-bold shadow-sm"><i class="fa-solid fa-plus"></i> 新增</button>
+                        </div>
+                        <div id="settings-categories-list" class="space-y-3"></div>
                     </div>
                 </div>
             </div>
         `
     };
 
-    window.restoreDailyNews = () => { /* Daily News Logic (Cached from earlier code) */ };
-    window.fetchDailyNews = async () => { /* Fetch News API Logic */ };
-    window.renderNewsGrid = async () => { /* Render Grid Logic */ };
-    window.renderAllTimeTrending = async () => { /* Trending Logic */ };
-    window.likeNews = async (index) => { /* Like News Logic */ };
+    window.restoreDailyNews = () => {
+        const cachedJson = localStorage.getItem('tony_news_cache_json');
+        const cachedTime = localStorage.getItem('tony_news_cache_time');
+        const container = document.getElementById('daily-news-container');
+        const dateDisplay = document.getElementById('daily-news-date');
+        const btn = document.getElementById('btn-fetch-news');
+
+        let shouldFetch = false;
+
+        if (cachedJson && cachedTime && container) {
+            try {
+                window.currentNewsData = JSON.parse(cachedJson);
+                window.renderNewsGrid(); 
+                if(dateDisplay) dateDisplay.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> 暫存更新時間：${cachedTime}`;
+                if(btn) btn.classList.add('animate-pulse', 'ring-4', 'ring-blue-500/30');
+
+                const cacheDate = new Date(cachedTime);
+                const now = new Date();
+                const diffHours = Math.abs(now - cacheDate) / 36e5;
+                if (diffHours > 12) shouldFetch = true;
+            } catch (e) {
+                shouldFetch = true;
+            }
+        } else {
+            if(dateDisplay) dateDisplay.innerHTML = `<i class="fa-regular fa-calendar"></i> 今日日期：${new Date().toLocaleDateString('zh-TW')}`;
+            if(btn) btn.classList.add('animate-pulse', 'ring-4', 'ring-blue-500/30');
+            shouldFetch = true;
+        }
+
+        if (shouldFetch) {
+            if(window.getApiKey()) {
+               setTimeout(() => { if(window.fetchDailyNews) window.fetchDailyNews(); }, 800);
+            } else {
+                if(container) container.innerHTML = `
+                    <div class="py-24 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <i class="fa-solid fa-key text-5xl text-gray-300 mb-6"></i>
+                        <p class="text-xl font-bold text-gray-400 mb-2">等待輸入金鑰</p>
+                        <p class="text-sm text-gray-500">請在上方設定金鑰後，點擊更新按鈕取得新聞。</p>
+                    </div>`;
+            }
+        }
+
+        window.renderAllTimeTrending();
+    };
+
+    window.fetchDailyNews = async () => {
+        const container = document.getElementById('daily-news-container');
+        const btn = document.getElementById('btn-fetch-news');
+        
+        if (!window.getApiKey()) {
+            window.showApiKeyModal();
+            return;
+        }
+
+        if(btn) btn.classList.remove('animate-pulse', 'ring-4', 'ring-blue-500/30');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="py-24 text-center text-textSub bg-blue-50/50 rounded-xl border border-blue-100 shadow-inner">
+                <i class="fa-solid fa-satellite-dish fa-beat text-5xl text-cta mb-6"></i>
+                <p class="text-xl font-bold text-primary mb-2">AI 正在啟動全球聯網機制</p>
+                <p class="text-sm text-gray-500">為您搜羅並深度分析今日最新情報... (約需 10-15 秒)</p>
+            </div>
+        `;
+        
+        try {
+            const systemPrompt = "你是一位頂尖的國際科技與財經新聞總編。\n【嚴格輸出格式指示】\n你必須搜尋今日最新新聞，並精準輸出 8 則新聞 (6則全球重點, 2則台灣重點)。\n絕對不要使用 JSON 格式。請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。\n\n範例格式：\nCATEGORY: 科技情報\nTITLE: 蘋果發表最新 AI 功能\nSUMMARY: 蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮...\nURL: https://example.com/news1\n===NEWS===\nCATEGORY: 財經趨势\n...\n\n【內容規範】\n1. SUMMARY (摘要) 必須達 150 - 200 字，深入分析。\n2. 請務必在 SUMMARY 中，將專有名詞、企業名稱、重要數據用**雙星號**包裝起來。\n3. URL 必須是真實、可點擊的新聞網址。";
+
+            const userPrompt = "請開始搜尋並輸出今日最新的 8 則 AI、財經與數位行銷新聞。";
+            
+            const extraOptions = {
+                generationConfig: { maxOutputTokens: 8192 }
+            };
+
+            const textResponse = await window.callGeminiAPI(systemPrompt, userPrompt, true, extraOptions);
+            
+            if (!textResponse || textResponse.trim() === '') {
+                throw new Error("AI 回傳了空白內容，請稍後重試。");
+            }
+
+            const newsData = [];
+            const newsBlocks = textResponse.split('===NEWS===');
+            
+            for (const block of newsBlocks) {
+                const lines = block.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                if (lines.length < 4) continue; 
+
+                let category = '科技情報';
+                let title = '未命名新聞';
+                let summary = '';
+                let url = '#';
+
+                for (const line of lines) {
+                    if (line.startsWith('CATEGORY:')) category = line.replace('CATEGORY:', '').trim();
+                    else if (line.startsWith('TITLE:')) title = line.replace('TITLE:', '').trim();
+                    else if (line.startsWith('URL:')) url = line.replace('URL:', '').trim();
+                    else if (line.startsWith('SUMMARY:')) summary = line.replace('SUMMARY:', '').trim();
+                    else if (summary !== '' && !line.startsWith('CATEGORY:') && !line.startsWith('TITLE:') && !line.startsWith('URL:')) {
+                        summary += ' ' + line;
+                    }
+                }
+                
+                if (title !== '未命名新聞' && url !== '#') {
+                    newsData.push({ category, title, summary, url });
+                }
+            }
+
+            if (newsData.length === 0) {
+                 throw new Error("無法從 AI 回應中解析出新聞資料。");
+            }
+
+            window.currentNewsData = newsData.slice(0, 8); 
+            const timestamp = new Date().toLocaleString('zh-TW');
+            localStorage.setItem('tony_news_cache_json', JSON.stringify(window.currentNewsData));
+            localStorage.setItem('tony_news_cache_time', timestamp);
+            
+            const newDateDisplay = document.getElementById('daily-news-date');
+            if(newDateDisplay) newDateDisplay.innerHTML = `<i class="fa-regular fa-clock"></i> 最新更新：${timestamp}`;
+            window.renderNewsGrid();
+            window.renderAllTimeTrending(); 
+            showToast("今日新聞情報彙整完畢！", "success");
+            
+        } catch (error) {
+            console.error("新聞抓取失敗:", error);
+            if (error.message.includes("MISSING_API_KEY")) return;
+            const errContainer = document.getElementById('daily-news-container');
+            if(errContainer) errContainer.innerHTML = `<div class="py-20 text-center text-red-500 bg-red-50 rounded-xl border border-red-100 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation text-4xl mb-4"></i>
+                <p class="font-bold text-lg">抓取失敗，請稍後重試。</p>
+                <p class="text-sm text-red-400 mt-2">${error.message}</p>
+                <div class="mt-4 p-4 bg-white/50 rounded text-left text-xs font-mono text-gray-600 max-w-2xl mx-auto overflow-auto border border-red-200">如果錯誤持續發生，請確認您的 API 金鑰額度，或嘗試重新整理頁面。</div>
+            </div>`;
+            showToast("新聞抓取失敗", "error");
+        }
+    };
+
+    window.renderNewsGrid = async () => {
+        const container = document.getElementById('daily-news-container');
+        if (!container || !window.currentNewsData || window.currentNewsData.length === 0) return;
+
+        let globalLikes = {};
+        try {
+            const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
+            const snap = await window.FS.getDocs(likesRef);
+            snap.forEach(doc => {
+                globalLikes[doc.data().url] = doc.data().count;
+            });
+        } catch (e) {
+            console.warn("無法取得全網熱門數據", e);
+        }
+
+        let likedUrls = [];
+        try {
+            likedUrls = JSON.parse(localStorage.getItem('tony_liked_news') || '[]');
+        } catch(e) {}
+
+        let finalHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
+        
+        window.currentNewsData.forEach((news, index) => {
+            const likeCount = globalLikes[news.url] || 0;
+            const hasLiked = likedUrls.includes(news.url);
+            
+            let safeSummary = (news.summary || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            safeSummary = safeSummary.replace(/\*\*(.*?)\*\*/g, '<strong class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold mx-0.5">$1</strong>');
+
+            const iconClass = hasLiked ? "fa-solid fa-heart text-red-500" : "fa-regular fa-heart text-gray-400 group-hover:text-red-400";
+            const btnClass = hasLiked ? "text-red-500 cursor-default" : "text-gray-400 hover:text-red-500 transition cursor-pointer";
+            const clickEvent = hasLiked ? "" : `onclick="window.likeNews(${index})"`;
+
+            finalHtml += `
+            <div class="p-6 bg-white rounded-xl border border-gray-200 hover:shadow-xl hover:border-blue-200 transition flex flex-col h-full group">
+                <div class="mb-5 flex items-center justify-between border-b border-gray-50 pb-4">
+                    <span class="px-3 py-1 bg-blue-50 text-cta text-xs font-bold rounded-full border border-blue-100">${news.category || '科技情報'}</span>
+                    <button id="btn-like-${index}" ${clickEvent} class="flex items-center gap-2 ${btnClass} px-3 py-1.5 rounded-full hover:bg-red-50 transition shadow-sm border border-transparent hover:border-red-100" title="推薦這則新聞">
+                        <i class="${iconClass} text-xl"></i>
+                        <span id="like-count-${index}" class="font-bold text-sm ${hasLiked ? 'text-red-500' : 'text-gray-500'}">${likeCount > 0 ? likeCount : '推薦'}</span>
+                    </button>
+                </div>
+                <h3 class="text-xl font-bold text-primary mb-4 leading-snug group-hover:text-cta transition">${news.title}</h3>
+                <p class="text-textSub mb-6 text-sm leading-relaxed flex-grow">
+                    ${safeSummary}
+                </p>
+                <div class="mt-auto flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg border border-gray-100">
+                    <span class="text-xs text-gray-400 font-medium"><i class="fa-regular fa-clock"></i> 今日最新</span>
+                    <a href="${news.url}" target="_blank" class="text-cta hover:text-blue-800 font-bold text-sm inline-flex items-center gap-2"><i class="fa-solid fa-arrow-up-right-from-square"></i> 閱讀原文</a>
+                </div>
+            </div>`;
+        });
+        finalHtml += '</div>';
+        container.innerHTML = finalHtml;
+    };
+
+    window.renderAllTimeTrending = async () => {
+        const container = document.getElementById('all-time-trending-container');
+        if(!container) return;
+        try {
+            const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
+            const q = window.FS.query(likesRef, window.FS.orderBy("count", "desc"), window.FS.limit(5));
+            const snap = await window.FS.getDocs(q);
+            
+            if(snap.empty) {
+                container.innerHTML = '<p class="text-textSub text-center py-6 bg-white/50 rounded-xl border border-dashed border-orange-200">目前尚無熱門推薦，快去為喜歡的新聞按讚吧！</p>';
+                return;
+            }
+            
+            let html = '<div class="space-y-4">';
+            let rank = 1;
+            snap.forEach(doc => {
+                const data = doc.data();
+                let rankColor = rank === 1 ? 'text-yellow-500' : (rank === 2 ? 'text-gray-400' : (rank === 3 ? 'text-amber-600' : 'text-gray-300'));
+                
+                let safeSummary = (data.summary || '此為早期推薦新聞，暫無摘要紀錄。').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                safeSummary = safeSummary.replace(/\*\*(.*?)\*\*/g, '<strong class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold mx-0.5">$1</strong>');
+
+                html += `
+                    <a href="${data.url}" target="_blank" class="block p-5 bg-white border border-orange-50 rounded-xl hover:shadow-lg hover:border-orange-200 transition group relative overflow-hidden">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-4 flex-grow mr-4">
+                                <span class="font-bold text-xl ${rankColor} w-8 text-center flex-shrink-0"><i class="fa-solid ${rank <= 3 ? 'fa-medal' : 'fa-hashtag'}"></i> ${rank > 3 ? rank : ''}</span>
+                                <h3 class="font-bold text-lg text-textMain group-hover:text-accent transition line-clamp-2">${data.title}</h3>
+                            </div>
+                            <span class="flex items-center gap-1.5 text-red-500 font-bold bg-red-50 px-3 py-1.5 rounded-full whitespace-nowrap border border-red-100 shadow-sm flex-shrink-0">
+                                <i class="fa-solid fa-heart fa-beat"></i> ${data.count}
+                            </span>
+                        </div>
+                        <div class="pl-12 pr-2">
+                            <p class="text-sm text-textSub line-clamp-5 leading-relaxed">${safeSummary}</p>
+                        </div>
+                    </a>
+                `;
+                rank++;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        } catch(e) {
+            console.error("載入熱門總榜失敗", e);
+            container.innerHTML = '<p class="text-red-400 text-center py-4">榜單載入失敗</p>';
+        }
+    };
+
+    window.likeNews = async (index) => {
+        const news = window.currentNewsData[index];
+        if (!news) return;
+
+        let likedUrls = JSON.parse(localStorage.getItem('tony_liked_news') || '[]');
+        if (likedUrls.includes(news.url)) return showToast("您已經推薦過這則新聞囉！", "info");
+
+        const btn = document.getElementById(`btn-like-${index}`);
+        const countSpan = document.getElementById(`like-count-${index}`);
+        
+        if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-red-500"></i>';
+
+        try {
+            const likesRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'newsLikes');
+            const q = window.FS.query(likesRef, window.FS.where("url", "==", news.url));
+            const snap = await window.FS.getDocs(q);
+            
+            let newCount = 1;
+            
+            if (!snap.empty) {
+                const docRef = snap.docs[0].ref;
+                newCount = (snap.docs[0].data().count || 0) + 1;
+                await window.FS.updateDoc(docRef, { count: newCount, lastUpdated: window.FS.serverTimestamp(), title: news.title, summary: news.summary });
+            } else {
+                await window.FS.addDoc(likesRef, {
+                    url: news.url,
+                    title: news.title,
+                    summary: news.summary, 
+                    count: 1,
+                    lastUpdated: window.FS.serverTimestamp()
+                });
+            }
+
+            likedUrls.push(news.url);
+            localStorage.setItem('tony_liked_news', JSON.stringify(likedUrls));
+
+            if(countSpan) countSpan.innerText = newCount;
+            if(btn) {
+                btn.innerHTML = `<i class="fa-solid fa-heart text-red-500 text-xl"></i> <span class="font-bold text-sm text-red-500">${newCount}</span>`;
+                btn.className = "flex items-center gap-2 text-red-500 cursor-default px-3 py-1.5 rounded-full bg-red-50 shadow-inner";
+                btn.onclick = null;
+            }
+            showToast("推薦成功！全網熱門指標已更新", "success");
+            
+            window.renderAllTimeTrending();
+
+        } catch (e) {
+            console.error("按讚失敗", e);
+            showToast("系統繁忙，請稍後再試", "error");
+            if(btn) btn.innerHTML = `<i class="fa-regular fa-heart text-gray-400 text-xl"></i> <span class="font-bold text-sm text-gray-500">推薦</span>`;
+        }
+    };
 
     window.renderMemberDashboard = () => {
         const user = window.AppState.user;
@@ -880,16 +1320,233 @@
         }
     };
 
-    window.loadUserBookmarks = async () => { /* Bookmarks Logic */ };
-    window.renderBookmarks = (bookmarks) => { /* Render Bookmarks Logic */ };
-    window.searchBookmarks = (e) => { /* Search Logic */ };
-    window.removeBookmark = async (bookmarkId) => { /* Remove Bookmark */ };
-    window.toggleBookmark = async (articleId, title, coverImage) => { /* Toggle Bookmark */ };
-    window.shareArticle = (type) => { /* Share Link Logic */ };
-    window.renderCommentForm = (articleId) => { /* Comments Form */ };
-    window.submitComment = async (e, articleId) => { /* Submit Comment */ };
-    window.fetchComments = async (articleId) => { /* Fetch Comments */ };
-    window.deleteComment = (commentId, articleId) => { /* Delete Comment */ };
+    window.loadUserBookmarks = async () => {
+        const container = document.getElementById('member-bookmarks-list');
+        if (!container) return;
+        try {
+            const { db, user } = window.AppState;
+            const q = window.FS.query(window.FS.collection(db, "bookmarks"), window.FS.where("userId", "==", user.uid));
+            const snap = await window.FS.getDocs(q);
+            
+            if (snap.empty) {
+                container.innerHTML = '<div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><p>您目前還沒有收藏任何專欄文章。</p></div>';
+                window.userBookmarksCache = [];
+                return;
+            }
+            
+            let bookmarks = [];
+            snap.forEach(doc => bookmarks.push({ id: doc.id, ...doc.data() }));
+            bookmarks.sort((a, b) => (b.savedAt?.seconds || 0) - (a.savedAt?.seconds || 0));
+            window.userBookmarksCache = bookmarks;
+            window.renderBookmarks(bookmarks);
+        } catch(e) {
+            container.innerHTML = '<div class="col-span-full text-center text-red-500">載入失敗，請稍後再試。</div>';
+        }
+    };
+
+    window.renderBookmarks = (bookmarks) => {
+        const container = document.getElementById('member-bookmarks-list');
+        if (!container) return;
+        if (bookmarks.length === 0) {
+            container.innerHTML = '<div class="col-span-full py-16 text-center text-textSub bg-gray-50 rounded-xl border border-dashed border-gray-300"><p>找不到符合條件的收藏。</p></div>';
+            return;
+        }
+        let html = '';
+        bookmarks.forEach(data => {
+            html += `
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+                    <div class="aspect-video w-full bg-gray-200 relative cursor-pointer" onclick="window.location.hash='#/article/${data.articleId}'">
+                        <img src="${data.coverImage}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow">
+                        <h3 class="text-lg font-bold text-textMain mb-3 cursor-pointer hover:text-cta line-clamp-2" onclick="window.location.hash='#/article/${data.articleId}'">${data.title}</h3>
+                        <div class="mt-auto flex justify-between items-center pt-3 border-t border-gray-50">
+                            <span class="text-xs text-gray-400">${data.savedAt ? new Date(data.savedAt.seconds*1000).toLocaleDateString() : ''}</span>
+                            <button onclick="window.removeBookmark('${data.id}')" class="text-red-500 hover:text-red-700 text-sm font-medium transition"><i class="fa-solid fa-trash-can mr-1"></i>移除</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    };
+
+    window.searchBookmarks = (e) => {
+        const keyword = e.target.value.toLowerCase();
+        const filtered = window.userBookmarksCache.filter(b => b.title.toLowerCase().includes(keyword));
+        window.renderBookmarks(filtered);
+    };
+
+    window.removeBookmark = async (bookmarkId) => {
+        try {
+            const { db } = window.AppState;
+            await window.FS.deleteDoc(window.FS.doc(db, "bookmarks", bookmarkId));
+            showToast("已移除收藏", "success");
+            window.loadUserBookmarks();
+        } catch(e) { showToast("移除失敗", "error"); }
+    };
+
+    window.toggleBookmark = async (articleId, title, coverImage) => {
+        const { user, db } = window.AppState;
+        if (!user) { showToast("請先登入會員，即可收藏文章！", "warning"); window.location.hash = '#/login'; return; }
+        const btn = document.getElementById('btn-bookmark-icon');
+        const textSpan = document.getElementById('btn-bookmark-text');
+        const btnParent = btn.parentElement;
+        try {
+            const q = window.FS.query(window.FS.collection(db, "bookmarks"), window.FS.where("userId", "==", user.uid), window.FS.where("articleId", "==", articleId));
+            const snap = await window.FS.getDocs(q);
+            if (!snap.empty) {
+                await window.FS.deleteDoc(window.FS.doc(db, "bookmarks", snap.docs[0].id));
+                btn.className = "fa-regular fa-bookmark text-white mr-2";
+                if(textSpan) textSpan.innerText = "收藏文章";
+                btnParent.className = "px-4 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/10 border-white/20 text-white hover:bg-white/20 text-sm font-bold flex-1 sm:flex-none";
+                showToast("已取消收藏", "info");
+            } else {
+                await window.FS.addDoc(window.FS.collection(db, "bookmarks"), { userId: user.uid, articleId: articleId, title: title, coverImage: coverImage, savedAt: window.FS.serverTimestamp() });
+                btn.className = "fa-solid fa-bookmark text-accent mr-2";
+                if(textSpan) textSpan.innerText = "已收藏";
+                btnParent.className = "px-4 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm bg-white/20 border-accent text-accent text-sm font-bold flex-1 sm:flex-none";
+                showToast("成功加入收藏！", "success");
+            }
+        } catch(e) { showToast("操作失敗", "error"); }
+    };
+
+    window.renderCommentForm = (articleId) => {
+        const formContainer = document.getElementById('comment-form-container');
+        if (!formContainer) return;
+        const user = window.AppState.user;
+        if (user && !user.isAnonymous) {
+            const avatarUrl = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + (user.displayName || user.email || 'U').charAt(0).toUpperCase());
+            formContainer.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
+                    <img src="${avatarUrl}" class="w-10 h-10 rounded-full border border-gray-200 hidden sm:block object-cover">
+                    <form class="flex-grow" onsubmit="window.submitComment(event, '${articleId}')">
+                        <textarea id="comment-input" rows="3" required placeholder="分享您的想法..." class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-cta focus:bg-white transition text-base md:text-sm resize-none"></textarea>
+                        <div class="flex justify-end mt-3">
+                            <button type="submit" id="btn-submit-comment" class="bg-primary hover:bg-secondary text-white px-6 py-2.5 rounded-lg font-bold shadow-sm transition text-sm flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> 發布留言</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        } else {
+            formContainer.innerHTML = `
+                <div class="text-center py-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <i class="fa-regular fa-comment-dots text-3xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-500 mb-4 text-sm font-medium">登入會員後即可參與討論與留言</p>
+                    <button type="button" onclick="window.location.hash='#/login'" class="bg-cta hover:bg-blue-700 text-white px-8 py-2.5 rounded-full font-bold shadow-sm transition text-sm">立即登入 / 註冊</button>
+                </div>
+            `;
+        }
+    };
+
+    window.submitComment = async (e, articleId) => {
+        e.preventDefault();
+        const user = window.AppState.user;
+        if (!user || user.isAnonymous) return showToast('請先登入會員', 'warning');
+        
+        const input = document.getElementById('comment-input');
+        const content = input.value.trim();
+        if (!content) return;
+        
+        const btn = document.getElementById('btn-submit-comment');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 發布中...';
+        
+        try {
+            const displayName = user.displayName || user.email?.split('@')[0] || '會員讀者';
+            const avatarUrl = user.photoURL || ('https://placehold.co/100x100/163A63/FFF?text=' + displayName.charAt(0).toUpperCase());
+            
+            const commentsRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'comments');
+            await window.FS.addDoc(commentsRef, {
+                articleId: articleId,
+                userId: user.uid,
+                userName: displayName,
+                userAvatar: avatarUrl,
+                content: content.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                createdAt: window.FS.serverTimestamp()
+            });
+            
+            showToast('留言發布成功！', 'success');
+            input.value = '';
+            window.fetchComments(articleId);
+        } catch(err) {
+            console.error("Submit comment error:", err);
+            showToast('留言失敗，請稍後再試', 'error');
+        } finally {
+            btn.disabled = false; btn.innerHTML = originalText;
+        }
+    };
+
+    window.fetchComments = async (articleId) => {
+        const container = document.getElementById('comments-list');
+        const countSpan = document.getElementById('comment-count');
+        if (!container) return;
+        try {
+            const commentsRef = window.FS.collection(window.AppState.db, 'artifacts', window.AppState.appId, 'public', 'data', 'comments');
+            const q = window.FS.query(commentsRef, window.FS.where("articleId", "==", articleId));
+            const snap = await window.FS.getDocs(q);
+            
+            if (countSpan) countSpan.innerText = snap.size;
+            
+            if (snap.empty) {
+                container.innerHTML = '<div class="text-center py-10 text-gray-400"><p>目前還沒有人留言，來搶頭香吧！</p></div>';
+                return;
+            }
+            
+            let commentsData = [];
+            snap.forEach(doc => {
+                commentsData.push({ id: doc.id, ...doc.data() });
+            });
+            
+            commentsData.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.seconds : 0;
+                const timeB = b.createdAt ? b.createdAt.seconds : 0;
+                return timeB - timeA;
+            });
+            
+            let html = '';
+            const user = window.AppState.user;
+            commentsData.forEach(data => {
+                const date = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleString('zh-TW', { hour12: false }) : '剛剛';
+                const safeContent = (data.content || '').replace(/\n/g, "<br>");
+                const isOwnerOrAdmin = user && (user.uid === data.userId || window.AppState.role === 'super_admin' || window.AppState.role === 'admin' || user.email === 'mindnodeai@gmail.com');
+                
+                html += `
+                    <div class="flex gap-4 p-4 hover:bg-gray-50 rounded-xl transition border border-transparent hover:border-gray-100 group animate-[fadeIn_0.3s_ease-out]">
+                        <img src="${data.userAvatar}" class="w-10 h-10 rounded-full border border-gray-200 flex-shrink-0 object-cover">
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-baseline mb-2">
+                                <div>
+                                    <span class="font-bold text-sm text-primary mr-2">${data.userName}</span>
+                                    <span class="text-xs text-gray-400">${date}</span>
+                                </div>
+                                ${isOwnerOrAdmin ? `<button onclick="window.deleteComment('${data.id}', '${articleId}')" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition text-xs" title="刪除留言"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            </div>
+                            <p class="text-sm text-gray-700 leading-relaxed">${safeContent}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            console.error("Fetch comments error:", e);
+            container.innerHTML = '<div class="text-center py-10 text-red-400"><p>留言載入失敗</p></div>';
+        }
+    };
+
+    window.deleteComment = (commentId, articleId) => {
+        window.showModal('刪除留言', '確定要刪除這則留言嗎？', async () => {
+            try {
+                const { db, appId } = window.AppState;
+                await window.FS.deleteDoc(window.FS.doc(db, 'artifacts', appId, 'public', 'data', 'comments', commentId));
+                showToast("留言已刪除", "success");
+                window.fetchComments(articleId);
+            } catch(e) {
+                console.error(e);
+                showToast("刪除失敗，權限不足", "error");
+            }
+        }, '確定刪除', true);
+    };
 
     window.authMode = 'login';
     window.toggleAuthMode = (mode) => {
@@ -907,12 +1564,21 @@
             submitBtn.innerText = '註冊帳號';
         }
     };
+
     window.togglePassword = (inputId, iconId) => {
         const input = document.getElementById(inputId);
         const icon = document.getElementById(iconId);
-        if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
-        else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     };
+
     window.handleEmailLogin = async (event) => {
         event.preventDefault();
         const email = document.getElementById('email').value;
@@ -921,13 +1587,23 @@
         const originalText = submitBtn.innerText;
         submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 處理中...';
         try {
-            if (window.authMode === 'login') await window.AuthAPI.signInWithEmailAndPassword(window.AppState.auth, email, password);
-            else await window.AuthAPI.createUserWithEmailAndPassword(window.AppState.auth, email, password);
-            showToast('操作成功！', 'success');
+            if (window.authMode === 'login') {
+                await window.AuthAPI.signInWithEmailAndPassword(window.AppState.auth, email, password);
+                showToast('登入成功！', 'success');
+            } else {
+                await window.AuthAPI.createUserWithEmailAndPassword(window.AppState.auth, email, password);
+                showToast('註冊成功！', 'success');
+            }
             window.history.back();
             setTimeout(() => { if (window.location.hash === '#/login') window.location.hash = '#/member'; }, 500);
-        } catch (error) { showToast('驗證失敗', 'error'); } 
-        finally { submitBtn.disabled = false; submitBtn.innerText = originalText; }
+        } catch (error) {
+            let msg = '發生錯誤';
+            if (error.code === 'auth/email-already-in-use') msg = '此 Email 已被註冊';
+            else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') msg = '帳號或密碼錯誤';
+            else if (error.code === 'auth/user-not-found') msg = '找不到此帳號，請先註冊';
+            else if (error.code === 'auth/weak-password') msg = '密碼太弱，請至少輸入 6 個字元';
+            showToast(msg, 'error');
+        } finally { submitBtn.disabled = false; submitBtn.innerText = originalText; }
     };
 
     const router = () => {
@@ -954,7 +1630,7 @@
             else if (path.startsWith('/admin/articles/edit/')) { const articleId = path.split('/')[4]; root.innerHTML = Views.adminArticleEdit; setTimeout(() => window.initArticleEditor(articleId), 100); }
             else if (path === '/admin/leads') { root.innerHTML = Views.adminLeads; setTimeout(window.loadAdminLeads, 100); }
             else if (path === '/admin/newsletter') { root.innerHTML = Views.adminNewsletter; setTimeout(() => window.initNewsletterEditor(), 100); window.scrollTo(0,0); }
-            else if (path === '/admin/settings') { root.innerHTML = Views.adminSettings; setTimeout(() => { window.loadSiteSettings(); }, 100); }
+            else if (path === '/admin/settings') { root.innerHTML = Views.adminSettings; setTimeout(() => { window.loadSiteSettings(); window.loadCategories('settings-categories-list', 'admin'); }, 100); }
         } else if (path === '/login') { if (window.AppState.user) return window.location.hash = '#/member'; root.innerHTML = Views.login; }
         else { root.innerHTML = `<div class="py-20 text-center"><h2 class="text-2xl font-bold">頁面不存在</h2></div>`; }
 
@@ -971,113 +1647,749 @@
                 if (data.heroTitle) document.getElementById('home-hero-title').innerHTML = data.heroTitle;
                 if (data.heroBio) document.getElementById('home-hero-bio').innerHTML = data.heroBio;
                 if (data.profileImageUrl) document.getElementById('home-profile-img').src = data.profileImageUrl;
+                
+                const socialContainer = document.getElementById('home-social-links');
+                if (socialContainer) {
+                    let socialHtml = '';
+                    const renderSocialIcon = (url, iconClass) => {
+                        if (url) return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-cta hover:text-white transition-all duration-300 shadow-sm border border-white/20 hover:scale-110"><i class="${iconClass}"></i></a>`;
+                        return '';
+                    };
+                    socialHtml += renderSocialIcon(data.socialFb, 'fa-brands fa-facebook-f');
+                    socialHtml += renderSocialIcon(data.socialLinkedin, 'fa-brands fa-linkedin-in');
+                    socialHtml += renderSocialIcon(data.socialYt, 'fa-brands fa-youtube');
+                    socialHtml += renderSocialIcon(data.socialIg, 'fa-brands fa-instagram');
+                    socialHtml += renderSocialIcon(data.socialTiktok, 'fa-brands fa-tiktok');
+                    
+                    if (socialHtml) {
+                        socialContainer.innerHTML = socialHtml;
+                        socialContainer.classList.remove('hidden');
+                    }
+                }
+
+                const ipContainer = document.getElementById('home-ip-info-container');
+                if (ipContainer && (data.skills || data.experience || data.certifications || data.books)) {
+                    let ipHtml = '<div class="bg-white/10 backdrop-blur-md rounded-2xl p-8 md:p-10 border border-white/20 mt-12 mb-8 shadow-2xl">';
+                    ipHtml += '<h3 class="text-3xl font-bold text-accent mb-8 flex items-center gap-3"><i class="fa-solid fa-address-card"></i> 專業里程碑</h3>';
+                    ipHtml += '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">';
+                    
+                    const renderBlock = (title, icon, content) => {
+                        if (!content) return '';
+                        const formatted = content.replace(/\n/g, '<br>');
+                        return `
+                            <div class="bg-white/5 p-6 md:p-8 rounded-xl border border-white/10 hover:bg-white/10 transition duration-300">
+                                <h4 class="text-accent font-bold text-lg md:text-xl mb-4 flex items-center gap-3 border-b border-white/10 pb-3">
+                                    <i class="${icon}"></i> ${title}
+                                </h4>
+                                <p class="text-gray-200 text-sm md:text-base leading-loose tracking-wide">${formatted}</p>
+                            </div>
+                        `;
+                    };
+                    ipHtml += renderBlock('核心專長', 'fa-solid fa-star', data.skills);
+                    ipHtml += renderBlock('重要經歷', 'fa-solid fa-briefcase', data.experience);
+                    ipHtml += renderBlock('企業輔導 / 人才認證', 'fa-solid fa-certificate', data.certifications);
+                    ipHtml += renderBlock('專案主持與政府產業專案紀錄', 'fa-solid fa-book', data.books);
+                    ipHtml += '</div></div>';
+                    ipContainer.innerHTML = ipHtml;
+                }
             }
             
             const featuredContainer = document.getElementById('home-featured-articles');
             if (featuredContainer) {
                 const q = window.FS.query(window.FS.collection(db, "articles"), window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public"), window.FS.orderBy("createdAt", "desc"), window.FS.limit(3));
                 const snap = await window.FS.getDocs(q);
-                if (snap.empty) { featuredContainer.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前尚無文章。</div>'; } 
-                else {
+                if (snap.empty) {
+                    featuredContainer.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前尚無文章。</div>';
+                } else {
                     let html = '';
                     snap.forEach((doc) => {
                         const article = doc.data();
-                        const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛';
+                        const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
                         const cover = article.coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=TONY+STUDIO';
-                        html += `<div class="group bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition flex flex-col"><div class="aspect-video bg-gray-200 cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'"><img src="${cover}" class="w-full h-full object-cover"></div><div class="p-6 flex flex-col flex-grow"><h3 class="text-xl font-bold mb-3 cursor-pointer group-hover:text-cta transition line-clamp-2" onclick="window.location.hash='#/article/${doc.id}'">${article.title}</h3></div></div>`;
+                        html += `
+                            <div class="group bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                                <div class="aspect-video w-full bg-gray-200 relative cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'">
+                                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded shadow">${article.category || '未分類'}</div>
+                                </div>
+                                <div class="p-6 flex flex-col flex-grow">
+                                    <p class="text-xs text-gray-400 mb-2"><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</p>
+                                    <h3 class="text-xl font-bold text-textMain mb-3 cursor-pointer group-hover:text-cta transition line-clamp-2" onclick="window.location.hash='#/article/${doc.id}'">${article.title}</h3>
+                                    <p class="text-sm text-textSub line-clamp-5 mb-6 flex-grow">${article.excerpt}</p>
+                                    <a href="#/article/${doc.id}" class="text-cta text-sm font-bold flex items-center gap-1 mt-auto hover:text-blue-800">閱讀更多 <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                                </div>
+                            </div>
+                        `;
                     });
                     featuredContainer.innerHTML = html;
                 }
             }
-        } catch (error) { console.warn("首頁載入錯誤:", error); }
+        } catch (error) { console.warn("載入首頁失敗:", error); }
     };
 
-    window.fetchPublicArticles = async () => { /* Fetch Articles Logic */ };
-    window.searchArticles = (e) => { window.AppState.searchQuery = e.target.value.trim(); window.fetchPublicArticles(); };
-    window.fetchArticleDetail = async (id) => { /* Detail Logic */ };
-    window.quillUploadHandler = async (type) => { /* Upload Logic */ };
+    window.loadSeriesData = async () => {
+        const container = document.getElementById('series-list-container');
+        if (!container) return;
+        try {
+            const { db } = window.AppState;
+            const catSnap = await window.FS.getDocs(window.FS.query(window.FS.collection(db, "categories"), window.FS.orderBy("order", "asc")));
+            if (catSnap.empty) { container.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前無分類。</div>'; return; }
+            let html = '';
+            for (const doc of catSnap.docs) {
+                const cat = doc.data();
+                try {
+                    const artSnap = await window.FS.getDocs(window.FS.query(window.FS.collection(db, "articles"), window.FS.where("category", "==", cat.name), window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public"), window.FS.orderBy("createdAt", "desc")));
+                    if (artSnap.size > 0) {
+                        const coverUrl = artSnap.docs[0].data().coverImage || 'https://placehold.co/800x450/E2E8F0/64748B?text=' + encodeURIComponent(cat.name);
+                        html += `
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group flex flex-col">
+                                <div class="aspect-video w-full bg-gray-200 relative overflow-hidden cursor-pointer" onclick="window.filterArticles('${cat.name}'); window.location.hash='#/articles';">
+                                    <img src="${coverUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <div class="absolute top-4 left-4 bg-accent text-primary text-xs font-bold px-3 py-1 rounded">專題</div>
+                                </div>
+                                <div class="p-8 flex flex-col flex-grow">
+                                    <h3 class="text-2xl font-bold text-primary mb-3">${cat.name}</h3>
+                                    <p class="text-textSub mb-6 flex-grow">探索所有關於「${cat.name}」的深度解析與實戰經驗。</p>
+                                    <div class="flex items-center justify-between mt-auto">
+                                        <span class="text-sm text-gray-500"><i class="fa-solid fa-list-ol mr-1"></i> 共 ${artSnap.size} 篇文章</span>
+                                        <button onclick="window.filterArticles('${cat.name}'); window.location.hash='#/articles';" class="text-cta font-medium hover:underline">開始閱讀 <i class="fa-solid fa-arrow-right text-sm ml-1"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (e) {}
+            }
+            container.innerHTML = html || '<div class="col-span-full py-12 text-center text-textSub">專題下無文章。</div>';
+        } catch (error) { container.innerHTML = '<div class="col-span-full text-center text-red-500">載入失敗。</div>'; }
+    };
+
+    window.fetchPublicArticles = async () => {
+        const container = document.getElementById('articles-list-container');
+        if (!container) return;
+        try {
+            const currentCat = window.AppState.currentCategory || '全部';
+            const searchQuery = window.AppState.searchQuery || '';
+            const { db } = window.AppState;
+            let constraints = [window.FS.where("status", "==", "published"), window.FS.where("visibility", "==", "public")];
+            if (currentCat !== '全部') constraints.push(window.FS.where("category", "==", currentCat));
+            constraints.push(window.FS.orderBy("createdAt", "desc"));
+            
+            const q = window.FS.query(window.FS.collection(db, "articles"), ...constraints);
+            const snap = await window.FS.getDocs(q);
+            if (snap.empty) { container.innerHTML = '<div class="col-span-full py-12 text-center text-textSub">目前無文章。</div>'; return; }
+            let html = '';
+            snap.forEach((doc) => {
+                const article = doc.data();
+                if (searchQuery && !article.title.toLowerCase().includes(searchQuery.toLowerCase())) return;
+
+                const dateStr = article.createdAt ? new Date(article.createdAt.seconds * 1000).toISOString().split('T')[0] : '剛剛發布';
+                const cover = article.coverImage || 'https://placehold.co/800x400/E2E8F0/64748B?text=TONY+STUDIO';
+                html += `
+                    <div class="group bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                        <div class="aspect-video w-full bg-gray-200 relative cursor-pointer" onclick="window.location.hash='#/article/${doc.id}'">
+                            <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <div class="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded shadow">${article.category || '未分類'}</div>
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <p class="text-xs text-gray-400 mb-2"><i class="fa-regular fa-calendar mr-1"></i> ${dateStr}</p>
+                            <h3 class="text-xl font-bold text-textMain mb-3 cursor-pointer group-hover:text-cta transition line-clamp-2" onclick="window.location.hash='#/article/${doc.id}'">${article.title}</h3>
+                            <p class="text-sm text-textSub line-clamp-5 mb-6 flex-grow">${article.excerpt}</p>
+                            <a href="#/article/${doc.id}" class="text-cta text-sm font-bold flex items-center gap-1 mt-auto hover:text-blue-800">閱讀更多 <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        </div>
+                    </div>
+                `;
+            });
+            if (html === '') html = '<div class="col-span-full py-12 text-center text-textSub">找不到符合條件的文章。</div>';
+            container.innerHTML = html;
+        } catch(e) { container.innerHTML = '<div class="col-span-full text-center text-red-500">讀取失敗</div>'; }
+    };
+
+    window.searchArticles = (e) => {
+        window.AppState.searchQuery = e.target.value.trim();
+        window.fetchPublicArticles();
+    };
+
+    window.fetchArticleDetail = async (id) => {
+        try {
+            const { db, user } = window.AppState;
+            const docSnap = await window.FS.getDoc(window.FS.doc(db, "articles", id));
+            if (docSnap.exists()) {
+                const article = docSnap.data();
+                const titleEl = document.getElementById('detail-title');
+                if(titleEl) titleEl.innerText = article.title;
+                const catEl = document.getElementById('detail-category');
+                if(catEl) catEl.innerText = article.category || '未分類';
+                const coverEl = document.getElementById('detail-cover');
+                if(coverEl) coverEl.src = article.coverImage || 'https://placehold.co/800x400';
+                
+                const contentEl = document.getElementById('detail-content');
+                if(contentEl) contentEl.innerHTML = `<div class="ql-editor" style="padding:0; overflow:visible; border:none; border-radius:0;">${article.content || ''}</div>`;
+                
+                window.updateSEO(article.title, article.excerpt, article.coverImage);
+
+                const bookmarkContainer = document.getElementById('bookmark-container');
+                if(bookmarkContainer) {
+                    let isBookmarked = false;
+                    if (user) {
+                        const q = window.FS.query(window.FS.collection(db, "bookmarks"), window.FS.where("userId", "==", user.uid), window.FS.where("articleId", "==", id));
+                        const snap = await window.FS.getDocs(q);
+                        isBookmarked = !snap.empty;
+                    }
+                    const iconClass = isBookmarked ? "fa-solid fa-bookmark text-accent" : "fa-regular fa-bookmark text-white";
+                    const btnText = isBookmarked ? "已收藏" : "收藏文章";
+                    const btnClass = isBookmarked ? "bg-white/20 border-accent text-accent" : "bg-white/10 border-white/20 text-white hover:bg-white/20";
+                    
+                    bookmarkContainer.innerHTML = `<button onclick="window.toggleBookmark('${id}', '${article.title.replace(/'/g, "\\'")}', '${article.coverImage}')" class="px-4 py-2.5 rounded-full transition flex items-center justify-center border shadow-sm ${btnClass} text-sm font-bold flex-1 sm:flex-none" title="收藏文章"><i id="btn-bookmark-icon" class="${iconClass} mr-2"></i><span id="btn-bookmark-text">${btnText}</span></button>`;
+                }
+                
+                if (window.renderCommentForm) window.renderCommentForm(id);
+                if (window.fetchComments) window.fetchComments(id);
+            }
+        } catch(e) { 
+            const contentEl = document.getElementById('detail-content');
+            if(contentEl) contentEl.innerHTML = '讀取失敗'; 
+        }
+    };
+
+    window.quillUploadHandler = async (type) => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', type === 'image' ? 'image/*' : 'video/*');
+        input.click();
+
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+
+            try {
+                showToast(`正在上傳${type === 'image' ? '圖片' : '影片'}至雲端...`, 'info');
+                const storageRef = window.StorageAPI.ref(window.AppState.storage, `articles_media/${Date.now()}_${file.name}`);
+                await window.StorageAPI.uploadBytes(storageRef, file);
+                const url = await window.StorageAPI.getDownloadURL(storageRef);
+                
+                const range = window.quillEditor ? window.quillEditor.getSelection(true) : window.newsletterEditor.getSelection(true);
+                const targetEditor = window.quillEditor || window.newsletterEditor;
+                
+                targetEditor.insertEmbed(range.index, type, url);
+                targetEditor.setSelection(range.index + 1);
+                showToast('媒體上傳成功！', 'success');
+            } catch (error) {
+                console.error("Upload error:", error);
+                showToast('上傳失敗，請檢查網路狀態', 'error');
+            }
+        };
+    };
+
     window.tableResizeState = { isResizing: false, startX: 0, startWidth: 0, resizeTd: null };
-    window.handleTableAction = (e, action) => { /* Table Action Logic */ };
-    
+
+    window.handleTableAction = (e, action) => {
+        if(e) e.preventDefault();
+        if (!window.quillEditor) return;
+        window.quillEditor.focus();
+        
+        const tableModule = window.quillEditor.getModule('table');
+        if (!tableModule) return;
+        const activeTd = document.querySelector('#editor-container td.selected');
+        let keepMenuOpen = false;
+
+        if (activeTd) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(activeTd);
+            range.collapse(false); 
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        if (action === 'increaseWidth' && activeTd) {
+            const currentWidth = activeTd.offsetWidth;
+            activeTd.style.minWidth = (currentWidth + 40) + 'px';
+            activeTd.style.width = (currentWidth + 40) + 'px';
+            keepMenuOpen = true;
+        }
+        if (action === 'decreaseWidth' && activeTd) {
+            const currentWidth = activeTd.offsetWidth;
+            activeTd.style.minWidth = Math.max(40, currentWidth - 40) + 'px';
+            activeTd.style.width = Math.max(40, currentWidth - 40) + 'px';
+            keepMenuOpen = true;
+        }
+        if (action === 'autoWidth' && activeTd) {
+            activeTd.style.minWidth = 'auto';
+            activeTd.style.width = 'auto';
+            keepMenuOpen = true;
+        }
+        
+        if (action === 'insertRowAbove') tableModule.insertRowAbove();
+        if (action === 'insertRowBelow') tableModule.insertRowBelow();
+        if (action === 'insertColumnLeft') tableModule.insertColumnLeft();
+        if (action === 'insertColumnRight') tableModule.insertColumnRight();
+        if (action === 'deleteRow') tableModule.deleteRow();
+        if (action === 'deleteColumn') tableModule.deleteColumn();
+        if (action === 'deleteTable') tableModule.deleteTable();
+        
+        if (!keepMenuOpen) {
+            const menu = document.getElementById('table-context-menu');
+            if(menu) menu.classList.add('hidden');
+        }
+    };
+
+    window.onclick = (e) => {
+        const menu = document.getElementById('table-context-menu');
+        if (menu && !menu.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    };
+
     window.initArticleEditor = async (id) => {
         const idEl = document.getElementById('article-id');
         if(idEl) idEl.value = id || '';
         const titleEl = document.getElementById('editor-title');
         if(titleEl) titleEl.innerHTML = id ? '編輯文章' : '新增文章';
         if (window.quillEditor) window.quillEditor = null;
+
+        const icons = Quill.import('ui/icons');
+        icons['table'] = '<svg viewBox="0 0 18 18"> <rect class="ql-stroke" height="12" width="12" x="3" y="3"></rect> <line class="ql-stroke" x1="3" x2="15" y1="9" y2="9"></line> <line class="ql-stroke" x1="9" x2="9" y1="3" y2="15"></line> </svg>';
+
         const toolbarOptions = [
             ['bold', 'italic', 'underline', 'strike'], ['blockquote', 'code-block'],
             [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'script': 'sub'}, { 'script': 'super' }], [{ 'indent': '-1'}, { 'indent': '+1' }],
+            [{ 'size': ['small', false, 'large', 'huge'] }], [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
             [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], ['link', 'image', 'video', 'table'], ['clean']
         ];
+        
         window.quillEditor = new Quill('#editor-container', { 
             theme: 'snow', 
-            modules: { table: true, toolbar: { container: toolbarOptions, handlers: { image: () => window.quillUploadHandler('image'), video: () => window.quillUploadHandler('video'), table: function() { this.quill.getModule('table').insertTable(3, 3); } } } } 
+            modules: { 
+                table: true, 
+                toolbar: {
+                    container: toolbarOptions,
+                    handlers: {
+                        image: () => window.quillUploadHandler('image'),
+                        video: () => window.quillUploadHandler('video'),
+                        table: function() {
+                           this.quill.getModule('table').insertTable(3, 3);
+                        }
+                    }
+                }
+            } 
         });
+
+        const quillRoot = window.quillEditor.root;
+        const editorNode = document.getElementById('editor-container');
+        const wrapperNode = document.getElementById('editor-wrapper');
+
+        quillRoot.oncontextmenu = (e) => {
+            const td = e.target.closest('td');
+            if (td) {
+                e.preventDefault();
+                const menu = document.getElementById('table-context-menu');
+                if(menu && wrapperNode) {
+                    const wrapperRect = wrapperNode.getBoundingClientRect();
+                    let leftPos = e.clientX - wrapperRect.left;
+                    const topPos = e.clientY - wrapperRect.top;
+                    if (leftPos + 224 > wrapperRect.width) leftPos = wrapperRect.width - 224 - 10;
+                    menu.style.top = topPos + 'px';
+                    menu.style.left = leftPos + 'px';
+                    menu.classList.remove('hidden');
+                }
+                if(editorNode) {
+                    editorNode.querySelectorAll('td').forEach(el => el.classList.remove('selected'));
+                }
+                td.classList.add('selected');
+            }
+        };
+
+        quillRoot.addEventListener('mousemove', (e) => {
+            if (window.tableResizeState.isResizing) return;
+            const td = e.target.closest('td');
+            if (td) {
+                const rect = td.getBoundingClientRect();
+                if (rect.right - e.clientX < 10 && rect.right - e.clientX >= 0) td.style.cursor = 'col-resize';
+                else td.style.cursor = 'text';
+            }
+        });
+
+        quillRoot.addEventListener('mousedown', (e) => {
+            const td = e.target.closest('td');
+            if (td) {
+                const rect = td.getBoundingClientRect();
+                if (rect.right - e.clientX < 10 && rect.right - e.clientX >= 0) {
+                    window.tableResizeState.isResizing = true;
+                    window.tableResizeState.resizeTd = td;
+                    window.tableResizeState.startX = e.clientX;
+                    window.tableResizeState.startWidth = td.offsetWidth;
+                    e.preventDefault(); 
+                }
+            }
+        });
+
+        if(!window.isTableResizerBound) {
+            document.addEventListener('mousemove', (e) => {
+                if (window.tableResizeState.isResizing && window.tableResizeState.resizeTd) {
+                    const diff = e.clientX - window.tableResizeState.startX;
+                    const newWidth = Math.max(40, window.tableResizeState.startWidth + diff);
+                    window.tableResizeState.resizeTd.style.width = newWidth + 'px';
+                    window.tableResizeState.resizeTd.style.minWidth = newWidth + 'px';
+                }
+            });
+            document.addEventListener('mouseup', () => { 
+                if (window.tableResizeState.isResizing) {
+                    window.tableResizeState.isResizing = false; 
+                    if (window.tableResizeState.resizeTd) window.tableResizeState.resizeTd.style.cursor = 'text';
+                    window.tableResizeState.resizeTd = null; 
+                }
+            });
+            window.isTableResizerBound = true;
+        }
         
+        if(window.loadCategories) await window.loadCategories('article-category-input', 'select');
+
         if (id) {
             const docSnap = await window.FS.getDoc(window.FS.doc(window.AppState.db, "articles", id));
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                document.getElementById('article-title-input').value = data.title || '';
-                document.getElementById('article-excerpt-input').value = data.excerpt || '';
-                if(data.coverImage) document.getElementById('cover-preview-img').src = data.coverImage;
+                const titleInput = document.getElementById('article-title-input');
+                if(titleInput) titleInput.value = data.title || '';
+                const excerptInput = document.getElementById('article-excerpt-input');
+                if(excerptInput) excerptInput.value = data.excerpt || '';
+                const statusInput = document.getElementById('article-status-input');
+                if(statusInput) statusInput.value = data.status || 'draft';
+                const coverPreview = document.getElementById('cover-preview-img');
+                if(data.coverImage && coverPreview) coverPreview.src = data.coverImage;
+                const catInput = document.getElementById('article-category-input');
+                if(data.category && catInput) catInput.value = data.category;
                 if(data.content) window.quillEditor.clipboard.dangerouslyPasteHTML(data.content);
             }
         }
     };
-    window.saveArticle = async (e) => { /* Save Article Logic */ };
-    window.deleteArticle = (id) => { /* Delete Logic */ };
 
-    window.loadAdminDashboard = async () => { /* Load Dashboard */ };
-    window.loadAdminLeads = async () => { /* Load Leads */ };
-    window.loadAdminArticles = async () => { /* Load Articles */ };
+    window.saveArticle = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('article-id').value;
+        const title = document.getElementById('article-title-input').value;
+        const excerpt = document.getElementById('article-excerpt-input').value;
+        const content = window.quillEditor.root.innerHTML;
+        const status = document.getElementById('article-status-input').value;
+        const category = document.getElementById('article-category-input').value;
+        const coverInput = document.getElementById('article-cover-input').value;
+        const coverPreview = document.getElementById('cover-preview-img').src;
+        const coverImage = coverInput || coverPreview;
+        
+        if(!title) return showToast("請輸入標題", "warning");
+
+        const data = { title, excerpt, content, status, category, coverImage, visibility: 'public', updatedAt: window.FS.serverTimestamp() };
+        
+        try {
+            if (id) { await window.FS.updateDoc(window.FS.doc(window.AppState.db, "articles", id), data); showToast("更新成功", "success"); } 
+            else { data.createdAt = window.FS.serverTimestamp(); await window.FS.addDoc(window.FS.collection(window.AppState.db, "articles"), data); showToast("新增成功", "success"); }
+            setTimeout(() => window.location.hash = '#/admin/articles', 1000);
+        } catch(err) { showToast("儲存失敗", "error"); }
+    };
+
+    window.deleteArticle = (id) => {
+        window.showModal('刪除文章', '確定要刪除這篇文章嗎？此動作無法復原。', async () => {
+            try {
+                await window.FS.deleteDoc(window.FS.doc(window.AppState.db, "articles", id));
+                showToast("文章已刪除", "success");
+                if(window.loadAdminArticles) window.loadAdminArticles();
+            } catch(e) { showToast("刪除失敗", "error"); }
+        }, '確定刪除', true);
+    };
+
+    window.loadAdminDashboard = async () => {
+        const container = document.getElementById('admin-subscribers-list');
+        if(!container) return;
+        try {
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "subscribers"), window.FS.orderBy("timestamp", "desc"), window.FS.limit(10)));
+            if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-4">無訂閱者</td></tr>'; return; }
+            let html = '';
+            snap.forEach(d => {
+                const data = d.data();
+                html += `<tr><td class="px-6 py-4 border-b whitespace-nowrap">${data.timestamp ? new Date(data.timestamp.seconds*1000).toLocaleDateString() : '無日期'}</td><td class="px-6 py-4 border-b whitespace-nowrap">${data.email}</td></tr>`;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = `<tr><td colspan="2" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
+    };
+
+    window.loadAdminLeads = async () => {
+        const container = document.getElementById('admin-leads-list');
+        if(!container) return;
+        try {
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "leads"), window.FS.orderBy("createdAt", "desc"), window.FS.limit(20)));
+            if (snap.empty) { container.innerHTML = '<tr><td colspan="2" class="text-center py-10 text-gray-500">目前尚無商機或預約資料</td></tr>'; return; }
+            let html = '';
+            snap.forEach(d => {
+                const data = d.data();
+                html += `
+                    <tr>
+                        <td class="px-6 py-4 border-b text-sm align-top whitespace-nowrap w-32">${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleDateString() : '無日期'}</td>
+                        <td class="px-6 py-4 border-b text-sm">
+                            <p class="font-bold text-primary text-base mb-1">${data.name} <span class="text-xs text-gray-500 font-normal ml-2"><i class="fa-solid fa-building"></i> ${data.company || '未提供公司名稱'}</span></p>
+                            <p class="text-xs text-cta mb-3"><i class="fa-solid fa-envelope"></i> ${data.email}</p>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 text-gray-700 whitespace-pre-wrap">${data.message}</div>
+                        </td>
+                    </tr>
+                `;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = `<tr><td colspan="2" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
+    };
+
+    window.loadAdminArticles = async () => {
+        const container = document.getElementById('admin-articles-list');
+        if(!container) return;
+        try {
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "articles"), window.FS.orderBy("createdAt", "desc")));
+            if (snap.empty) { container.innerHTML = '<tr><td colspan="4" class="text-center py-4">無文章</td></tr>'; return; }
+            let html = '';
+            snap.forEach(d => {
+                const data = d.data();
+                html += `
+                    <tr>
+                        <td class="px-6 py-4 border-b whitespace-nowrap"><p class="font-bold text-primary">${data.title}</p><span class="text-xs bg-gray-100 px-2 py-1 rounded">${data.category}</span></td>
+                        <td class="px-6 py-4 border-b whitespace-nowrap">${data.status === 'published' ? '<span class="text-green-600 font-bold text-xs">已發布</span>' : '<span class="text-gray-400 font-bold text-xs">草稿</span>'}</td>
+                        <td class="px-6 py-4 border-b text-sm whitespace-nowrap">${data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleDateString() : '無日期'}</td>
+                        <td class="px-6 py-4 border-b text-right whitespace-nowrap">
+                            <a href="#/admin/articles/edit/${d.id}" class="text-blue-500 hover:underline mr-3 text-sm">編輯</a>
+                            <button onclick="window.deleteArticle('${d.id}')" class="text-red-500 hover:underline text-sm">刪除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>資料載入失敗：${e.message}</td></tr>`;
+        }
+    };
 
     window.initNewsletterEditor = () => {
         if (window.newsletterEditor) window.newsletterEditor = null;
-        const toolbarOptions = [ ['bold', 'italic', 'underline'], ['blockquote'], [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], [{ 'color': [] }, { 'background': [] }], ['link', 'image', 'clean'] ];
-        window.newsletterEditor = new Quill('#newsletter-editor-container', { theme: 'snow', modules: { toolbar: { container: toolbarOptions, handlers: { image: () => window.quillUploadHandler('image') } } } });
+        
+        const toolbarOptions = [
+            ['bold', 'italic', 'underline', 'strike'], ['blockquote'],
+            [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'color': [] }, { 'background': [] }], [{ 'align': [] }], ['link', 'image', 'clean']
+        ];
+        
+        window.newsletterEditor = new Quill('#newsletter-editor-container', { 
+            theme: 'snow', 
+            modules: { 
+                toolbar: {
+                    container: toolbarOptions,
+                    handlers: {
+                        image: () => window.quillUploadHandler('image')
+                    }
+                }
+            } 
+        });
     };
 
     window.applyNewsletterTemplate = (type) => {
+        if(!window.newsletterEditor) return;
+        
         const templates = {
-            'weekly': `<h2>📰 本週精選彙整</h2><p>親愛的讀者，您好：</p><p>本週我們為您挑選了幾篇重點文章：</p><ul><li><strong>文章一</strong>：摘要</li></ul><p>週末愉快！</p>`,
-            'new_post': `<h2>🚀 最新文章上線：[標題]</h2><p>我們剛剛發布了一篇全新的深度解析文章。</p><p><a href="#">👉 點擊這裡閱讀</a></p>`,
-            'event': `<h2>🎉 [活動名稱] 開放報名囉！</h2><ul><li><strong>時間</strong>：</li><li><strong>地點</strong>：</li></ul><p><a href="#">👉 立即報名</a></p>`,
-            'insight': `<h2>💡 TONY 的專業洞察</h2><p>這週我觀察到一個現象...</p>`,
-            'update': `<h2>👋 近況更新</h2><p>最近發生了一些新變化，想與您分享！</p>`
+            'weekly': `<h2>📰 本週精選彙整</h2><p>親愛的讀者，您好：</p><p>本週我們為您挑選了以下幾篇重點文章，希望能為您帶來新的啟發：</p><ul><li><strong><a href="#" target="_blank">重點文章標題一</a></strong>：這裡寫上一小段摘要說明。</li><li><strong><a href="#" target="_blank">重點文章標題二</a></strong>：這裡寫上一小段摘要說明。</li></ul><p><br></p><p>祝 週末愉快！</p>`,
+            'new_post': `<h2>🚀 最新文章上線：[請填寫文章標題]</h2><p>親愛的讀者，您好：</p><p>我們剛剛發布了一篇全新的深度解析文章。在這篇文章中，我們探討了：</p><ul><li>核心重點一</li><li>核心重點二</li></ul><p><a href="#" target="_blank">👉 點擊這裡立即閱讀完整文章</a></p>`,
+            'event': `<h2>🎉 [請填寫活動/課程名稱] 開放報名囉！</h2><p>親愛的讀者，您好：</p><p>我們即將舉辦一場精彩的活動，誠摯地邀請您一同參與！</p><ul><li><strong>時間</strong>：[日期與時間]</li><li><strong>地點 / 形式</strong>：[實體地點或線上會議連結]</li><li><strong>活動亮點</strong>：[寫下 1-2 個吸引人的特點]</li></ul><p><a href="#" target="_blank">👉 名額有限，點擊這裡立即報名</a></p>`,
+            'insight': `<h2>💡 TONY 的專業洞察：[請填寫本期主題]</h2><p>親愛的讀者，您好：</p><p>這週在協助企業導入 AI 或是產品開發時，我觀察到一個有趣的現象...</p><blockquote>這裡可以寫入一段名言，或是您本週最核心的一句觀點。</blockquote><p>（請在此接續您的深度見解與故事分享）</p><p>您對這個主題有什麼看法呢？歡迎直接回信與我交流！</p>`,
+            'update': `<h2>👋 近況更新：[請填寫近期的大事]</h2><p>嗨！好久不見：</p><p>最近 TONY STUDIO 發生了一些令人興奮的新變化，想第一時間與您分享！</p><p>（在此寫下您的近況、接下來的計畫或是專案進度）</p><p>感謝您一直以來的關注與支持，期待很快能帶來更多好消息！</p>`
         };
-        if (templates[type] && window.newsletterEditor) {
-            window.newsletterEditor.clipboard.dangerouslyPasteHTML(templates[type]);
-            showToast('模板已套用', 'success');
+
+        if (templates[type]) {
+            window.showModal('套用模板', '確定要套用此模板嗎？這將會覆蓋您目前編輯器中的內容。', () => {
+                window.newsletterEditor.clipboard.dangerouslyPasteHTML(templates[type]);
+                showToast('模板已套用', 'success');
+            }, '確定套用');
         }
     };
 
     window.sendNewsletter = async (e) => {
         e.preventDefault();
         const subject = document.getElementById('newsletter-subject').value.trim();
+        
+        if(!window.newsletterEditor) return;
         const content = window.newsletterEditor.root.innerHTML;
-        if (!subject || !window.newsletterEditor.getText().trim()) return showToast("主旨與內容不能為空", "warning");
+        const textContent = window.newsletterEditor.getText().trim();
+
+        if (!subject || !textContent) {
+            showToast("主旨與內容不能為空", "warning");
+            return; 
+        }
 
         const btn = document.getElementById('btn-send-newsletter');
-        const originalHtml = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 發送中...';
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true; 
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 撈取名單並發送中...';
 
         try {
             const snap = await window.FS.getDocs(window.FS.collection(window.AppState.db, "subscribers"));
-            let bccList = []; snap.forEach(doc => { if(doc.data().email) bccList.push(doc.data().email); });
-            if (bccList.length === 0) { showToast("無訂閱者", "warning"); return; }
+            let bccList = [];
+            snap.forEach(doc => {
+                const email = doc.data().email;
+                if(email && !bccList.includes(email)) bccList.push(email);
+            });
 
-            await window.FS.addDoc(window.FS.collection(window.AppState.db, "mail"), { to: "mindnodeai@gmail.com", bcc: bccList, message: { subject, html: content } });
-            showToast(`成功觸發！將寄送給 ${bccList.length} 人。`, "success");
-            document.getElementById('newsletter-subject').value = ''; window.newsletterEditor.root.innerHTML = '';
-        } catch (error) { showToast("發送失敗", "error"); } finally { btn.disabled = false; btn.innerHTML = originalHtml; }
+            if (bccList.length === 0) {
+                showToast("目前沒有任何訂閱者可以發送", "warning");
+                return;
+            }
+
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "mail"), {
+                to: "mindnodeai@gmail.com",
+                bcc: bccList,
+                message: { subject: subject, html: content }
+            });
+
+            showToast(`成功觸發發信機制！將寄送給 ${bccList.length} 位訂閱者。`, "success");
+            document.getElementById('newsletter-subject').value = '';
+            window.newsletterEditor.root.innerHTML = '';
+        } catch (error) {
+            console.error("發送失敗", error);
+            showToast("發送失敗，請檢查資料庫權限", "error");
+        } finally {
+            btn.disabled = false; 
+            btn.innerHTML = originalHtml;
+        }
+    };
+
+    window.submitAskTony = async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('ask-tony-input');
+        const btn = document.getElementById('ask-tony-btn');
+        const chatbox = document.getElementById('ask-tony-chatbox');
+        if(!input || !btn || !chatbox) return;
+        const question = input.value.trim();
+        if (!question) return;
+
+        chatbox.innerHTML += `<div class="flex gap-3 md:gap-4 justify-end"><div class="bg-cta text-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tr-sm shadow-sm max-w-[85%] md:max-w-[80%] text-sm md:text-base">${question.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div></div>`;
+        input.value = ''; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
+
+        const loadingId = 'ai-msg-' + Date.now();
+        chatbox.innerHTML += `<div class="flex gap-3 md:gap-4" id="${loadingId}"><div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div><div class="bg-white px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textSub max-w-[85%] md:max-w-[80%] text-sm md:text-base"><i class="fa-solid fa-ellipsis fa-fade"></i> AI 顧問思考中...</div></div>`;
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+        try {
+            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：\n1. 絕對不可以使用 Markdown 的程式碼區塊標記 (如 ```)。\n2. 必須直接輸出純 HTML 格式。\n3. 使用 <h3> 標示大段落標題 (套用 class='text-lg font-bold text-primary border-b border-gray-100 pb-2 mb-3 mt-5')。\n4. 使用 <strong> 標示重要關鍵字 (套用 class='text-cta bg-blue-50 px-1 py-0.5 rounded')。\n5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4 text-gray-700'> 與 <li> 標籤。\n6. 段落之間請用 <p class='mb-4 leading-relaxed text-gray-700'> 包覆。";
+            const resultText = await window.callGeminiAPI(systemPrompt, question);
+            
+            let cleanHTML = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            
+            const loadEl = document.getElementById(loadingId);
+            if(loadEl) {
+                loadEl.innerHTML = `
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div>
+                    <div class="bg-white px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[90%] md:max-w-[85%] text-sm md:text-base overflow-x-auto">
+                        <div class="max-w-none text-textMain leading-loose">${cleanHTML.trim()}</div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            const loadEl = document.getElementById(loadingId);
+            if(loadEl) {
+                loadEl.innerHTML = `
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 font-bold shadow-sm flex-shrink-0 text-sm md:text-base"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="bg-red-50 px-4 py-3 md:px-5 md:py-3 rounded-2xl rounded-tl-sm shadow-sm border border-red-100 text-red-600 max-w-[85%] md:max-w-[80%] text-sm md:text-base">${error.message.includes("MISSING_API_KEY") ? "請在彈出的視窗輸入金鑰後，重新發問。" : error.message}</div>
+                `;
+            }
+        } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane text-lg"></i>'; chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    };
+
+    window.generateAIContent = async () => {
+        const promptInput = document.getElementById('ai-prompt');
+        if(!promptInput) return;
+        const prompt = promptInput.value;
+        if (!prompt) return showToast("請輸入寫作主題", "warning");
+        try {
+            showToast("AI 撰寫中...", "info");
+            const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，不要包含 markdown 標記。";
+            const resultText = await window.callGeminiAPI(safePromptText, `主題大綱：${prompt}`);
+            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            if(window.quillEditor) window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), cleanText);
+            showToast("生成完成", "success");
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); }
+    };
+
+    window.generateCoverPrompt = async () => {
+        if (!window.quillEditor) return;
+        const content = window.quillEditor.getText().trim();
+        if (content.length < 50) return showToast("正文內容過少", "warning");
+
+        const btn = document.querySelector('button[onclick="window.generateCoverPrompt()"]');
+        if(!btn) return;
+        const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 設計中...'; btn.disabled = true;
+
+        try {
+            const resultText = await window.callGeminiAPI("你是一位視覺藝術總監，專為 Midjourney v6 寫 Prompt。輸出全英文純文字。", `文章內容：${content.substring(0, 3000)}`);
+            const container = document.getElementById('ai-prompt-result-container');
+            const resultInput = document.getElementById('ai-cover-prompt-result');
+            if(container) { container.classList.remove('hidden'); container.classList.add('flex'); }
+            if(resultInput) resultInput.value = resultText.replace(new RegExp('\\x60\\x60\\x60', 'g'), '').trim();
+            showToast("Prompt 已生成", "success");
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); } 
+        finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+    };
+
+    window.copyPrompt = () => {
+        const copyText = document.getElementById("ai-cover-prompt-result");
+        if(!copyText) return;
+        copyText.select(); copyText.setSelectionRange(0, 99999);
+        document.execCommand("copy"); showToast("已複製！", "success");
+    };
+
+    window.generateAIExcerpt = async () => {
+        if (!window.quillEditor) return;
+        const content = window.quillEditor.getText().trim();
+        if (content.length < 50) return showToast("正文內容過少", "warning");
+
+        const btn = document.querySelector('button[onclick="window.generateAIExcerpt()"]');
+        if(!btn) return;
+        const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 分析中...'; btn.disabled = true;
+
+        try {
+            const resultText = await window.callGeminiAPI("請撰寫大約 250 到 300 字的摘要。純文字輸出。", content.substring(0, 3000));
+            const excerptInput = document.getElementById('article-excerpt-input');
+            if(excerptInput) excerptInput.value = resultText.trim();
+            showToast("摘要產生成功！", "success");
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`摘要失敗：${e.message}`, "error"); } 
+        finally { btn.innerHTML = originalHtml; btn.disabled = false; }
+    };
+
+    window.formatContentWithAI = async () => {
+        if (!window.quillEditor) return;
+        const htmlContent = window.quillEditor.root.innerHTML;
+        if (!window.quillEditor.getText().trim()) return showToast("編輯器內無內容", "warning");
+
+        const btn = document.querySelector('button[onclick="window.formatContentWithAI()"]');
+        if(!btn) return;
+        const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 排版中...'; btn.disabled = true;
+
+        try {
+            showToast("請稍候...", "info");
+            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 markdown 標記。";
+            const resultText = await window.callGeminiAPI(safePromptText, htmlContent);
+            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            window.quillEditor.clipboard.dangerouslyPasteHTML(cleanText);
+            showToast("排版完成！", "success");
+        } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`排版失敗：${e.message}`, "error"); } 
+        finally { btn.innerHTML = originalHtml; btn.disabled = false; }
     };
 
     window.previewImage = async (event, previewId) => {
         const file = event.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => { const previewEl = document.getElementById(previewId); if(previewEl) previewEl.src = e.target.result; }
+            reader.onload = (e) => {
+                const previewEl = document.getElementById(previewId);
+                if(previewEl) previewEl.src = e.target.result;
+            }
             reader.readAsDataURL(file);
             try {
                 showToast("上傳圖片中...", "info");
@@ -1085,13 +2397,21 @@
                 await window.StorageAPI.uploadBytes(storageRef, file);
                 const url = await window.StorageAPI.getDownloadURL(storageRef);
                 
-                // 判斷是存入哪一個隱藏欄位
                 if (previewId === 'settings-header-logo-preview') {
-                    document.getElementById('hidden-header-logo').value = url;
-                } else if (previewId === 'settings-footer-logo-preview') {
-                    document.getElementById('hidden-footer-logo').value = url;
-                } else if (previewId === 'settings-preview-img') {
-                    document.getElementById('hidden-profile-img').value = url;
+                    const el = document.getElementById('hidden-header-logo');
+                    if(el) el.value = url;
+                }
+                else if (previewId === 'settings-footer-logo-preview') {
+                    const el = document.getElementById('hidden-footer-logo');
+                    if(el) el.value = url;
+                }
+                else if (previewId === 'settings-preview-img') {
+                    const el = document.getElementById('hidden-profile-img');
+                    if(el) el.value = url;
+                }
+                else if (previewId === 'cover-preview-img') {
+                    const el = document.getElementById('article-cover-input');
+                    if(el) el.value = url;
                 }
                 showToast("圖片上傳成功", "success");
             } catch (err) { showToast("上傳失敗", "error"); }
@@ -1103,82 +2423,212 @@
             const docSnap = await window.FS.getDoc(window.FS.doc(window.AppState.db, "settings", "global"));
             if (docSnap.exists()) {
                 const data = docSnap.data();
+                
                 const setVal = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
                 
                 setVal('settings-hero-title', data.heroTitle);
                 setVal('settings-hero-bio', data.heroBio);
+                setVal('settings-skills', data.skills);
+                setVal('settings-experience', data.experience);
+                setVal('settings-certifications', data.certifications);
+                setVal('settings-books', data.books);
+                setVal('settings-social-fb', data.socialFb);
+                setVal('settings-social-linkedin', data.socialLinkedin);
+                setVal('settings-social-yt', data.socialYt);
+                setVal('settings-social-ig', data.socialIg);
+                setVal('settings-social-tiktok', data.socialTiktok);
                 
-                // 載入 Header Logo
                 const headerUrl = data.headerLogoUrl || data.siteLogoUrl;
                 if (headerUrl) {
-                    const hp = document.getElementById('settings-header-logo-preview'); if(hp) hp.src = headerUrl;
+                    const preview = document.getElementById('settings-header-logo-preview');
+                    if(preview) preview.src = headerUrl;
                     setVal('hidden-header-logo', headerUrl);
                 }
-                // 載入 Footer Logo
+                
                 const footerUrl = data.footerLogoUrl || data.siteLogoUrl;
                 if (footerUrl) {
-                    const fp = document.getElementById('settings-footer-logo-preview'); if(fp) fp.src = footerUrl;
+                    const preview = document.getElementById('settings-footer-logo-preview');
+                    if(preview) preview.src = footerUrl;
                     setVal('hidden-footer-logo', footerUrl);
                 }
-                // 載入 Profile Img
+
                 if (data.profileImageUrl) {
-                    const pp = document.getElementById('settings-preview-img'); if(pp) pp.src = data.profileImageUrl;
+                    const profilePreview = document.getElementById('settings-preview-img');
+                    if(profilePreview) profilePreview.src = data.profileImageUrl;
                     setVal('hidden-profile-img', data.profileImageUrl);
                 }
             }
+            const currentKey = window.getApiKey();
+            const apiKeyInput = document.getElementById('settings-api-key');
+            if (currentKey && apiKeyInput) apiKeyInput.value = currentKey;
         } catch(e) { }
+    };
+
+    window.saveSettingsApiKey = () => {
+        const apiKeyInput = document.getElementById('settings-api-key');
+        if(!apiKeyInput) return;
+        const key = apiKeyInput.value;
+        if (key) window.saveApiKey(key); else showToast("請輸入金鑰", "warning");
     };
 
     window.saveSiteSettings = async (e) => {
         e.preventDefault();
         try {
             const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+            
+            const headerLogoUrl = getVal('hidden-header-logo');
+            const footerLogoUrl = getVal('hidden-footer-logo');
+
             const data = {
                 heroTitle: getVal('settings-hero-title'),
                 heroBio: getVal('settings-hero-bio'),
-                headerLogoUrl: getVal('hidden-header-logo'),
-                footerLogoUrl: getVal('hidden-footer-logo'),
+                skills: getVal('settings-skills'),
+                experience: getVal('settings-experience'),
+                certifications: getVal('settings-certifications'),
+                books: getVal('settings-books'),
+                socialFb: getVal('settings-social-fb'),
+                socialLinkedin: getVal('settings-social-linkedin'),
+                socialYt: getVal('settings-social-yt'),
+                socialIg: getVal('settings-social-ig'),
+                socialTiktok: getVal('settings-social-tiktok'),
+                headerLogoUrl: headerLogoUrl,
+                footerLogoUrl: footerLogoUrl,
                 profileImageUrl: getVal('hidden-profile-img'),
                 updatedAt: window.FS.serverTimestamp()
             };
             await window.FS.setDoc(window.FS.doc(window.AppState.db, "settings", "global"), data, { merge: true });
             showToast("全域設定已儲存！", "success");
-            window.loadGlobalSettings(); // 儲存後立即重新渲染 Logo
+            
+            if (headerLogoUrl) {
+                const img = document.getElementById('nav-logo-img');
+                const txt = document.getElementById('nav-logo-text');
+                if (img && txt) { img.src = headerLogoUrl; img.classList.remove('hidden'); txt.classList.add('hidden'); }
+            }
+            if (footerLogoUrl) {
+                const img = document.getElementById('footer-logo-img');
+                const txt = document.getElementById('footer-logo-text');
+                if (img && txt) { img.src = footerLogoUrl; img.classList.remove('hidden'); txt.classList.add('hidden'); }
+            }
         } catch(err) { showToast("儲存失敗", "error"); }
     };
 
-    // 全域網站設定載入器 (確保任何頁面重新整理都會抓 Logo)
+    window.subscribeNewsletter = async (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('newsletter-email');
+        if(!emailInput) return;
+        const email = emailInput.value.trim();
+        if (!email) return;
+
+        const btn = e.target.querySelector('button');
+        const originalText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "subscribers"), { email: email, timestamp: window.FS.serverTimestamp() });
+            showToast('訂閱成功！感謝您的支持', 'success');
+            emailInput.value = '';
+        } catch(error) { showToast('訂閱失敗，請稍後再試', 'error'); } 
+        finally { btn.disabled = false; btn.innerHTML = originalText; }
+    };
+
+    window.submitLeadForm = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('lead-submit-btn');
+        if(!btn) return;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 送出中...';
+        try {
+            const getVal = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "leads"), {
+                name: getVal('lead-name'),
+                email: getVal('lead-email'),
+                company: getVal('lead-company'),
+                message: getVal('lead-message'),
+                createdAt: window.FS.serverTimestamp()
+            });
+            showToast('預約成功！我們將盡快與您聯絡', 'success');
+            setTimeout(() => { window.location.hash = '#/'; }, 1500);
+        } catch(error) { showToast('送出失敗，請稍後再試', 'error'); } 
+        finally { btn.disabled = false; btn.innerText = '送出預約'; }
+    };
+
+    window.loadCategories = async (containerId, mode = 'filters') => {
+        const container = document.getElementById(containerId);
+        if(!container) return;
+        try {
+            const snap = await window.FS.getDocs(window.FS.query(window.FS.collection(window.AppState.db, "categories"), window.FS.orderBy("order", "asc")));
+            if (mode === 'admin') {
+                let html = '';
+                snap.forEach(doc => { html += `<div class="bg-gray-50 px-4 py-3 rounded border font-medium flex justify-between items-center">${doc.data().name} <button onclick="window.deleteCategory('${doc.id}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button></div>`; });
+                container.innerHTML = html;
+            } else if (mode === 'select') {
+                let html = '';
+                snap.forEach(doc => { html += `<option value="${doc.data().name}">${doc.data().name}</option>`; });
+                container.innerHTML = html;
+            } else if (mode === 'filters') {
+                let html = `<button onclick="window.filterArticles('全部')" class="cat-btn px-5 py-2 bg-primary text-white rounded-full text-sm">全部</button>`;
+                snap.forEach(doc => { html += `<button onclick="window.filterArticles('${doc.data().name}')" class="cat-btn px-5 py-2 bg-white border border-gray-200 text-textSub hover:border-cta hover:text-cta text-sm rounded-full transition">${doc.data().name}</button>`; });
+                container.innerHTML = html;
+            }
+        } catch(e) {}
+    };
+
+    window.createCategory = async () => {
+        const inputEl = document.getElementById('new-category-input');
+        if(!inputEl) return;
+        const name = inputEl.value.trim();
+        if(!name) return;
+        try {
+            await window.FS.addDoc(window.FS.collection(window.AppState.db, "categories"), { name: name, order: Date.now(), createdAt: window.FS.serverTimestamp() });
+            showToast("新增分類成功", "success");
+            inputEl.value = '';
+            if(window.loadCategories) window.loadCategories('settings-categories-list', 'admin');
+        } catch(e) { showToast("新增失敗", "error"); }
+    };
+    
+    window.deleteCategory = (id) => {
+        window.showModal('刪除分類', '確定要刪除這個分類嗎？', async () => {
+            try {
+                await window.FS.deleteDoc(window.FS.doc(window.AppState.db, "categories", id));
+                showToast("分類已刪除", "success");
+                if(window.loadCategories) window.loadCategories('settings-categories-list', 'admin');
+            } catch(e) { showToast("刪除失敗", "error"); }
+        }, '確定刪除', true);
+    };
+
+    window.filterArticles = (category) => {
+        window.AppState.currentCategory = category;
+        if(window.fetchPublicArticles) window.fetchPublicArticles();
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            if(btn.innerText === category) { btn.className = 'cat-btn px-5 py-2 bg-primary text-white shadow-md text-sm font-medium rounded-full whitespace-nowrap transition'; }
+            else { btn.className = 'cat-btn px-5 py-2 bg-white text-textSub border border-gray-200 hover:border-cta hover:text-cta text-sm font-medium rounded-full whitespace-nowrap transition'; }
+        });
+    };
+
     window.loadGlobalSettings = async () => {
         try {
             const docSnap = await window.FS.getDoc(window.FS.doc(window.AppState.db, "settings", "global"));
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 
-                // 更新上方 Header Logo (有新欄位用新欄位，沒有則降級用舊的 siteLogoUrl)
                 const headerUrl = data.headerLogoUrl || data.siteLogoUrl;
                 if (headerUrl) {
-                    const navImg = document.getElementById('nav-logo-img');
-                    const navText = document.getElementById('nav-logo-text');
-                    if (navImg && navText) { navImg.src = headerUrl; navImg.classList.remove('hidden'); navText.classList.add('hidden'); }
+                    const img = document.getElementById('nav-logo-img');
+                    const txt = document.getElementById('nav-logo-text');
+                    if (img && txt) { img.src = headerUrl; img.classList.remove('hidden'); txt.classList.add('hidden'); }
                 }
-
-                // 更新下方 Footer Logo (有新欄位用新欄位，沒有則降級用舊的 siteLogoUrl)
+                
                 const footerUrl = data.footerLogoUrl || data.siteLogoUrl;
                 if (footerUrl) {
-                    const footerImg = document.getElementById('footer-logo-img');
-                    const footerText = document.getElementById('footer-logo-text');
-                    if (footerImg && footerText) { footerImg.src = footerUrl; footerImg.classList.remove('hidden'); footerText.classList.add('hidden'); }
+                    const img = document.getElementById('footer-logo-img');
+                    const txt = document.getElementById('footer-logo-text');
+                    if (img && txt) { img.src = footerUrl; img.classList.remove('hidden'); txt.classList.add('hidden'); }
                 }
             }
         } catch (error) { console.warn("載入全域設定失敗:", error); }
     };
 
-    window.subscribeNewsletter = async (e) => { /* Subscribe Logic */ };
-    window.submitLeadForm = async (e) => { /* Contact Logic */ };
-
     window.addEventListener('hashchange', router);
     window.addEventListener('load', () => { 
-        window.loadGlobalSettings(); 
+        window.loadGlobalSettings();
         router(); 
     });
 </script>
