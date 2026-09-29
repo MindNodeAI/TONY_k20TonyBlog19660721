@@ -72,6 +72,23 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         #detail-content .ql-mermaid-edit-btn { display: none !important; }
+
+        .mermaid-wrapper { max-width: 100%; overflow: hidden; position: relative; }
+        .mermaid-render { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 0.5rem; }
+        /* 強制 SVG 保持可視寬度並允許外部捲動，避免手機版字體縮到無法閱讀 */
+        .mermaid-render svg { max-width: none !important; height: auto !important; min-width: 100%; }
+        
+        /* 針對手機版進行微調 */
+        @media (max-width: 640px) {
+            .mermaid-wrapper { padding: 1rem !important; }
+            .mermaid-wrapper .ql-mermaid-edit-btn { 
+                top: 0.5rem !important; 
+                right: 0.5rem !important; 
+                padding: 0.25rem 0.5rem !important; 
+                font-size: 0.7rem !important; 
+                opacity: 0.85; 
+            }
+        }
     </style>
 
     <script>
@@ -1936,7 +1953,8 @@
                 if(coverEl) coverEl.src = article.coverImage || 'https://placehold.co/800x400';
                 
                 const contentEl = document.getElementById('detail-content');
-                if(contentEl) contentEl.innerHTML = `<div class="ql-editor" style="padding:0; overflow:visible; border:none; border-radius:0;">${article.content || ''}</div>`;
+                /* 更新這裡：改為 overflow-x:auto 並加入原生觸控捲動 */
+                if(contentEl) contentEl.innerHTML = `<div class="ql-editor" style="padding:0; overflow-x:auto; -webkit-overflow-scrolling: touch; border:none; border-radius:0;">${article.content || ''}</div>`;
                 
                 window.updateSEO(article.title, article.excerpt, article.coverImage);
 
