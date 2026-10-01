@@ -1,19 +1,24 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-immersive-translate-page-theme="light"><head>
+<html lang="zh-TW" data-immersive-translate-page-theme="light">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TONY STUDIO | 個人品牌官網與專業內容中心</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Quill, KaTeX & Mermaid JS -->
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.8.0/dist/mermaid.min.js" crossorigin="anonymous"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+        window.mermaid = mermaid;
+    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -41,7 +46,7 @@
         
         input, textarea, select { font-size: 16px !important; }
 
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: theme('colors.bg'); }
         ::-webkit-scrollbar-thumb { background: theme('colors.secondary'); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: theme('colors.primary'); }
@@ -49,9 +54,10 @@
         .page-enter { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        /* Quill Editor Styling Optimization */
         .ql-container { font-family: 'Inter', 'Noto Sans TC', sans-serif !important; font-size: 1rem !important; background-color: #ffffff; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem; }
         .ql-toolbar { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; background-color: #f8fafc; }
-        .ql-editor { min-height: 400px; overflow-x: auto; max-width: 100%; line-height: 1.8; }
+        .ql-editor { min-height: 400px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; line-height: 1.8; }
         
         .ql-editor h1 { font-size: 2em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
         .ql-editor h2 { font-size: 1.5em !important; font-weight: 700 !important; margin-bottom: 0.5em !important; line-height: 1.3 !important; }
@@ -63,40 +69,28 @@
         .ql-editor li { margin-bottom: 0.5em !important; }
         .ql-editor blockquote { border-left: 4px solid #C9A24B !important; padding-left: 1rem !important; color: #667085 !important; font-style: italic !important; margin-bottom: 1em !important; background-color: #f8fafc !important; padding-top: 0.5rem !important; padding-bottom: 0.5rem !important;}
 
-        .ql-editor table { width: 100%; border-collapse: collapse; margin-bottom: 1em !important;}
-        .ql-editor td { border: 1px solid #d1d5db; padding: 10px; min-width: 50px; position: relative; word-break: break-word; }
+        /* Mobile Optimized Table - Ensure width >= 140px to prevent text squeezing */
+        .ql-editor table { width: 100%; border-collapse: collapse; margin-bottom: 1em !important; table-layout: auto; }
+        .ql-editor td { border: 1px solid #d1d5db; padding: 12px 10px; min-width: 140px; position: relative; word-break: break-word; vertical-align: top; }
         .ql-editor td.selected { background-color: #eff6ff; outline: 2px solid #2563EB; outline-offset: -2px; }
         .ql-editor img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 1em; margin-bottom: 1em; }
 
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        #detail-content .ql-mermaid-edit-btn { display: none !important; }
-
+        /* Mermaid Graph Optimization for Mobile */
         .mermaid-wrapper { max-width: 100%; overflow: hidden; position: relative; }
-        .mermaid-render { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 0.5rem; }
-        /* 強制 SVG 保持可視寬度並允許外部捲動，避免手機版字體縮到無法閱讀 */
+        .mermaid-render { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 0.5rem; display: flex; justify-content: flex-start; }
         .mermaid-render svg { max-width: none !important; height: auto !important; min-width: 100%; }
         
-        /* 針對手機版進行微調 */
+        #detail-content .ql-mermaid-edit-btn { display: none !important; }
+        
         @media (max-width: 640px) {
             .mermaid-wrapper { padding: 1rem !important; }
-            .mermaid-wrapper .ql-mermaid-edit-btn { 
-                top: 0.5rem !important; 
-                right: 0.5rem !important; 
-                padding: 0.25rem 0.5rem !important; 
-                font-size: 0.7rem !important; 
-                opacity: 0.85; 
-            }
+            .mermaid-wrapper .ql-mermaid-edit-btn { top: 0.5rem !important; right: 0.5rem !important; padding: 0.25rem 0.5rem !important; font-size: 0.7rem !important; opacity: 0.85; }
         }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if(window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'default' });
-        });
-    </script>
-<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:Inter, Noto Sans TC, sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0px}.inset-y-0{top:0px;bottom:0px}.bottom-4{bottom:1rem}.left-0{left:0px}.left-4{left:1rem}.right-4{right:1rem}.top-0{top:0px}.bottom-0{bottom:0px}.right-0{right:0px}.top-4{top:1rem}.z-40{z-index:40}.z-50{z-index:50}.z-\[110\]{z-index:110}.z-10{z-index:10}.z-\[100\]{z-index:100}.col-span-full{grid-column:1 / -1}.mx-auto{margin-left:auto;margin-right:auto}.my-1{margin-top:0.25rem;margin-bottom:0.25rem}.mb-4{margin-bottom:1rem}.mb-3{margin-bottom:0.75rem}.mt-auto{margin-top:auto}.-mb-20{margin-bottom:-5rem}.-ml-20{margin-left:-5rem}.-mr-20{margin-right:-5rem}.-mt-20{margin-top:-5rem}.mb-10{margin-bottom:2.5rem}.mb-12{margin-bottom:3rem}.mb-2{margin-bottom:0.5rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-1{margin-left:0.25rem}.mt-12{margin-top:3rem}.mr-1{margin-right:0.25rem}.mt-3{margin-top:0.75rem}.mt-8{margin-top:2rem}.mt-2{margin-top:0.5rem}.mr-3{margin-right:0.75rem}.ml-2{margin-left:0.5rem}.mt-4{margin-top:1rem}.mb-1{margin-bottom:0.25rem}.mb-5{margin-bottom:1.25rem}.line-clamp-2{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}.line-clamp-5{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.aspect-video{aspect-ratio:16 / 9}.h-16{height:4rem}.h-8{height:2rem}.h-10{height:2.5rem}.h-64{height:16rem}.h-72{height:18rem}.h-96{height:24rem}.h-full{height:100%}.h-7{height:1.75rem}.h-auto{height:auto}.h-24{height:6rem}.min-h-screen{min-height:100vh}.w-8{width:2rem}.w-auto{width:auto}.w-full{width:100%}.w-10{width:2.5rem}.w-64{width:16rem}.w-72{width:18rem}.w-96{width:24rem}.w-16{width:4rem}.w-7{width:1.75rem}.w-5{width:1.25rem}.w-4{width:1rem}.w-40{width:10rem}.w-56{width:14rem}.min-w-\[4rem\]{min-width:4rem}.max-w-7xl{max-width:80rem}.max-w-2xl{max-width:42rem}.max-w-md{max-width:28rem}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.flex-grow{flex-grow:1}.border-collapse{border-collapse:collapse}.translate-y-10{--tw-translate-y:2.5rem;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes spin{to{transform:rotate(360deg)}}.animate-\[spin_60s_linear_infinite\]{animation:spin 60s linear infinite}.cursor-pointer{cursor:pointer}.appearance-none{-webkit-appearance:none;appearance:none}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.flex-row{flex-direction:row}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-2{gap:0.5rem}.gap-8{gap:2rem}.gap-12{gap:3rem}.gap-4{gap:1rem}.gap-3{gap:0.75rem}.gap-6{gap:1.5rem}.space-x-2 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.5rem * var(--tw-space-x-reverse));margin-left:calc(0.5rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-4 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(1rem * var(--tw-space-x-reverse));margin-left:calc(1rem * calc(1 - var(--tw-space-x-reverse)))}.space-x-8 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(2rem * var(--tw-space-x-reverse));margin-left:calc(2rem * calc(1 - var(--tw-space-x-reverse)))}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.space-y-8 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(2rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(2rem * var(--tw-space-y-reverse))}.space-x-3 > :not([hidden]) ~ :not([hidden]){--tw-space-x-reverse:0;margin-right:calc(0.75rem * var(--tw-space-x-reverse));margin-left:calc(0.75rem * calc(1 - var(--tw-space-x-reverse)))}.divide-y > :not([hidden]) ~ :not([hidden]){--tw-divide-y-reverse:0;border-top-width:calc(1px * calc(1 - var(--tw-divide-y-reverse)));border-bottom-width:calc(1px * var(--tw-divide-y-reverse))}.divide-gray-200 > :not([hidden]) ~ :not([hidden]){--tw-divide-opacity:1;border-color:rgb(229 231 235 / var(--tw-divide-opacity, 1))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.whitespace-nowrap{white-space:nowrap}.rounded{border-radius:0.25rem}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-full{border-radius:9999px}.rounded-2xl{border-radius:1rem}.rounded-xl{border-radius:0.75rem}.rounded-l{border-top-left-radius:0.25rem;border-bottom-left-radius:0.25rem}.rounded-r{border-top-right-radius:0.25rem;border-bottom-right-radius:0.25rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-t{border-top-width:1px}.border-b{border-bottom-width:1px}.border-l-2{border-left-width:2px}.border-dashed{border-style:dashed}.border-gray-100{--tw-border-opacity:1;border-color:rgb(243 244 246 / var(--tw-border-opacity, 1))}.border-transparent{border-color:transparent}.border-gray-600{--tw-border-opacity:1;border-color:rgb(75 85 99 / var(--tw-border-opacity, 1))}.border-accent{--tw-border-opacity:1;border-color:rgb(201 162 75 / var(--tw-border-opacity, 1))}.border-accent\/30{border-color:rgb(201 162 75 / 0.3)}.border-white\/20{border-color:rgb(255 255 255 / 0.2)}.border-white\/10{border-color:rgb(255 255 255 / 0.1)}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))}.border-gray-700{--tw-border-opacity:1;border-color:rgb(55 65 81 / var(--tw-border-opacity, 1))}.border-blue-100{--tw-border-opacity:1;border-color:rgb(219 234 254 / var(--tw-border-opacity, 1))}.border-indigo-200{--tw-border-opacity:1;border-color:rgb(199 210 254 / var(--tw-border-opacity, 1))}.bg-primary{--tw-bg-opacity:1;background-color:rgb(11 31 58 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-cta{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.bg-secondary{--tw-bg-opacity:1;background-color:rgb(22 58 99 / var(--tw-bg-opacity, 1))}.bg-white\/10{background-color:rgb(255 255 255 / 0.1)}.bg-white\/5{background-color:rgb(255 255 255 / 0.05)}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))}.bg-bg{--tw-bg-opacity:1;background-color:rgb(248 247 243 / var(--tw-bg-opacity, 1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.bg-transparent{background-color:transparent}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-blue-50{--tw-bg-opacity:1;background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.bg-indigo-50{--tw-bg-opacity:1;background-color:rgb(238 242 255 / var(--tw-bg-opacity, 1))}.bg-black\/50{background-color:rgb(0 0 0 / 0.5)}.bg-blue-50\/50{background-color:rgb(239 246 255 / 0.5)}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-blue-50{--tw-gradient-from:#eff6ff var(--tw-gradient-from-position);--tw-gradient-to:rgb(239 246 255 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-indigo-50{--tw-gradient-to:#eef2ff var(--tw-gradient-to-position)}.object-contain{object-fit:contain}.object-cover{object-fit:cover}.p-2{padding:0.5rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.p-1{padding:0.25rem}.p-10{padding:2.5rem}.p-4{padding:1rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-8{padding-left:2rem;padding-right:2rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-16{padding-top:4rem;padding-bottom:4rem}.py-20{padding-top:5rem;padding-bottom:5rem}.py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-10{padding-top:2.5rem;padding-bottom:2.5rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.py-6{padding-top:1.5rem;padding-bottom:1.5rem}.pb-6{padding-bottom:1.5rem}.pt-2{padding-top:0.5rem}.pt-4{padding-top:1rem}.pb-3{padding-bottom:0.75rem}.pr-10{padding-right:2.5rem}.pr-4{padding-right:1rem}.pr-2{padding-right:0.5rem}.pl-4{padding-left:1rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.text-base{font-size:1rem;line-height:1.5rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.text-\[10px\]{font-size:10px}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-extrabold{font-weight:800}.font-normal{font-weight:400}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.leading-loose{line-height:2}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-wide{letter-spacing:0.025em}.tracking-widest{letter-spacing:0.1em}.text-accent{--tw-text-opacity:1;color:rgb(201 162 75 / var(--tw-text-opacity, 1))}.text-primary{--tw-text-opacity:1;color:rgb(11 31 58 / var(--tw-text-opacity, 1))}.text-textMain{--tw-text-opacity:1;color:rgb(23 32 51 / var(--tw-text-opacity, 1))}.text-textSub{--tw-text-opacity:1;color:rgb(102 112 133 / var(--tw-text-opacity, 1))}.text-gray-300{--tw-text-opacity:1;color:rgb(209 213 219 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-cta{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.text-gray-200{--tw-text-opacity:1;color:rgb(229 231 235 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246 / var(--tw-text-opacity, 1))}.text-green-600{--tw-text-opacity:1;color:rgb(22 163 74 / var(--tw-text-opacity, 1))}.text-red-500{--tw-text-opacity:1;color:rgb(239 68 68 / var(--tw-text-opacity, 1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128 / var(--tw-text-opacity, 1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202 / var(--tw-text-opacity, 1))}.text-blue-800{--tw-text-opacity:1;color:rgb(30 64 175 / var(--tw-text-opacity, 1))}.placeholder-gray-400::placeholder{--tw-placeholder-opacity:1;color:rgb(156 163 175 / var(--tw-placeholder-opacity, 1))}.opacity-30{opacity:0.3}.opacity-50{opacity:0.5}.opacity-0{opacity:0}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow{--tw-shadow:0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-inner{--tw-shadow:inset 0 2px 4px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:inset 0 2px 4px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.blur-3xl{--tw-blur:blur(64px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.duration-500{transition-duration:500ms}.file\:mr-4::file-selector-button{margin-right:1rem}.file\:rounded-lg::file-selector-button{border-radius:0.5rem}.file\:border-0::file-selector-button{border-width:0px}.file\:bg-blue-50::file-selector-button{--tw-bg-opacity:1;background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))}.file\:px-5::file-selector-button{padding-left:1.25rem;padding-right:1.25rem}.file\:py-2\.5::file-selector-button{padding-top:0.625rem;padding-bottom:0.625rem}.file\:text-sm::file-selector-button{font-size:0.875rem;line-height:1.25rem}.file\:font-bold::file-selector-button{font-weight:700}.file\:text-cta::file-selector-button{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.hover\:scale-110:hover{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:border-blue-100:hover{--tw-border-opacity:1;border-color:rgb(219 234 254 / var(--tw-border-opacity, 1))}.hover\:bg-blue-50:hover{--tw-bg-opacity:1;background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))}.hover\:bg-blue-600:hover{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.hover\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/20:hover{background-color:rgb(255 255 255 / 0.2)}.hover\:bg-cta:hover{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.hover\:bg-white\/10:hover{background-color:rgb(255 255 255 / 0.1)}.hover\:bg-gray-50:hover{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.hover\:bg-primary:hover{--tw-bg-opacity:1;background-color:rgb(11 31 58 / var(--tw-bg-opacity, 1))}.hover\:bg-red-100:hover{--tw-bg-opacity:1;background-color:rgb(254 226 226 / var(--tw-bg-opacity, 1))}.hover\:bg-secondary:hover{--tw-bg-opacity:1;background-color:rgb(22 58 99 / var(--tw-bg-opacity, 1))}.hover\:bg-indigo-100:hover{--tw-bg-opacity:1;background-color:rgb(224 231 255 / var(--tw-bg-opacity, 1))}.hover\:bg-red-50:hover{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.hover\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))}.hover\:text-cta:hover{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.hover\:text-primary:hover{--tw-text-opacity:1;color:rgb(11 31 58 / var(--tw-text-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:text-blue-800:hover{--tw-text-opacity:1;color:rgb(30 64 175 / var(--tw-text-opacity, 1))}.hover\:text-red-600:hover{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.hover\:text-red-500:hover{--tw-text-opacity:1;color:rgb(239 68 68 / var(--tw-text-opacity, 1))}.hover\:underline:hover{-webkit-text-decoration-line:underline;text-decoration-line:underline}.hover\:shadow-xl:hover{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.hover\:file\:bg-blue-100::file-selector-button:hover{--tw-bg-opacity:1;background-color:rgb(219 234 254 / var(--tw-bg-opacity, 1))}.focus\:border-accent:focus{--tw-border-opacity:1;border-color:rgb(201 162 75 / var(--tw-border-opacity, 1))}.focus\:border-cta:focus{--tw-border-opacity:1;border-color:rgb(37 99 235 / var(--tw-border-opacity, 1))}.focus\:bg-white:focus{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}.focus\:ring-1:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.focus\:ring-cta:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(37 99 235 / var(--tw-ring-opacity, 1))}.group:hover .group-hover\:scale-105{--tw-scale-x:1.05;--tw-scale-y:1.05;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:text-cta{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}@media (min-width: 640px){.sm\:block{display:block}.sm\:h-72{height:18rem}.sm\:w-72{width:18rem}.sm\:w-auto{width:auto}.sm\:flex-row{flex-direction:row}.sm\:px-6{padding-left:1.5rem;padding-right:1.5rem}}@media (min-width: 768px){.md\:left-auto{left:auto}.md\:right-4{right:1rem}.md\:col-span-1{grid-column:span 1 / span 1}.md\:col-span-2{grid-column:span 2 / span 2}.md\:inline{display:inline}.md\:flex{display:flex}.md\:hidden{display:none}.md\:h-96{height:24rem}.md\:min-h-screen{min-height:100vh}.md\:w-96{width:24rem}.md\:w-64{width:16rem}.md\:w-auto{width:auto}.md\:grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.md\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.md\:flex-row{flex-direction:row}.md\:flex-col{flex-direction:column}.md\:items-center{align-items:center}.md\:gap-12{gap:3rem}.md\:overflow-x-visible{overflow-x:visible}.md\:p-10{padding:2.5rem}.md\:p-8{padding:2rem}.md\:px-8{padding-left:2rem;padding-right:2rem}.md\:py-10{padding-top:2.5rem;padding-bottom:2.5rem}.md\:text-sm{font-size:0.875rem;line-height:1.25rem}.md\:text-5xl{font-size:3rem;line-height:1}.md\:text-base{font-size:1rem;line-height:1.5rem}.md\:text-xl{font-size:1.25rem;line-height:1.75rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}.md\:text-lg{font-size:1.125rem;line-height:1.75rem}}@media (min-width: 1024px){.lg\:mb-0{margin-bottom:0px}.lg\:w-2\/5{width:40%}.lg\:w-3\/5{width:60%}.lg\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.lg\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.lg\:flex-row{flex-direction:row}.lg\:px-8{padding-left:2rem;padding-right:2rem}.lg\:text-6xl{font-size:3.75rem;line-height:1}}</style><style data-id="immersive-translate-input-injected-css"></style></head>
+</head>
 <body class="min-h-screen flex flex-col">
 
 <script type="module">
@@ -126,6 +120,36 @@
 
     window.currentNewsData = []; 
     window.userBookmarksCache = [];
+
+    // ====== CORE: AI Response Self-Healing Parsing Pipeline ======
+    window.parseAIResponse = (rawText, type = 'html') => {
+        if (!rawText) return '';
+        
+        if (type === 'json') {
+            try {
+                // 1. First attempt: Clean basic markdown wrappers
+                let cleanedText = rawText.replace(/```(?:json)?\n?/gi, '').replace(/```/g, '').trim();
+                return JSON.parse(cleanedText);
+            } catch (e) {
+                console.warn("Standard JSON parse failed, initiating regex self-healing...", e);
+                // 2. Fallback: Regex extraction to find the first valid array or object
+                const match = rawText.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+                if (match) {
+                    try {
+                        return JSON.parse(match[0]);
+                    } catch (err) {
+                        console.error("Self-Healing Regex JSON Parsing failed:", err);
+                        throw new Error("AI 回傳的資料結構異常，無法自動容錯修復。");
+                    }
+                }
+                throw new Error("模型回傳內容未包含合法的 JSON 結構。");
+            }
+        } else if (type === 'html' || type === 'text') {
+            // Strip markdown code blocks for HTML/Text requests
+            return rawText.replace(/```(?:html|md|markdown)?\n?/gi, '').replace(/```/g, '').trim();
+        }
+        return rawText.trim();
+    };
 
     const initAuth = async () => {
         try {
@@ -336,8 +360,8 @@
         <div class="flex justify-between items-center h-16">
             <div class="flex-shrink-0 flex items-center">
                 <a href="#/" id="nav-logo-container" class="flex items-center space-x-2">
-                    <img id="nav-logo-img" src="https://firebasestorage.googleapis.com/v0/b/k20-tony-blogger.firebasestorage.app/o/site%2Fsettings%2Flogo_1786448482005.png?alt=media&amp;token=3922e644-2162-42da-ba99-eb6e0a0e67a3" alt="Logo" class="h-8 w-auto object-contain">
-                    <div id="nav-logo-text" class="w-8 h-8 bg-primary text-accent flex items-center justify-center rounded font-bold text-xl hidden">T</div>
+                    <img id="nav-logo-img" src="" alt="Logo" class="h-8 w-auto hidden object-contain">
+                    <div id="nav-logo-text" class="w-8 h-8 bg-primary text-accent flex items-center justify-center rounded font-bold text-xl">T</div>
                     <span class="font-bold text-xl text-primary tracking-tight">TONY STUDIO</span>
                 </a>
             </div>
@@ -351,16 +375,7 @@
             </nav>
 
             <div class="flex items-center space-x-4">
-                <div id="nav-auth-container" class="hidden sm:block">
-                <div class="flex items-center space-x-4">
-                    <a href="#/admin" class="text-xs font-bold text-accent bg-secondary px-2 py-1 rounded hover:bg-primary transition"><i class="fa-solid fa-gauge mr-1"></i>管理後台</a>
-                    <a href="#/member" class="flex items-center space-x-2 text-textSub hover:text-primary transition bg-gray-50 px-2 py-1.5 rounded-full border border-gray-100">
-                        <img src="https://placehold.co/100x100/163A63/FFF?text=M" alt="Avatar" class="w-7 h-7 rounded-full border border-gray-200">
-                        <span class="text-sm font-medium hidden sm:block pr-2">mindnodeai</span>
-                    </a>
-                    <button onclick="window.handleLogout()" class="text-sm text-gray-400 hover:text-red-600 transition" title="登出"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-                </div>
-            </div>
+                <div id="nav-auth-container" class="hidden sm:block"></div>
                 <button onclick="window.toggleMobileMenu()" class="md:hidden text-textSub hover:text-primary focus:outline-none transition">
                     <i id="mobile-menu-icon" class="fa-solid fa-bars text-xl"></i>
                 </button>
@@ -375,104 +390,12 @@
             <a href="#/daily-news" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100 flex items-center gap-2"><i class="fa-solid fa-newspaper text-accent"></i> 每日 AI 報</a>
             <a href="#/ask-tony" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100 flex items-center gap-2"><i class="fa-solid fa-sparkles text-accent"></i> Ask TONY</a>
             <a href="#/services" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-lg text-base font-medium text-textMain hover:bg-blue-50 transition border border-transparent hover:border-blue-100 mb-4">服務與課程</a>
-            <div id="mobile-auth-container" class="pt-4 border-t border-gray-100">
-                <div class="flex items-center space-x-3 px-3 py-3 bg-gray-50 rounded-lg mb-2">
-                    <img src="https://placehold.co/100x100/163A63/FFF?text=M" alt="Avatar" class="w-10 h-10 rounded-full border border-gray-200 shadow-sm">
-                    <div>
-                        <p class="text-sm font-bold text-textMain">mindnodeai</p>
-                        <a href="#/admin" onclick="window.toggleMobileMenu()" class="text-xs font-bold text-accent"><i class="fa-solid fa-gauge"></i> 進入管理後台</a>
-                    </div>
-                </div>
-                <a href="#/member" onclick="window.toggleMobileMenu()" class="block px-3 py-3 rounded-md text-base font-medium text-textMain hover:bg-gray-50 transition border border-gray-100 mb-2 text-center bg-blue-50 text-cta">進入會員專區</a>
-                <button onclick="window.toggleMobileMenu(); window.handleLogout();" class="w-full text-center block px-3 py-3 rounded-md text-base font-medium text-red-600 bg-red-50 hover:bg-red-100 transition shadow-sm">登出帳號</button>
-            </div>
+            <div id="mobile-auth-container" class="pt-4 border-t border-gray-100"></div>
         </div>
     </div>
 </header>
 
-<main id="app-root" class="flex-grow flex flex-col page-enter">
-            <div class="bg-gray-50 min-h-screen">
-                <div class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-                    <div class="w-full max-w-full px-4 md:px-8 py-4 flex items-center justify-between">
-                        <div class="flex items-center gap-4"><a href="#/admin/articles" class="text-textSub hover:text-primary transition font-bold"><i class="fa-solid fa-arrow-left"></i> 返回</a><h1 class="text-lg md:text-xl font-bold text-primary border-l-2 border-gray-200 pl-4" id="editor-title">新增文章</h1></div>
-                        <button id="btn-save-article" onclick="window.saveArticle(event)" class="bg-cta hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm md:text-base font-bold transition shadow-md flex items-center gap-2"><i class="fa-solid fa-cloud-arrow-up"></i> 儲存文章</button>
-                    </div>
-                </div>
-                <div class="w-full max-w-full px-4 md:px-8 py-6 md:py-10">
-                    <form id="article-form" class="space-y-8">
-                        <input type="hidden" id="article-id" value="">
-                        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <div class="md:col-span-2 space-y-6">
-                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">文章標題 *</label><input type="text" id="article-title-input" required="" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta font-bold text-base md:text-lg"></div>
-                                    <div>
-                                        <label class="block text-sm font-bold text-gray-700 mb-2">封面圖片</label>
-                                        <div class="flex items-center gap-6">
-                                            <img id="cover-preview-img" src="https://placehold.co/800x400/E2E8F0/64748B?text=Cover" class="w-40 h-24 object-cover rounded-lg shadow-sm border border-gray-200">
-                                            <input type="file" id="article-cover-file" accept="image/*" onchange="window.previewImage(event, 'cover-preview-img')" class="text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-cta hover:file:bg-blue-100 transition w-full">
-                                        </div>
-                                        <input type="hidden" id="article-cover-input">
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between items-center mb-2">
-                                            <label class="block text-sm font-bold text-gray-700">文章摘要 *</label>
-                                            <button type="button" onclick="window.generateAIExcerpt()" class="text-xs font-bold text-accent bg-secondary hover:bg-primary px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 依正文產出長篇摘要</button>
-                                        </div>
-                                        <textarea id="article-excerpt-input" required="" rows="5" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base"></textarea>
-                                    </div>
-                                </div>
-                                <div class="space-y-6 bg-gray-50 p-6 rounded-xl border border-gray-200">
-                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">發布狀態 *</label><select id="article-status-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm bg-white shadow-sm"><option value="draft">草稿 (隱藏)</option><option value="published">已發布 (公開)</option></select></div>
-                                    <div><label class="block text-sm font-bold text-gray-700 mb-2">分類 *</label><select id="article-category-input" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base md:text-sm bg-white shadow-sm"><option value="AI Agent 代理式AI">AI Agent 代理式AI</option><option value="企業管理">企業管理</option><option value="人間智慧">人間智慧</option><option value="數位行銷">數位行銷</option><option value="理論框架與方法論">理論框架與方法論</option><option value="顧問案例示範說明">顧問案例示範說明</option><option value="飲食醫療保健">飲食醫療保健</option><option value="趨勢探索">趨勢探索</option><option value="教育重構藍圖">教育重構藍圖</option></select></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 md:p-8 rounded-2xl shadow-sm border border-blue-100">
-                            <h3 class="text-xl font-bold text-primary mb-6 flex items-center gap-3"><i class="fa-solid fa-wand-magic-sparkles text-accent"></i> AI 寫作助手</h3>
-                            <div class="mb-6"><label class="block text-sm font-bold text-gray-700 mb-2">請描述寫作主題 *</label><textarea id="ai-prompt" rows="3" placeholder="幫我寫一篇關於..." class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-cta text-base bg-white"></textarea></div>
-                            <div class="flex flex-col md:flex-row gap-4">
-                                <button type="button" onclick="window.generateCoverPrompt()" class="bg-white border border-gray-300 px-6 py-2.5 rounded-lg font-bold shadow-sm"><i class="fa-solid fa-image"></i> 依正文產生封面 Prompt</button>
-                                <button type="button" onclick="window.generateAIContent()" class="bg-primary text-accent px-6 py-2.5 rounded-lg font-bold shadow-md"><i class="fa-solid fa-pen-nib"></i> AI 生成內文</button>
-                            </div>
-                            <div id="ai-prompt-result-container" class="mt-4 hidden flex-col md:flex-row gap-3">
-                                <input type="text" id="ai-cover-prompt-result" readonly="" class="flex-grow px-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-700 font-mono text-base md:text-sm">
-                                <button type="button" onclick="window.copyPrompt()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold shadow-sm transition whitespace-nowrap"><i class="fa-solid fa-copy text-cta"></i> 複製</button>
-                            </div>
-                        </div>
-
-                        <!-- 編輯器區塊 -->
-                        <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-gray-200 relative" id="editor-wrapper">
-                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                                <label class="block text-sm font-bold text-gray-700">文章正文 * <span class="text-xs text-gray-400 font-normal ml-2 hidden md:inline">提示：在表格內按右鍵可增減行列與調整寬度</span></label>
-                                <button type="button" onclick="window.formatContentWithAI()" class="w-full md:w-auto text-sm font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-highlighter"></i> AI 智能排版與畫重點</button>
-                            </div>
-                            
-                            <div role="toolbar" class="ql-toolbar ql-snow"><span class="ql-formats"><button type="button" class="ql-bold" aria-pressed="false" aria-label="bold"><svg viewBox="0 0 18 18"><path class="ql-stroke" d="M5,4H9.5A2.5,2.5,0,0,1,12,6.5v0A2.5,2.5,0,0,1,9.5,9H5A0,0,0,0,1,5,9V4A0,0,0,0,1,5,4Z"></path><path class="ql-stroke" d="M5,9h5.5A2.5,2.5,0,0,1,13,11.5v0A2.5,2.5,0,0,1,10.5,14H5a0,0,0,0,1,0,0V9A0,0,0,0,1,5,9Z"></path></svg></button><button type="button" class="ql-italic" aria-pressed="false" aria-label="italic"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="7" x2="13" y1="4" y2="4"></line><line class="ql-stroke" x1="5" x2="11" y1="14" y2="14"></line><line class="ql-stroke" x1="8" x2="10" y1="14" y2="4"></line></svg></button><button type="button" class="ql-underline" aria-pressed="false" aria-label="underline"><svg viewBox="0 0 18 18"><path class="ql-stroke" d="M5,3V9a4.012,4.012,0,0,0,4,4H9a4.012,4.012,0,0,0,4-4V3"></path><rect class="ql-fill" height="1" rx="0.5" ry="0.5" width="12" x="3" y="15"></rect></svg></button><button type="button" class="ql-strike" aria-pressed="false" aria-label="strike"><svg viewBox="0 0 18 18"><line class="ql-stroke ql-thin" x1="15.5" x2="2.5" y1="8.5" y2="9.5"></line><path class="ql-fill" d="M9.007,8C6.542,7.791,6,7.519,6,6.5,6,5.792,7.283,5,9,5c1.571,0,2.765.679,2.969,1.309a1,1,0,0,0,1.9-.617C13.356,4.106,11.354,3,9,3,6.2,3,4,4.538,4,6.5a3.2,3.2,0,0,0,.5,1.843Z"></path><path class="ql-fill" d="M8.984,10C11.457,10.208,12,10.479,12,11.5c0,0.708-1.283,1.5-3,1.5-1.571,0-2.765-.679-2.969-1.309a1,1,0,1,0-1.9.617C4.644,13.894,6.646,15,9,15c2.8,0,5-1.538,5-3.5a3.2,3.2,0,0,0-.5-1.843Z"></path></svg></button></span><span class="ql-formats"><button type="button" class="ql-blockquote" aria-pressed="false" aria-label="blockquote"><svg viewBox="0 0 18 18"><rect class="ql-fill ql-stroke" height="3" width="3" x="4" y="5"></rect><rect class="ql-fill ql-stroke" height="3" width="3" x="11" y="5"></rect><path class="ql-even ql-fill ql-stroke" d="M7,8c0,4.031-3,5-3,5"></path><path class="ql-even ql-fill ql-stroke" d="M14,8c0,4.031-3,5-3,5"></path></svg></button><button type="button" class="ql-code-block ql-active" aria-pressed="true" aria-label="code-block"><svg viewBox="0 0 18 18"><polyline class="ql-even ql-stroke" points="5 7 3 9 5 11"></polyline><polyline class="ql-even ql-stroke" points="13 7 15 9 13 11"></polyline><line class="ql-stroke" x1="10" x2="8" y1="5" y2="13"></line></svg></button></span><span class="ql-formats"><button type="button" class="ql-header" aria-pressed="false" value="1" aria-label="header: 1"><svg viewBox="0 0 18 18"><path class="ql-fill" d="M10,4V14a1,1,0,0,1-2,0V10H3v4a1,1,0,0,1-2,0V4A1,1,0,0,1,3,4V8H8V4a1,1,0,0,1,2,0Zm6.06787,9.209H14.98975V7.59863a.54085.54085,0,0,0-.605-.60547h-.62744a1.01119,1.01119,0,0,0-.748.29688L11.645,8.56641a.5435.5435,0,0,0-.022.8584l.28613.30762a.53861.53861,0,0,0,.84717.0332l.09912-.08789a1.2137,1.2137,0,0,0,.2417-.35254h.02246s-.01123.30859-.01123.60547V13.209H12.041a.54085.54085,0,0,0-.605.60547v.43945a.54085.54085,0,0,0,.605.60547h4.02686a.54085.54085,0,0,0,.605-.60547v-.43945A.54085.54085,0,0,0,16.06787,13.209Z"></path></svg></button><button type="button" class="ql-header" aria-pressed="false" value="2" aria-label="header: 2"><svg viewBox="0 0 18 18"><path class="ql-fill" d="M16.73975,13.81445v.43945a.54085.54085,0,0,1-.605.60547H11.855a.58392.58392,0,0,1-.64893-.60547V14.0127c0-2.90527,3.39941-3.42187,3.39941-4.55469a.77675.77675,0,0,0-.84717-.78125,1.17684,1.17684,0,0,0-.83594.38477c-.2749.26367-.561.374-.85791.13184l-.4292-.34082c-.30811-.24219-.38525-.51758-.1543-.81445a2.97155,2.97155,0,0,1,2.45361-1.17676,2.45393,2.45393,0,0,1,2.68408,2.40918c0,2.45312-3.1792,2.92676-3.27832,3.93848h2.79443A.54085.54085,0,0,1,16.73975,13.81445ZM9,3A.99974.99974,0,0,0,8,4V8H3V4A1,1,0,0,0,1,4V14a1,1,0,0,0,2,0V10H8v4a1,1,0,0,0,2,0V4A.99974.99974,0,0,0,9,3Z"></path></svg></button></span><span class="ql-formats"><button type="button" class="ql-list" aria-pressed="false" value="ordered" aria-label="list: ordered"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="7" x2="15" y1="4" y2="4"></line><line class="ql-stroke" x1="7" x2="15" y1="9" y2="9"></line><line class="ql-stroke" x1="7" x2="15" y1="14" y2="14"></line><line class="ql-stroke ql-thin" x1="2.5" x2="4.5" y1="5.5" y2="5.5"></line><path class="ql-fill" d="M3.5,6A0.5,0.5,0,0,1,3,5.5V3.085l-0.276.138A0.5,0.5,0,0,1,2.053,3c-0.124-.247-0.023-0.324.224-0.447l1-.5A0.5,0.5,0,0,1,4,2.5v3A0.5,0.5,0,0,1,3.5,6Z"></path><path class="ql-stroke ql-thin" d="M4.5,10.5h-2c0-.234,1.85-1.076,1.85-2.234A0.959,0.959,0,0,0,2.5,8.156"></path><path class="ql-stroke ql-thin" d="M2.5,14.846a0.959,0.959,0,0,0,1.85-.109A0.7,0.7,0,0,0,3.75,14a0.688,0.688,0,0,0,.6-0.736,0.959,0.959,0,0,0-1.85-.109"></path></svg></button><button type="button" class="ql-list" aria-pressed="false" value="bullet" aria-label="list: bullet"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="6" x2="15" y1="4" y2="4"></line><line class="ql-stroke" x1="6" x2="15" y1="9" y2="9"></line><line class="ql-stroke" x1="6" x2="15" y1="14" y2="14"></line><line class="ql-stroke" x1="3" x2="3" y1="4" y2="4"></line><line class="ql-stroke" x1="3" x2="3" y1="9" y2="9"></line><line class="ql-stroke" x1="3" x2="3" y1="14" y2="14"></line></svg></button></span><span class="ql-formats"><button type="button" class="ql-script" aria-pressed="false" value="sub" aria-label="script: sub"><svg viewBox="0 0 18 18"><path class="ql-fill" d="M15.5,15H13.861a3.858,3.858,0,0,0,1.914-2.975,1.8,1.8,0,0,0-1.6-1.751A1.921,1.921,0,0,0,12.021,11.7a0.50013,0.50013,0,1,0,.957.291h0a0.914,0.914,0,0,1,1.053-.725,0.81,0.81,0,0,1,.744.762c0,1.076-1.16971,1.86982-1.93971,2.43082A1.45639,1.45639,0,0,0,12,15.5a0.5,0.5,0,0,0,.5.5h3A0.5,0.5,0,0,0,15.5,15Z"></path><path class="ql-fill" d="M9.65,5.241a1,1,0,0,0-1.409.108L6,7.964,3.759,5.349A1,1,0,0,0,2.192,6.59178Q2.21541,6.6213,2.241,6.649L4.684,9.5,2.241,12.35A1,1,0,0,0,3.71,13.70722q0.02557-.02768.049-0.05722L6,11.036,8.241,13.65a1,1,0,1,0,1.567-1.24277Q9.78459,12.3777,9.759,12.35L7.316,9.5,9.759,6.651A1,1,0,0,0,9.65,5.241Z"></path></svg></button><button type="button" class="ql-script" aria-pressed="false" value="super" aria-label="script: super"><svg viewBox="0 0 18 18"><path class="ql-fill" d="M15.5,7H13.861a4.015,4.015,0,0,0,1.914-2.975,1.8,1.8,0,0,0-1.6-1.751A1.922,1.922,0,0,0,12.021,3.7a0.5,0.5,0,1,0,.957.291,0.917,0.917,0,0,1,1.053-.725,0.81,0.81,0,0,1,.744.762c0,1.077-1.164,1.925-1.934,2.486A1.423,1.423,0,0,0,12,7.5a0.5,0.5,0,0,0,.5.5h3A0.5,0.5,0,0,0,15.5,7Z"></path><path class="ql-fill" d="M9.651,5.241a1,1,0,0,0-1.41.108L6,7.964,3.759,5.349a1,1,0,1,0-1.519,1.3L4.683,9.5,2.241,12.35a1,1,0,1,0,1.519,1.3L6,11.036,8.241,13.65a1,1,0,0,0,1.519-1.3L7.317,9.5,9.759,6.651A1,1,0,0,0,9.651,5.241Z"></path></svg></button></span><span class="ql-formats"><button type="button" class="ql-indent" aria-pressed="false" value="-1" aria-label="indent: -1"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="3" x2="15" y1="14" y2="14"></line><line class="ql-stroke" x1="3" x2="15" y1="4" y2="4"></line><line class="ql-stroke" x1="9" x2="15" y1="9" y2="9"></line><polyline class="ql-stroke" points="5 7 5 11 3 9 5 7"></polyline></svg></button><button type="button" class="ql-indent" aria-pressed="false" value="+1" aria-label="indent: +1"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="3" x2="15" y1="14" y2="14"></line><line class="ql-stroke" x1="3" x2="15" y1="4" y2="4"></line><line class="ql-stroke" x1="9" x2="15" y1="9" y2="9"></line><polyline class="ql-fill ql-stroke" points="3 7 3 11 5 9 3 7"></polyline></svg></button></span><span class="ql-formats"><span class="ql-size ql-picker"><span class="ql-picker-label" tabindex="0" role="button" aria-expanded="false" aria-controls="ql-picker-options-0"><svg viewBox="0 0 18 18"><polygon class="ql-stroke" points="7 11 9 13 11 11 7 11"></polygon><polygon class="ql-stroke" points="7 7 9 5 11 7 7 7"></polygon></svg></span><span class="ql-picker-options" aria-hidden="true" tabindex="-1" id="ql-picker-options-0"><span tabindex="0" role="button" class="ql-picker-item" data-value="small"></span><span tabindex="0" role="button" class="ql-picker-item ql-selected"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="large"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="huge"></span></span></span><select class="ql-size" style="display: none;"><option value="small"></option><option selected="selected"></option><option value="large"></option><option value="huge"></option></select></span><span class="ql-formats"><span class="ql-header ql-picker"><span class="ql-picker-label" tabindex="0" role="button" aria-expanded="false" aria-controls="ql-picker-options-1"><svg viewBox="0 0 18 18"><polygon class="ql-stroke" points="7 11 9 13 11 11 7 11"></polygon><polygon class="ql-stroke" points="7 7 9 5 11 7 7 7"></polygon></svg></span><span class="ql-picker-options" aria-hidden="true" tabindex="-1" id="ql-picker-options-1"><span tabindex="0" role="button" class="ql-picker-item" data-value="1"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="2"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="3"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="4"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="5"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="6"></span><span tabindex="0" role="button" class="ql-picker-item ql-selected"></span></span></span><select class="ql-header" style="display: none;"><option value="1"></option><option value="2"></option><option value="3"></option><option value="4"></option><option value="5"></option><option value="6"></option><option selected="selected"></option></select></span><span class="ql-formats"><span class="ql-color ql-picker ql-color-picker"><span class="ql-picker-label" tabindex="0" role="button" aria-expanded="false" aria-controls="ql-picker-options-2"><svg viewBox="0 0 18 18"><line class="ql-color-label ql-stroke ql-transparent" x1="3" x2="15" y1="15" y2="15"></line><polyline class="ql-stroke" points="5.5 11 9 3 12.5 11"></polyline><line class="ql-stroke" x1="11.63" x2="6.38" y1="9" y2="9"></line></svg></span><span class="ql-picker-options" aria-hidden="true" tabindex="-1" id="ql-picker-options-2"><span tabindex="0" role="button" class="ql-picker-item ql-primary ql-selected"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#e60000" style="background-color: rgb(230, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#ff9900" style="background-color: rgb(255, 153, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#ffff00" style="background-color: rgb(255, 255, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#008a00" style="background-color: rgb(0, 138, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#0066cc" style="background-color: rgb(0, 102, 204);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#9933ff" style="background-color: rgb(153, 51, 255);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffffff" style="background-color: rgb(255, 255, 255);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#facccc" style="background-color: rgb(250, 204, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffebcc" style="background-color: rgb(255, 235, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffffcc" style="background-color: rgb(255, 255, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#cce8cc" style="background-color: rgb(204, 232, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#cce0f5" style="background-color: rgb(204, 224, 245);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ebd6ff" style="background-color: rgb(235, 214, 255);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#bbbbbb" style="background-color: rgb(187, 187, 187);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#f06666" style="background-color: rgb(240, 102, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffc266" style="background-color: rgb(255, 194, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffff66" style="background-color: rgb(255, 255, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#66b966" style="background-color: rgb(102, 185, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#66a3e0" style="background-color: rgb(102, 163, 224);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#c285ff" style="background-color: rgb(194, 133, 255);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#888888" style="background-color: rgb(136, 136, 136);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#a10000" style="background-color: rgb(161, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#b26b00" style="background-color: rgb(178, 107, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#b2b200" style="background-color: rgb(178, 178, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#006100" style="background-color: rgb(0, 97, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#0047b2" style="background-color: rgb(0, 71, 178);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#6b24b2" style="background-color: rgb(107, 36, 178);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#444444" style="background-color: rgb(68, 68, 68);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#5c0000" style="background-color: rgb(92, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#663d00" style="background-color: rgb(102, 61, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#666600" style="background-color: rgb(102, 102, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#003700" style="background-color: rgb(0, 55, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#002966" style="background-color: rgb(0, 41, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#3d1466" style="background-color: rgb(61, 20, 102);"></span></span></span><select class="ql-color" style="display: none;"><option selected="selected"></option><option value="#e60000"></option><option value="#ff9900"></option><option value="#ffff00"></option><option value="#008a00"></option><option value="#0066cc"></option><option value="#9933ff"></option><option value="#ffffff"></option><option value="#facccc"></option><option value="#ffebcc"></option><option value="#ffffcc"></option><option value="#cce8cc"></option><option value="#cce0f5"></option><option value="#ebd6ff"></option><option value="#bbbbbb"></option><option value="#f06666"></option><option value="#ffc266"></option><option value="#ffff66"></option><option value="#66b966"></option><option value="#66a3e0"></option><option value="#c285ff"></option><option value="#888888"></option><option value="#a10000"></option><option value="#b26b00"></option><option value="#b2b200"></option><option value="#006100"></option><option value="#0047b2"></option><option value="#6b24b2"></option><option value="#444444"></option><option value="#5c0000"></option><option value="#663d00"></option><option value="#666600"></option><option value="#003700"></option><option value="#002966"></option><option value="#3d1466"></option></select><span class="ql-background ql-picker ql-color-picker"><span class="ql-picker-label" tabindex="0" role="button" aria-expanded="false" aria-controls="ql-picker-options-3"><svg viewBox="0 0 18 18"><g class="ql-fill ql-color-label"><polygon points="6 6.868 6 6 5 6 5 7 5.942 7 6 6.868"></polygon><rect height="1" width="1" x="4" y="4"></rect><polygon points="6.817 5 6 5 6 6 6.38 6 6.817 5"></polygon><rect height="1" width="1" x="2" y="6"></rect><rect height="1" width="1" x="3" y="5"></rect><rect height="1" width="1" x="4" y="7"></rect><polygon points="4 11.439 4 11 3 11 3 12 3.755 12 4 11.439"></polygon><rect height="1" width="1" x="2" y="12"></rect><rect height="1" width="1" x="2" y="9"></rect><rect height="1" width="1" x="2" y="15"></rect><polygon points="4.63 10 4 10 4 11 4.192 11 4.63 10"></polygon><rect height="1" width="1" x="3" y="8"></rect><path d="M10.832,4.2L11,4.582V4H10.708A1.948,1.948,0,0,1,10.832,4.2Z"></path><path d="M7,4.582L7.168,4.2A1.929,1.929,0,0,1,7.292,4H7V4.582Z"></path><path d="M8,13H7.683l-0.351.8a1.933,1.933,0,0,1-.124.2H8V13Z"></path><rect height="1" width="1" x="12" y="2"></rect><rect height="1" width="1" x="11" y="3"></rect><path d="M9,3H8V3.282A1.985,1.985,0,0,1,9,3Z"></path><rect height="1" width="1" x="2" y="3"></rect><rect height="1" width="1" x="6" y="2"></rect><rect height="1" width="1" x="3" y="2"></rect><rect height="1" width="1" x="5" y="3"></rect><rect height="1" width="1" x="9" y="2"></rect><rect height="1" width="1" x="15" y="14"></rect><polygon points="13.447 10.174 13.469 10.225 13.472 10.232 13.808 11 14 11 14 10 13.37 10 13.447 10.174"></polygon><rect height="1" width="1" x="13" y="7"></rect><rect height="1" width="1" x="15" y="5"></rect><rect height="1" width="1" x="14" y="6"></rect><rect height="1" width="1" x="15" y="8"></rect><rect height="1" width="1" x="14" y="9"></rect><path d="M3.775,14H3v1H4V14.314A1.97,1.97,0,0,1,3.775,14Z"></path><rect height="1" width="1" x="14" y="3"></rect><polygon points="12 6.868 12 6 11.62 6 12 6.868"></polygon><rect height="1" width="1" x="15" y="2"></rect><rect height="1" width="1" x="12" y="5"></rect><rect height="1" width="1" x="13" y="4"></rect><polygon points="12.933 9 13 9 13 8 12.495 8 12.933 9"></polygon><rect height="1" width="1" x="9" y="14"></rect><rect height="1" width="1" x="8" y="15"></rect><path d="M6,14.926V15H7V14.316A1.993,1.993,0,0,1,6,14.926Z"></path><rect height="1" width="1" x="5" y="15"></rect><path d="M10.668,13.8L10.317,13H10v1h0.792A1.947,1.947,0,0,1,10.668,13.8Z"></path><rect height="1" width="1" x="11" y="15"></rect><path d="M14.332,12.2a1.99,1.99,0,0,1,.166.8H15V12H14.245Z"></path><rect height="1" width="1" x="14" y="15"></rect><rect height="1" width="1" x="15" y="11"></rect></g><polyline class="ql-stroke" points="5.5 13 9 5 12.5 13"></polyline><line class="ql-stroke" x1="11.63" x2="6.38" y1="11" y2="11"></line></svg></span><span class="ql-picker-options" aria-hidden="true" tabindex="-1" id="ql-picker-options-3"><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#000000" style="background-color: rgb(0, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#e60000" style="background-color: rgb(230, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#ff9900" style="background-color: rgb(255, 153, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#ffff00" style="background-color: rgb(255, 255, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#008a00" style="background-color: rgb(0, 138, 0);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#0066cc" style="background-color: rgb(0, 102, 204);"></span><span tabindex="0" role="button" class="ql-picker-item ql-primary" data-value="#9933ff" style="background-color: rgb(153, 51, 255);"></span><span tabindex="0" role="button" class="ql-picker-item ql-selected"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#facccc" style="background-color: rgb(250, 204, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffebcc" style="background-color: rgb(255, 235, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffffcc" style="background-color: rgb(255, 255, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#cce8cc" style="background-color: rgb(204, 232, 204);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#cce0f5" style="background-color: rgb(204, 224, 245);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ebd6ff" style="background-color: rgb(235, 214, 255);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#bbbbbb" style="background-color: rgb(187, 187, 187);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#f06666" style="background-color: rgb(240, 102, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffc266" style="background-color: rgb(255, 194, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#ffff66" style="background-color: rgb(255, 255, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#66b966" style="background-color: rgb(102, 185, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#66a3e0" style="background-color: rgb(102, 163, 224);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#c285ff" style="background-color: rgb(194, 133, 255);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#888888" style="background-color: rgb(136, 136, 136);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#a10000" style="background-color: rgb(161, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#b26b00" style="background-color: rgb(178, 107, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#b2b200" style="background-color: rgb(178, 178, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#006100" style="background-color: rgb(0, 97, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#0047b2" style="background-color: rgb(0, 71, 178);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#6b24b2" style="background-color: rgb(107, 36, 178);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#444444" style="background-color: rgb(68, 68, 68);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#5c0000" style="background-color: rgb(92, 0, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#663d00" style="background-color: rgb(102, 61, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#666600" style="background-color: rgb(102, 102, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#003700" style="background-color: rgb(0, 55, 0);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#002966" style="background-color: rgb(0, 41, 102);"></span><span tabindex="0" role="button" class="ql-picker-item" data-value="#3d1466" style="background-color: rgb(61, 20, 102);"></span></span></span><select class="ql-background" style="display: none;"><option value="#000000"></option><option value="#e60000"></option><option value="#ff9900"></option><option value="#ffff00"></option><option value="#008a00"></option><option value="#0066cc"></option><option value="#9933ff"></option><option selected="selected"></option><option value="#facccc"></option><option value="#ffebcc"></option><option value="#ffffcc"></option><option value="#cce8cc"></option><option value="#cce0f5"></option><option value="#ebd6ff"></option><option value="#bbbbbb"></option><option value="#f06666"></option><option value="#ffc266"></option><option value="#ffff66"></option><option value="#66b966"></option><option value="#66a3e0"></option><option value="#c285ff"></option><option value="#888888"></option><option value="#a10000"></option><option value="#b26b00"></option><option value="#b2b200"></option><option value="#006100"></option><option value="#0047b2"></option><option value="#6b24b2"></option><option value="#444444"></option><option value="#5c0000"></option><option value="#663d00"></option><option value="#666600"></option><option value="#003700"></option><option value="#002966"></option><option value="#3d1466"></option></select></span><span class="ql-formats"><span class="ql-align ql-picker ql-icon-picker"><span class="ql-picker-label" tabindex="0" role="button" aria-expanded="false" aria-controls="ql-picker-options-4"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="3" x2="15" y1="9" y2="9"></line><line class="ql-stroke" x1="3" x2="13" y1="14" y2="14"></line><line class="ql-stroke" x1="3" x2="9" y1="4" y2="4"></line></svg></span><span class="ql-picker-options" aria-hidden="true" tabindex="-1" id="ql-picker-options-4"><span tabindex="0" role="button" class="ql-picker-item ql-selected"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="3" x2="15" y1="9" y2="9"></line><line class="ql-stroke" x1="3" x2="13" y1="14" y2="14"></line><line class="ql-stroke" x1="3" x2="9" y1="4" y2="4"></line></svg></span><span tabindex="0" role="button" class="ql-picker-item" data-value="center"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="15" x2="3" y1="9" y2="9"></line><line class="ql-stroke" x1="14" x2="4" y1="14" y2="14"></line><line class="ql-stroke" x1="12" x2="6" y1="4" y2="4"></line></svg></span><span tabindex="0" role="button" class="ql-picker-item" data-value="right"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="15" x2="3" y1="9" y2="9"></line><line class="ql-stroke" x1="15" x2="5" y1="14" y2="14"></line><line class="ql-stroke" x1="15" x2="9" y1="4" y2="4"></line></svg></span><span tabindex="0" role="button" class="ql-picker-item" data-value="justify"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="15" x2="3" y1="9" y2="9"></line><line class="ql-stroke" x1="15" x2="3" y1="14" y2="14"></line><line class="ql-stroke" x1="15" x2="3" y1="4" y2="4"></line></svg></span></span></span><select class="ql-align" style="display: none;"><option selected="selected"></option><option value="center"></option><option value="right"></option><option value="justify"></option></select></span><span class="ql-formats"><button type="button" class="ql-link" aria-pressed="false" aria-label="link"><svg viewBox="0 0 18 18"><line class="ql-stroke" x1="7" x2="11" y1="7" y2="11"></line><path class="ql-even ql-stroke" d="M8.9,4.577a3.476,3.476,0,0,1,.36,4.679A3.476,3.476,0,0,1,4.577,8.9C3.185,7.5,2.035,6.4,4.217,4.217S7.5,3.185,8.9,4.577Z"></path><path class="ql-even ql-stroke" d="M13.423,9.1a3.476,3.476,0,0,0-4.679-.36,3.476,3.476,0,0,0,.36,4.679c1.392,1.392,2.5,2.542,4.679.36S14.815,10.5,13.423,9.1Z"></path></svg></button><button type="button" class="ql-image" aria-pressed="false" aria-label="image"><svg viewBox="0 0 18 18"><rect class="ql-stroke" height="10" width="12" x="3" y="4"></rect><circle class="ql-fill" cx="6" cy="7" r="1"></circle><polyline class="ql-even ql-fill" points="5 12 5 11 7 9 8 10 11 7 13 9 13 12 5 12"></polyline></svg></button><button type="button" class="ql-video" aria-pressed="false" aria-label="video"><svg viewBox="0 0 18 18"><rect class="ql-stroke" height="12" width="12" x="3" y="3"></rect><rect class="ql-fill" height="12" width="1" x="5" y="3"></rect><rect class="ql-fill" height="12" width="1" x="12" y="3"></rect><rect class="ql-fill" height="2" width="8" x="5" y="8"></rect><rect class="ql-fill" height="1" width="3" x="3" y="5"></rect><rect class="ql-fill" height="1" width="3" x="3" y="7"></rect><rect class="ql-fill" height="1" width="3" x="3" y="10"></rect><rect class="ql-fill" height="1" width="3" x="3" y="12"></rect><rect class="ql-fill" height="1" width="3" x="12" y="5"></rect><rect class="ql-fill" height="1" width="3" x="12" y="7"></rect><rect class="ql-fill" height="1" width="3" x="12" y="10"></rect><rect class="ql-fill" height="1" width="3" x="12" y="12"></rect></svg></button><button type="button" class="ql-formula" aria-pressed="false" aria-label="formula"><svg viewBox="0 0 18 18"><path class="ql-fill" d="M11.759,2.482a2.561,2.561,0,0,0-3.53.607A7.656,7.656,0,0,0,6.8,6.2C6.109,9.188,5.275,14.677,4.15,14.927a1.545,1.545,0,0,0-1.3-.933A0.922,0.922,0,0,0,2,15.036S1.954,16,4.119,16s3.091-2.691,3.7-5.553c0.177-.826.36-1.726,0.554-2.6L8.775,6.2c0.381-1.421.807-2.521,1.306-2.676a1.014,1.014,0,0,0,1.02.56A0.966,0.966,0,0,0,11.759,2.482Z"></path><rect class="ql-fill" height="1.6" rx="0.8" ry="0.8" width="5" x="5.15" y="6.2"></rect><path class="ql-fill" d="M13.663,12.027a1.662,1.662,0,0,1,.266-0.276q0.193,0.069.456,0.138a2.1,2.1,0,0,0,.535.069,1.075,1.075,0,0,0,.767-0.3,1.044,1.044,0,0,0,.314-0.8,0.84,0.84,0,0,0-.238-0.619,0.8,0.8,0,0,0-.594-0.239,1.154,1.154,0,0,0-.781.3,4.607,4.607,0,0,0-.781,1q-0.091.15-.218,0.346l-0.246.38c-0.068-.288-0.137-0.582-0.212-0.885-0.459-1.847-2.494-.984-2.941-0.8-0.482.2-.353,0.647-0.094,0.529a0.869,0.869,0,0,1,1.281.585c0.217,0.751.377,1.436,0.527,2.038a5.688,5.688,0,0,1-.362.467,2.69,2.69,0,0,1-.264.271q-0.221-.08-0.471-0.147a2.029,2.029,0,0,0-.522-0.066,1.079,1.079,0,0,0-.768.3A1.058,1.058,0,0,0,9,15.131a0.82,0.82,0,0,0,.832.852,1.134,1.134,0,0,0,.787-0.3,5.11,5.11,0,0,0,.776-0.993q0.141-.219.215-0.34c0.046-.076.122-0.194,0.223-0.346a2.786,2.786,0,0,0,.918,1.726,2.582,2.582,0,0,0,2.376-.185c0.317-.181.212-0.565,0-0.494A0.807,0.807,0,0,1,14.176,15a5.159,5.159,0,0,1-.913-2.446l0,0Q13.487,12.24,13.663,12.027Z"></path></svg></button><button type="button" class="ql-table" aria-pressed="false" aria-label="table"><svg viewBox="0 0 18 18"> <rect class="ql-stroke" height="12" width="12" x="3" y="3"></rect> <line class="ql-stroke" x1="3" x2="15" y1="9" y2="9"></line> <line class="ql-stroke" x1="9" x2="9" y1="3" y2="15"></line> </svg></button><button type="button" class="ql-mermaid" aria-pressed="false" aria-label="mermaid"><svg viewBox="0 0 18 18"><path class="ql-fill" d="M11,4.5A1.5,1.5,0,1,1,9.5,3,1.5,1.5,0,0,1,11,4.5ZM9.5,7a1.5,1.5,0,1,0,1.5,1.5A1.5,1.5,0,0,0,9.5,7Zm0,5.5A1.5,1.5,0,1,0,11,14,1.5,1.5,0,0,0,9.5,12.5ZM6.5,4.5A1.5,1.5,0,1,1,5,3,1.5,1.5,0,0,1,6.5,4.5ZM5,7A1.5,1.5,0,1,0,6.5,8.5,1.5,1.5,0,0,0,5,7Zm0,5.5A1.5,1.5,0,1,0,6.5,14,1.5,1.5,0,0,0,5,12.5ZM14,4.5A1.5,1.5,0,1,1,12.5,3,1.5,1.5,0,0,1,14,4.5ZM12.5,7A1.5,1.5,0,1,0,14,8.5,1.5,1.5,0,0,0,12.5,7Zm0,5.5A1.5,1.5,0,1,0,14,14,1.5,1.5,0,0,0,12.5,12.5Z"></path></svg></button></span><span class="ql-formats"><button type="button" class="ql-clean" aria-pressed="false" aria-label="clean"><svg class="" viewBox="0 0 18 18"><line class="ql-stroke" x1="5" x2="13" y1="3" y2="3"></line><line class="ql-stroke" x1="6" x2="9.35" y1="12" y2="3"></line><line class="ql-stroke" x1="11" x2="15" y1="11" y2="15"></line><line class="ql-stroke" x1="15" x2="11" y1="11" y2="15"></line><rect class="ql-fill" height="1" rx="0.5" ry="0.5" width="7" x="2" y="14"></rect></svg></button></span></div><div id="editor-container" class="ql-container ql-snow"><div class="ql-editor" contenteditable="true"><h2>💡 TONY 的初步觀點</h2><p>這是一份直球對決高教生死存亡的<strong>「反脆弱變革藍圖」</strong>。</p><p>在梳理這份改變理論（Theory of Change）時，我非常清楚：<strong>少子化招生斷崖不是遠在 2043 年的灰犀牛，而是此刻正以倍速逼近的黑天鵝</strong>。生成式 AI 對人文社會學科帶來的並非單純的工具衝擊，而是直搗其核心價值的<strong>「降維打擊」</strong>——當 AI 寫出的論述比一般大學生更工整、邏輯更嚴密時，傳統人社教育若依然停留在「記憶、背誦、考卷單向輸出」的象牙塔裡，被淘汰只是時間問題。</p><p>這份架構最打動我的一點，在於鎖定了<strong>「PR 40–70 之中間群體學生的活化」</strong>。在教育現場，PR 90 以上的菁英學生往往具備極強的自我驅動與資源整合能力，而真正決定一所大學的社會影響力、生存韌性，乃至整個世代認知水準的，正是這群往往在體制內<strong>「被動無感、找不到學習意義感」的中間多數</strong>。如果這套模式能讓他們在 <strong>AI 賦能與真實解題</strong>中重燃火花，高教轉型才算真正扎根。</p><div class="ql-code-block-container" spellcheck="false"><div class="ql-code-block" data-language="plain">mermaid TD</div><div class="ql-code-block" data-language="plain">    A[外部衝擊: 少子化斷崖 x AI白領替代] --&gt; B(核心痛點: 傳統學科框架僵化 / 學生被動無感)</div><div class="ql-code-block" data-language="plain">    B --&gt; C{改革槓桿解}</div><div class="ql-code-block" data-language="plain">    C --&gt;|制度解鎖| D[彈性學制 &amp; 敏捷空間]</div><div class="ql-code-block" data-language="plain">    C --&gt;|師資翻轉| E[教師轉型引導教練 &amp; AI助教]</div><div class="ql-code-block" data-language="plain">    C --&gt;|學習重構| F[真實PBL &amp; 形成性評量]</div><div class="ql-code-block" data-language="plain">    D --&gt; G((活化 PR 40-70 學生))</div><div class="ql-code-block" data-language="plain">    E --&gt; G</div><div class="ql-code-block" data-language="plain">    F --&gt; G</div><div class="ql-code-block" data-language="plain">    G --&gt; H[成果: 批判思考 x 人機協作 x 產學共構]</div><div class="ql-code-block" data-language="plain">    H --&gt; I[終極影響: 人社軟實力復興 &amp; 高教韌性]</div></div><h2><br></h2><h2>🚀 TONY 的深度洞察</h2><p>這套改革方案要從「紙上架構」真正落地為<strong>「系統級變革」</strong>，必須看穿三個維度的底層邏輯：</p><h3>1. 認知底層：<strong>「知識半衰期趨近於零，學習力本質是認知能量的重組」</strong></h3><p>過去大學在販售「封裝好的專業知識」，但 AI 時代的資訊邊際成本已實質歸零。α 世代之所以注意力碎片化，不是因為他們大腦變笨，而是傳統單向講授的<strong>「資訊密度」</strong>與<strong>「互動回饋延遲」</strong>遠遠落後於數位原生世界的體驗。</p><p>人社學生的不可替代性，可以用一個<strong>抗替代率模型（Antifragility Index, AFI）</strong>來衡量：</p><p class="ql-align-center"><em>AFI = (Empathy × Critical Inquiry × AI Orchestration) / (Cognitive Inertia + ε)</em></p><ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>當學生只扮演「文字搬運工」時，認知慣性極高，AFI 趨近於零，立即面臨淘汰。</li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>人社學科的本質不是背誦思想史，而是<strong>「定義問題的維度」</strong>與<strong>「對複雜倫理、文化情境的敏銳感知」</strong>。我們引導學生使用 AI Agent 不是為了偷懶，而是將省下來的認知帶寬，投入到 AFI 分子項的高階思維——<strong>學會向世界問出好問題，並協調 AI 工具共同求解</strong>。</li></ol><h3>2. 組織機制底層：<strong>「評鑑制度是所有改革的真正引信，不改 KPI 就沒有真轉型」</strong></h3><p>推動高教改革幾十年，我看過太多無疾而終的專案，其核心盲點都在於：<strong>「試圖在舊系統的激勵結構上，長出新的創新行為。」</strong></p><ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>如果教師升等、研究補助依然被傳統單一的期刊篇數綁架，要求老師花費數倍時間去開發 AI Agent、陪伴學生做 PBL、蹲點產學場域，在經濟學與理性選擇上根本是<strong>「懲罰熱情者」</strong>。</li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>因此，具體作法中提到<strong>「將促進學生主動學習之成效實質納入績效評估」</strong>是整套改革的命脈。</li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><strong>底層邏輯在於：必須將「教師由知識傳授者轉向學習教練」的轉換成本，以具體的資源與榮譽機制進行避險。</strong> 設立「教學陪伴歷程認證」、認可「產學共創專案等同研究產出」，老師才敢放手走下講台，走入學生的討論圈。</li></ol><h3>3. 產學與生態底層：<strong>「人社學科必須從『象牙塔清談』躍遷為『複雜系統的解題架構師』」</strong></h3><p>長期以來，人社領域的產學合作容易流於「文化參訪」或「單向講座」，因為雙方的溝通語言完全脫節。</p><ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span><strong>企業面臨的往往是非結構化問題（Wicked Problems）</strong>——員工組織流動率高、ESG 永續溝通障礙、AI 導入後的倫理風險、跨文化市場信任建立等。這些問題從來不是單純的程式碼或財報模型能解決的，需要的是人社的<strong>「質性洞察力」</strong>。</li><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>透過「分級模組挑戰題庫」與「結構化 Co-op 帶薪實習」，我們實質上是在搭建一座<strong>「意義轉譯的橋樑」</strong>：</li><li data-list="ordered" class="ql-indent-1"><span class="ql-ui" contenteditable="false"></span><strong>企業出題</strong>（非結構化情境）</li><li data-list="ordered" class="ql-indent-1"><span class="ql-ui" contenteditable="false"></span><strong>人社師生結合 AI 梳理脈絡</strong>（質性洞察 + 數據協作）</li><li data-list="ordered" class="ql-indent-1"><span class="ql-ui" contenteditable="false"></span><strong>回饋敏捷方案</strong>（落地驗證）</li></ol><p>這不僅活化了學生在真實戰場上的生存肌肉，更是讓人社教育從「就業市場的被挑選者」，翻轉為<strong>「產業升級的價值羅盤」</strong>。</p><h3>總結我的省思</h3><p>這份方案非常宏大，下一步最關鍵的戰術動作是<strong>「尋找最小可行性變革單位（Minimum Viable Transformation, MVT）」</strong>：挑選 1 到 2 個最具包容性與實驗精神的人社學程作為「原型實驗室」，導入這套彈性學制與 AI 協作教練模式，用 PR 40-70 學生的眼神轉變與產學成果，向體制證明：<strong>這不是為了因應退場的防禦性掙扎，而是一場重塑未來高教價值的文藝復興。</strong></p></div><div class="ql-tooltip ql-hidden"><a class="ql-preview" rel="noopener noreferrer" target="_blank" href="about:blank"></a><input type="text" data-formula="e=mc^2" data-link="https://quilljs.com" data-video="Embed URL"><a class="ql-action"></a><a class="ql-remove"></a></div></div>
-                            
-                            <!-- 專屬手刻的原生右鍵表格選單與寬度控制 -->
-                            <div id="table-context-menu" class="hidden absolute z-[110] bg-white border border-gray-200 shadow-2xl rounded-xl py-2 w-56 text-sm transform transition-all">
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowAbove')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-up mr-3 text-gray-400 w-4"></i>向上插入一列</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertRowBelow')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-down mr-3 text-gray-400 w-4"></i>向下插入一列</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnLeft')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-left mr-3 text-gray-400 w-4"></i>向左插入一欄</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'insertColumnRight')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-arrow-right mr-3 text-gray-400 w-4"></i>向右插入一欄</button>
-                                
-                                <div class="my-1 border-t border-gray-100"></div>
-                                <div class="px-5 py-1 text-gray-400 text-[10px] font-bold bg-gray-50 uppercase tracking-widest">欄位寬度調整</div>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'increaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-expand mr-3 text-cta w-4"></i>加寬此欄位 (+40px)</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'decreaseWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-compress mr-3 text-cta w-4"></i>縮窄此欄位 (-40px)</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'autoWidth')" class="w-full text-left px-5 py-2.5 hover:bg-blue-50 text-gray-700 font-medium transition flex items-center"><i class="fa-solid fa-wand-magic-sparkles mr-3 text-accent w-4"></i>自動適應內容寬度</button>
-
-                                <div class="my-1 border-t border-gray-100"></div>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteRow')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這列</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteColumn')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-medium transition flex items-center"><i class="fa-solid fa-minus mr-3 w-4"></i>刪除目前這欄</button>
-                                <button type="button" onmousedown="window.handleTableAction(event, 'deleteTable')" class="w-full text-left px-5 py-2.5 hover:bg-red-50 text-red-600 font-bold transition flex items-center"><i class="fa-solid fa-trash-can mr-3 w-4"></i>刪除整個表格</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </main>
+<main id="app-root" class="flex-grow flex flex-col page-enter"></main>
 
 <div id="toast-container" class="fixed bottom-4 left-4 right-4 md:left-auto md:w-96 md:right-4 z-[110] flex flex-col gap-2 pointer-events-none"></div>
 <script>
@@ -499,11 +422,11 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div class="md:col-span-1">
             <a href="#/" id="footer-logo-container" class="flex items-center space-x-2 mb-4">
-                <img id="footer-logo-img" src="https://firebasestorage.googleapis.com/v0/b/k20-tony-blogger.firebasestorage.app/o/site%2F1790331295515_%E9%80%8F%E6%98%8E%E5%8F%8D%E7%99%BD.png?alt=media&amp;token=b24eed83-b793-40b8-b2fa-d7fa7f569f7c" alt="Logo" class="h-10 w-auto object-contain">
-                <div id="footer-logo-text" class="w-10 h-10 bg-white text-primary flex items-center justify-center rounded font-bold text-2xl hidden">T</div>
+                <img id="footer-logo-img" src="" alt="Logo" class="h-10 w-auto hidden object-contain">
+                <div id="footer-logo-text" class="w-10 h-10 bg-white text-primary flex items-center justify-center rounded font-bold text-2xl">T</div>
                 <span class="font-bold text-xl text-white tracking-tight">TONY STUDIO</span>
             </a>
-            <p class="text-sm text-gray-300 mb-4 leading-relaxed">個人品牌官網 × 專業內容中樞 × AI 知識庫。致力於提供最優質的技術洞察與商業策略。</p>
+            <p class="text-sm text-gray-300 mb-4 leading-relaxed">個人品牌官網 × 專業內容中樞 × AI 知識庫。致力於提供最優質的技術洞察與商業策略。<br><br>&copy; 2026 TONY STUDIO (楊文澤顧問) All Rights Reserved.</p>
         </div>
         <div>
             <h4 class="font-bold mb-4 text-accent">內容導覽</h4>
@@ -516,7 +439,7 @@
         <div>
             <h4 class="font-bold mb-4 text-accent">服務與合作</h4>
             <ul class="space-y-3 text-sm text-gray-300">
-                <li><a href="#/services" class="hover:text-white transition">企業培訓 &amp; 顧問</a></li>
+                <li><a href="#/services" class="hover:text-white transition">企業培訓 & 顧問</a></li>
                 <li><a href="#/contact" class="hover:text-white transition">預約諮詢</a></li>
             </ul>
         </div>
@@ -524,14 +447,14 @@
             <h4 class="font-bold mb-4 text-accent">訂閱電子報</h4>
             <p class="text-sm text-gray-300 mb-3 leading-relaxed">掌握最新的技術趨勢與洞察文章。</p>
             <form class="flex" onsubmit="window.subscribeNewsletter(event)">
-                <input type="email" id="newsletter-email" required="" placeholder="您的 Email" class="px-3 py-2 bg-secondary text-white placeholder-gray-400 border border-gray-600 rounded-l focus:outline-none focus:border-accent w-full text-base md:text-sm">
+                <input type="email" id="newsletter-email" required placeholder="您的 Email" class="px-3 py-2 bg-secondary text-white placeholder-gray-400 border border-gray-600 rounded-l focus:outline-none focus:border-accent w-full text-base md:text-sm">
                 <button type="submit" class="bg-cta hover:bg-blue-600 px-4 py-2 rounded-r text-sm font-medium transition flex items-center justify-center min-w-[4rem]">訂閱</button>
             </form>
         </div>
     </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
 <script>
     const Views = {
@@ -703,7 +626,7 @@
                         <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all group">
                             <div class="w-16 h-16 bg-blue-50 text-cta rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition"><i class="fa-solid fa-building"></i></div>
                             <h3 class="text-2xl font-bold text-primary mb-4">企業培訓與顧問</h3>
-                            <p class="text-textSub mb-6 leading-relaxed">針對企業需求量身打造 AI 導入、數位轉型、行銷科技等內訓課程與顧問服務。協助團隊建立實戰能力，解決真實商業問題。</p>
+                            <p class="text-textSub mb-6 leading-relaxed">針對企業需求量身打造 AI 導入、數位轉型、行 সভাপ科技等內訓課程與顧問服務。協助團隊建立實戰能力，解決真實商業問題。</p>
                             <ul class="space-y-3 mb-8 text-sm text-gray-700 font-medium">
                                 <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> 生成式 AI 企業導入策略</li>
                                 <li class="flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i> OMO 數位行銷與品牌整合</li>
@@ -1212,7 +1135,31 @@
         `;
         
         try {
-            const systemPrompt = "你是一位頂尖的國際科技與財經新聞總編。\n【嚴格輸出格式指示】\n你必須搜尋今日最新新聞，並精準輸出 8 則新聞 (6則全球重點, 2則台灣重點)。\n絕對不要使用 JSON 格式。請使用以下純文字格式，每一則新聞之間用 ===NEWS=== 分隔。\n\n範例格式：\nCATEGORY: 科技情報\nTITLE: 蘋果發表最新 AI 功能\nSUMMARY: 蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮...\nURL: https://example.com/news1\n===NEWS===\nCATEGORY: 財經趨势\n...\n\n【內容規範】\n1. SUMMARY (摘要) 必須達 150 - 200 字，深入分析。\n2. 請務必在 SUMMARY 中，將專有名詞、企業名稱、重要數據用**雙星號**包裝起來。\n3. URL 必須是真實、可點擊的新聞網址。";
+            // Updated System Prompt with strict Few-Shot JSON structure to ensure parsability
+            const systemPrompt = `你是一位頂尖的國際科技與財經新聞總編。
+【核心任務】
+使用 Google Search 搜尋今日最新新聞，並精準輸出 8 則新聞 (6則全球科技/財經重點, 2則台灣在地重點)。
+
+【嚴格格式要求】
+1. 你必須且「只能」輸出合法的 JSON Array 格式。
+2. 絕對不要包含 Markdown 標記 (如 \`\`\`json)、開頭的問候語或其他說明文字。
+3. 每個物件必須包含 category, title, summary, url 四個欄位。
+
+【JSON 欄位定義】
+- category: "科技情報"、"財經趨勢"、"數位行銷" 等短分類。
+- title: 新聞標題。
+- summary: 150-200字的深度分析摘要。請務必在摘要中將專有名詞、企業名稱、重要數據用**雙星號**包裝起來。
+- url: 真實且可點擊的新聞來源網址。
+
+【Few-Shot 範例】
+[
+  {
+    "category": "科技情報",
+    "title": "蘋果發表最新 AI 功能",
+    "summary": "蘋果今日宣布全面整合 **Apple Intelligence**，預計將帶動 **50%** 的換機潮，並深度結合 **Siri** 的語意理解能力。",
+    "url": "https://example.com/news1"
+  }
+]`;
 
             const userPrompt = "請開始搜尋並輸出今日最新的 8 則 AI、財經與數位行銷新聞。";
             
@@ -1222,42 +1169,21 @@
 
             const textResponse = await window.callGeminiAPI(systemPrompt, userPrompt, true, extraOptions);
             
-            if (!textResponse || textResponse.trim() === '') {
-                throw new Error("AI 回傳了空白內容，請稍後重試。");
+            // Robust Parsing Pipeline Integration
+            const newsData = window.parseAIResponse(textResponse, 'json');
+
+            if (!Array.isArray(newsData) || newsData.length === 0) {
+                 throw new Error("無法從 AI 回應中解析出有效的新聞陣列結構。");
             }
 
-            const newsData = [];
-            const newsBlocks = textResponse.split('===NEWS===');
+            // Sanitize & Format Data
+            window.currentNewsData = newsData.map(news => ({
+                category: news.category || '最新情報',
+                title: news.title || '未命名新聞',
+                summary: news.summary || '尚無摘要內容。',
+                url: news.url || '#'
+            })).slice(0, 8);
             
-            for (const block of newsBlocks) {
-                const lines = block.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                if (lines.length < 4) continue; 
-
-                let category = '科技情報';
-                let title = '未命名新聞';
-                let summary = '';
-                let url = '#';
-
-                for (const line of lines) {
-                    if (line.startsWith('CATEGORY:')) category = line.replace('CATEGORY:', '').trim();
-                    else if (line.startsWith('TITLE:')) title = line.replace('TITLE:', '').trim();
-                    else if (line.startsWith('URL:')) url = line.replace('URL:', '').trim();
-                    else if (line.startsWith('SUMMARY:')) summary = line.replace('SUMMARY:', '').trim();
-                    else if (summary !== '' && !line.startsWith('CATEGORY:') && !line.startsWith('TITLE:') && !line.startsWith('URL:')) {
-                        summary += ' ' + line;
-                    }
-                }
-                
-                if (title !== '未命名新聞' && url !== '#') {
-                    newsData.push({ category, title, summary, url });
-                }
-            }
-
-            if (newsData.length === 0) {
-                 throw new Error("無法從 AI 回應中解析出新聞資料。");
-            }
-
-            window.currentNewsData = newsData.slice(0, 8); 
             const timestamp = new Date().toLocaleString('zh-TW');
             localStorage.setItem('tony_news_cache_json', JSON.stringify(window.currentNewsData));
             localStorage.setItem('tony_news_cache_time', timestamp);
@@ -1953,7 +1879,7 @@
                 if(coverEl) coverEl.src = article.coverImage || 'https://placehold.co/800x400';
                 
                 const contentEl = document.getElementById('detail-content');
-                /* 更新這裡：改為 overflow-x:auto 並加入原生觸控捲動 */
+                // Enabled overflow-x: auto to support mobile table horizontal scrolling
                 if(contentEl) contentEl.innerHTML = `<div class="ql-editor" style="padding:0; overflow-x:auto; -webkit-overflow-scrolling: touch; border:none; border-radius:0;">${article.content || ''}</div>`;
                 
                 window.updateSEO(article.title, article.excerpt, article.coverImage);
@@ -2169,7 +2095,7 @@
             keepMenuOpen = true;
         }
         if (action === 'autoWidth' && activeTd) {
-            activeTd.style.minWidth = 'auto';
+            activeTd.style.minWidth = '140px';
             activeTd.style.width = 'auto';
             keepMenuOpen = true;
         }
@@ -2613,17 +2539,24 @@
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
-            const systemPrompt = "你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：\n1. 絕對不可以使用 Markdown 的程式碼區塊標記 (如 ```)。\n2. 必須直接輸出純 HTML 格式。\n3. 使用 <h3> 標示大段落標題 (套用 class='text-lg font-bold text-primary border-b border-gray-100 pb-2 mb-3 mt-5')。\n4. 使用 <strong> 標示重要關鍵字 (套用 class='text-cta bg-blue-50 px-1 py-0.5 rounded')。\n5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4 text-gray-700'> 與 <li> 標籤。\n6. 段落之間請用 <p class='mb-4 leading-relaxed text-gray-700'> 包覆。";
+            const systemPrompt = `你現在是 TONY STUDIO 的專屬 AI 顧問「Ask TONY」。你的回答必須具備極高的專業度與結構性。請嚴格遵守以下格式規則：
+1. 絕對不可以使用 Markdown 的程式碼區塊標記 (如 \`\`\`html)。直接輸出純 HTML 標籤。
+2. 必須直接輸出純 HTML 格式。
+3. 使用 <h3> 標示大段落標題 (套用 class='text-lg font-bold text-primary border-b border-gray-100 pb-2 mb-3 mt-5')。
+4. 使用 <strong> 標示重要關鍵字 (套用 class='text-cta bg-blue-50 px-1 py-0.5 rounded')。
+5. 若有列點，必須使用 <ul class='list-disc pl-5 space-y-2 mb-4 text-gray-700'> 與 <li> 標籤。
+6. 段落之間請用 <p class='mb-4 leading-relaxed text-gray-700'> 包覆。`;
             const resultText = await window.callGeminiAPI(systemPrompt, question);
             
-            let cleanHTML = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            // Robust Parsing: Clean up markdown blocks from HTML response
+            let cleanHTML = window.parseAIResponse(resultText, 'html');
             
             const loadEl = document.getElementById(loadingId);
             if(loadEl) {
                 loadEl.innerHTML = `
                     <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary flex items-center justify-center text-accent font-bold shadow-sm flex-shrink-0 text-sm md:text-base">T</div>
                     <div class="bg-white px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 text-textMain max-w-[90%] md:max-w-[85%] text-sm md:text-base overflow-x-auto">
-                        <div class="max-w-none text-textMain leading-loose">${cleanHTML.trim()}</div>
+                        <div class="max-w-none text-textMain leading-loose">${cleanHTML}</div>
                     </div>
                 `;
             }
@@ -2647,9 +2580,11 @@
         if (!prompt) return showToast("請輸入寫作主題", "warning");
         try {
             showToast("AI 撰寫中...", "info");
-            const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，不要包含 markdown 標記。";
+            const safePromptText = "你是一個部落格寫作專家。輸出純 HTML，絕對不要包含 markdown 標記 (如 ```html)。";
             const resultText = await window.callGeminiAPI(safePromptText, `主題大綱：${prompt}`);
-            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            
+            // Robust Parsing: Clean up HTML output
+            const cleanText = window.parseAIResponse(resultText, 'html');
             if(window.quillEditor) window.quillEditor.clipboard.dangerouslyPasteHTML(window.quillEditor.getLength(), cleanText);
             showToast("生成完成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); }
@@ -2665,11 +2600,11 @@
         const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 設計中...'; btn.disabled = true;
 
         try {
-            const resultText = await window.callGeminiAPI("你是一位視覺藝術總監，專為 Midjourney v6 寫 Prompt。輸出全英文純文字。", `文章內容：${content.substring(0, 3000)}`);
+            const resultText = await window.callGeminiAPI("你是一位視覺藝術總監，專為 Midjourney v6 寫 Prompt。絕對不要使用 markdown，請直接輸出全英文純文字。", `文章內容：${content.substring(0, 3000)}`);
             const container = document.getElementById('ai-prompt-result-container');
             const resultInput = document.getElementById('ai-cover-prompt-result');
             if(container) { container.classList.remove('hidden'); container.classList.add('flex'); }
-            if(resultInput) resultInput.value = resultText.replace(new RegExp('\\x60\\x60\\x60', 'g'), '').trim();
+            if(resultInput) resultInput.value = window.parseAIResponse(resultText, 'text');
             showToast("Prompt 已生成", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`生成失敗: ${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -2692,9 +2627,9 @@
         const originalHtml = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 分析中...'; btn.disabled = true;
 
         try {
-            const resultText = await window.callGeminiAPI("請撰寫大約 250 到 300 字的摘要。純文字輸出。", content.substring(0, 3000));
+            const resultText = await window.callGeminiAPI("請撰寫大約 250 到 300 字的摘要。純文字輸出，不帶有任何標記符號。", content.substring(0, 3000));
             const excerptInput = document.getElementById('article-excerpt-input');
-            if(excerptInput) excerptInput.value = resultText.trim();
+            if(excerptInput) excerptInput.value = window.parseAIResponse(resultText, 'text');
             showToast("摘要產生成功！", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`摘要失敗：${e.message}`, "error"); } 
         finally { btn.innerHTML = originalHtml; btn.disabled = false; }
@@ -2711,9 +2646,9 @@
 
         try {
             showToast("請稍候...", "info");
-            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 markdown 標記。";
+            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 markdown 標記 (如 ```html)。";
             const resultText = await window.callGeminiAPI(safePromptText, htmlContent);
-            const cleanText = resultText.replace(new RegExp('\\x60\\x60\\x60html', 'gi'), '').replace(new RegExp('\\x60\\x60\\x60', 'g'), '');
+            const cleanText = window.parseAIResponse(resultText, 'html');
             window.quillEditor.clipboard.dangerouslyPasteHTML(cleanText);
             showToast("排版完成！", "success");
         } catch(e) { if (!e.message.includes("MISSING_API_KEY")) showToast(`排版失敗：${e.message}`, "error"); } 
@@ -2971,7 +2906,5 @@
     });
 </script>
 
-
-
-            
-        </body></html>
+</body>
+</html>
