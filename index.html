@@ -2646,7 +2646,10 @@
 
         try {
             showToast("請稍候...", "info");
-            const safePromptText = "幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出 HTML，嚴禁包含 markdown 標記 (如 ```html)。";
+            const safePromptText = `幫文章進行排版與畫重點，用 <strong> 加粗核心概念。直接輸出純 HTML，嚴禁包含 markdown 標記 (如 \`\`\`html)。
+【容錯與輸出規範】
+1. 數學公式：若內含中文，請捨棄複雜 LaTeX，改用標準純文字運算符號 (如 +, -, =, x)。
+2. Mermaid 圖表：節點內若有中文或括號，必須用雙引號包起來 (例: A["中文字"])，或改用純文字箭頭 (如 ──▶) 以確保高相容性。`;
             const resultText = await window.callGeminiAPI(safePromptText, htmlContent);
             const cleanText = window.parseAIResponse(resultText, 'html');
             window.quillEditor.clipboard.dangerouslyPasteHTML(cleanText);
